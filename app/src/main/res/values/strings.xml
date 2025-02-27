@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">DeliGoAndroid</string>
+    <string-array name="user_roles">
+        <item>Customer</item>
+        <item>Driver</item>
+        <item>Restaurant</item>
+    </string-array>
+</resources>
