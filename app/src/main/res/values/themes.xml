@@ -6,4 +6,11 @@
     </style>
 
     <style name="Theme.DeliGoAndroid" parent="Base.Theme.DeliGoAndroid" />
+
+    <!-- Splash Screen theme -->
+    <style name="SplashTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

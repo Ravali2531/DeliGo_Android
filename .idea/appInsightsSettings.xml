@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.example.deligoandroid" />
+                  <option name="mobileSdkAppId" value="1:161723224896:android:96c5b4cd25c171bafda0a5" />
+                  <option name="projectId" value="deligo-6cdb9" />
+                  <option name="projectNumber" value="161723224896" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
