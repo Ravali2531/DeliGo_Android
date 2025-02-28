@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.deligoandroid.Admin.AdminActivity;
+import com.example.deligoandroid.Driver.DriverDocumentsActivity;
+import com.example.deligoandroid.Driver.DriverHomeActivity;
 import com.example.deligoandroid.MainActivity;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
@@ -129,10 +131,22 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    redirectUser("Driver");
+                    // Check if documents are submitted
+                    Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                    if (documentsSubmitted == null || !documentsSubmitted) {
+                        // Documents not submitted, redirect to upload page
+                        Intent intent = new Intent(LoginActivity.this, DriverDocumentsActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        // Documents submitted, go to driver home
+                        Intent intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
+                        startActivity(intent);
+                        finish();
+                    }
                     return;
                 }
-                // Check in restaurants
+                // Check in restaurants if not a driver
                 checkInRestaurants(userId);
             }
 
