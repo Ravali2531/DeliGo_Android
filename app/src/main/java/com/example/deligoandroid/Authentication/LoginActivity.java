@@ -9,6 +9,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.deligoandroid.Admin.AdminActivity;
 import com.example.deligoandroid.MainActivity;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
@@ -86,7 +87,26 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void checkUserRoleAndRedirect(String userId) {
-        // Check in customers
+        // First check if user is admin
+        mDatabase.child("admins").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    redirectUser("Admin");
+                    return;
+                }
+                // If not admin, check other roles
+                checkInCustomers(userId);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                handleDatabaseError(databaseError);
+            }
+        });
+    }
+
+    private void checkInCustomers(String userId) {
         mDatabase.child("customers").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -94,7 +114,6 @@ public class LoginActivity extends AppCompatActivity {
                     redirectUser("Customer");
                     return;
                 }
-                // Check in drivers
                 checkInDrivers(userId);
             }
 
@@ -148,22 +167,24 @@ public class LoginActivity extends AppCompatActivity {
 
     private void redirectUser(String role) {
         Toast.makeText(this, "Logged in successfully as " + role, Toast.LENGTH_SHORT).show();
-        // TODO: Implement role-specific redirections
-         Intent intent;
-         switch (role) {
-             case "Customer":
-                 intent = new Intent(LoginActivity.this, MainActivity.class);
-                 break;
-             case "Driver":
-                 intent = new Intent(LoginActivity.this, MainActivity.class);
-                 break;
-             case "Restaurant":
-                 intent = new Intent(LoginActivity.this, MainActivity.class);
-                 break;
-             default:
-                 return;
-         }
-         startActivity(intent);
+        Intent intent;
+        switch (role) {
+            case "Admin":
+                intent = new Intent(LoginActivity.this, AdminActivity.class);
+                break;
+            case "Customer":
+                intent = new Intent(LoginActivity.this, MainActivity.class);
+                break;
+            case "Driver":
+                intent = new Intent(LoginActivity.this, MainActivity.class);
+                break;
+            case "Restaurant":
+                intent = new Intent(LoginActivity.this, MainActivity.class);
+                break;
+            default:
+                return;
+        }
+        startActivity(intent);
         finish();
     }
 
