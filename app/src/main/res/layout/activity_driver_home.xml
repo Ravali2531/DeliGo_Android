@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:gravity="center">
+
+    <!-- For Pending Review Status -->
+    <LinearLayout
+        android:id="@+id/pendingReviewLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+<!--        <ImageView-->
+<!--            android:layout_width="100dp"-->
+<!--            android:layout_height="100dp"-->
+<!--            android:src="@drawable/ic_pending_review"-->
+<!--            android:layout_marginBottom="20dp"/>-->
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Documents Under Review"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your documents are being reviewed by our team. This usually takes 1-2 business days."
+            android:textAlignment="center"
+            android:layout_marginBottom="20dp"/>
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="?android:attr/progressBarStyle"/>
+    </LinearLayout>
+
+    <!-- For Normal Home Page Content -->
+    <LinearLayout
+        android:id="@+id/normalHomeLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+        
+        <!-- Add your normal home page content here -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Welcome Driver!"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"/>
+        
+        <!-- Add other driver home page elements -->
+        
+    </LinearLayout>
+
+</LinearLayout> 
