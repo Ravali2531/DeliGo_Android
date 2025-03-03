@@ -36,6 +36,8 @@ import com.example.deligoandroid.Restaurant.Fragments.OrdersFragment;
 import com.example.deligoandroid.Restaurant.Fragments.MenuFragment;
 import com.example.deligoandroid.Restaurant.Fragments.AccountFragment;
 
+import android.widget.ImageView;
+
 public class RestaurantHomeActivity extends AppCompatActivity {
     private LinearLayout pendingReviewLayout;
     private LinearLayout normalHomeLayout;
@@ -50,9 +52,18 @@ public class RestaurantHomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_restaurant_home);
 
+        // Initialize Firebase and user ID first
+        databaseRef = FirebaseDatabase.getInstance().getReference();
+        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        // Initialize views
         initializeViews();
+        
+        // Load data
+        loadInitialData();
+        
+        // Setup remaining components
         setupClickListeners();
-        initializeFirebase();
         checkDocumentStatus();
 
         // Show Orders fragment by default
@@ -67,25 +78,9 @@ public class RestaurantHomeActivity extends AppCompatActivity {
         restaurantNameText = findViewById(R.id.restaurantNameText);
         restaurantStatusSwitch = findViewById(R.id.restaurantStatusSwitch);
         logoutButton = findViewById(R.id.logoutButton);
-
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
     }
 
-    private void setupClickListeners() {
-        // Bottom navigation
-        findViewById(R.id.ordersTab).setOnClickListener(v -> loadFragment(new OrdersFragment()));
-        findViewById(R.id.menuTab).setOnClickListener(v -> loadFragment(new MenuFragment()));
-        findViewById(R.id.accountTab).setOnClickListener(v -> loadFragment(new AccountFragment()));
-        
-        restaurantStatusSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> 
-            updateRestaurantStatus(isChecked));
-            
-        logoutButton.setOnClickListener(v -> handleLogout());
-    }
-
-    private void initializeFirebase() {
-        databaseRef = FirebaseDatabase.getInstance().getReference();
-        
+    private void loadInitialData() {
         // Load restaurant name
         databaseRef.child("restaurants").child(userId).child("restaurantName")
             .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -103,6 +98,51 @@ public class RestaurantHomeActivity extends AppCompatActivity {
                         "Error loading restaurant name", Toast.LENGTH_SHORT).show();
                 }
             });
+
+        // Load initial restaurant status
+        databaseRef.child("restaurants").child(userId).child("isOpen")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    Boolean isOpen = dataSnapshot.getValue(Boolean.class);
+                    if (isOpen != null) {
+                        restaurantStatusSwitch.setChecked(isOpen);
+                        updateSwitchAppearance(isOpen);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Toast.makeText(RestaurantHomeActivity.this, 
+                        "Error loading restaurant status", Toast.LENGTH_SHORT).show();
+                }
+            });
+    }
+
+    private void setupClickListeners() {
+        // Bottom navigation
+        findViewById(R.id.ordersTab).setOnClickListener(v -> {
+            loadFragment(new OrdersFragment());
+            updateTabColors(R.id.ordersTab);
+        });
+        findViewById(R.id.menuTab).setOnClickListener(v -> {
+            loadFragment(new MenuFragment());
+            updateTabColors(R.id.menuTab);
+        });
+        findViewById(R.id.accountTab).setOnClickListener(v -> {
+            loadFragment(new AccountFragment());
+            updateTabColors(R.id.accountTab);
+        });
+        
+        restaurantStatusSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            updateSwitchAppearance(isChecked);
+            updateRestaurantStatus(isChecked);
+        });
+            
+        logoutButton.setOnClickListener(v -> handleLogout());
+
+        // Set initial tab colors
+        updateTabColors(R.id.ordersTab);
     }
 
     private void loadFragment(Fragment fragment) {
@@ -176,5 +216,40 @@ public class RestaurantHomeActivity extends AppCompatActivity {
             // Redirect to document upload
             finish();
         }
+    }
+
+    private void updateSwitchAppearance(boolean isOpen) {
+        if (isOpen) {
+            restaurantStatusSwitch.setText("Open");
+            restaurantStatusSwitch.setTextColor(Color.parseColor("#4CAF50")); // Material Green
+        } else {
+            restaurantStatusSwitch.setText("Closed");
+            restaurantStatusSwitch.setTextColor(Color.parseColor("#F44336")); // Material Red
+        }
+    }
+
+    private void updateTabColors(int selectedTabId) {
+        // Get all tab views
+        View ordersTab = findViewById(R.id.ordersTab);
+        View menuTab = findViewById(R.id.menuTab);
+        View accountTab = findViewById(R.id.accountTab);
+
+        // Reset all tabs to black
+        updateTabColor(ordersTab, false);
+        updateTabColor(menuTab, false);
+        updateTabColor(accountTab, false);
+
+        // Set selected tab to blue
+        View selectedTab = findViewById(selectedTabId);
+        updateTabColor(selectedTab, true);
+    }
+
+    private void updateTabColor(View tabView, boolean isSelected) {
+        ImageView icon = (ImageView) ((LinearLayout) tabView).getChildAt(0);
+        TextView text = (TextView) ((LinearLayout) tabView).getChildAt(1);
+
+        int color = isSelected ? Color.parseColor("#2196F3") : Color.BLACK; // Material Blue when selected
+        icon.setColorFilter(color);
+        text.setTextColor(color);
     }
 } 

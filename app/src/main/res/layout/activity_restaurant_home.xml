@@ -70,7 +70,8 @@
                 android:id="@+id/restaurantStatusSwitch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Open"/>
+                android:text="Closed"
+                android:textColor="#FF0000"/>
         </LinearLayout>
 
         <!-- Fragment Container -->
@@ -99,13 +100,16 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_orders"/>
+                    android:src="@drawable/ic_orders"
+                    android:tint="#000000"/>
 
                 <TextView
+                    android:id="@+id/ordersTabText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Orders"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:textColor="#000000"/>
             </LinearLayout>
 
             <LinearLayout
@@ -119,13 +123,16 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_menu"/>
+                    android:src="@drawable/ic_menu"
+                    android:tint="#000000"/>
 
                 <TextView
+                    android:id="@+id/menuTabText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Menu"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:textColor="#000000"/>
             </LinearLayout>
 
             <LinearLayout
@@ -139,13 +146,16 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_account"/>
+                    android:src="@drawable/ic_account"
+                    android:tint="#000000"/>
 
                 <TextView
+                    android:id="@+id/accountTabText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Account"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:textColor="#000000"/>
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

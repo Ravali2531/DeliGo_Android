@@ -24,7 +24,7 @@ import java.util.List;
 
 public class OrdersFragment extends Fragment {
     private RecyclerView ordersRecyclerView;
-    private LinearLayout noOrdersLayout;
+    private LinearLayout noNewOrdersLayout, noInProgressOrdersLayout, noDeliveredOrdersLayout;
     private Button newOrdersTab, inProgressTab, deliveredTab;
     private OrdersAdapter ordersAdapter;
     private DatabaseReference databaseRef;
@@ -44,7 +44,9 @@ public class OrdersFragment extends Fragment {
 
     private void initializeViews(View view) {
         ordersRecyclerView = view.findViewById(R.id.ordersRecyclerView);
-        noOrdersLayout = view.findViewById(R.id.noOrdersLayout);
+        noNewOrdersLayout = view.findViewById(R.id.noNewOrdersLayout);
+        noInProgressOrdersLayout = view.findViewById(R.id.noInProgressOrdersLayout);
+        noDeliveredOrdersLayout = view.findViewById(R.id.noDeliveredOrdersLayout);
         newOrdersTab = view.findViewById(R.id.newOrdersTab);
         inProgressTab = view.findViewById(R.id.inProgressTab);
         deliveredTab = view.findViewById(R.id.deliveredTab);
@@ -99,6 +101,13 @@ public class OrdersFragment extends Fragment {
         }
     }
 
+    private void updateEmptyState(boolean isEmpty) {
+        ordersRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        noNewOrdersLayout.setVisibility(currentOrderStatus.equals("NEW") && isEmpty ? View.VISIBLE : View.GONE);
+        noInProgressOrdersLayout.setVisibility(currentOrderStatus.equals("IN_PROGRESS") && isEmpty ? View.VISIBLE : View.GONE);
+        noDeliveredOrdersLayout.setVisibility(currentOrderStatus.equals("DELIVERED") && isEmpty ? View.VISIBLE : View.GONE);
+    }
+
     private void loadOrders() {
         databaseRef.child("restaurants").child(userId).child("orders")
             .orderByChild("status").equalTo(currentOrderStatus)
@@ -114,12 +123,8 @@ public class OrdersFragment extends Fragment {
                         }
                     }
 
-                    if (orders.isEmpty()) {
-                        ordersRecyclerView.setVisibility(View.GONE);
-                        noOrdersLayout.setVisibility(View.VISIBLE);
-                    } else {
-                        ordersRecyclerView.setVisibility(View.VISIBLE);
-                        noOrdersLayout.setVisibility(View.GONE);
+                    updateEmptyState(orders.isEmpty());
+                    if (!orders.isEmpty()) {
                         ordersAdapter.setOrders(orders);
                     }
                 }
