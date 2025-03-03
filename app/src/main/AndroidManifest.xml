@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
@@ -53,6 +55,14 @@
 
         <activity
             android:name=".Driver.DriverHomeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantDocumentsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantHomeActivity"
             android:exported="false" />
     </application>
 

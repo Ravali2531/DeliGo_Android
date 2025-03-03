@@ -2,80 +2,120 @@ package com.example.deligoandroid.Admin;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import android.widget.Toast;
 
 public class AdminActivity extends AppCompatActivity {
-    private FirebaseAuth mAuth;
-    private DatabaseReference adminRef;
-    private TextView welcomeText;
-    private Button btnManageUsers, btnLogout;
+    private TextView driverCountBadge, restaurantCountBadge;
+    private Button userManagementBtn, chatManagementBtn, logoutButton;
+    private DatabaseReference databaseRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin);
 
-        mAuth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        adminRef = FirebaseDatabase.getInstance().getReference().child("admins");
+        // Initialize Firebase
+        databaseRef = FirebaseDatabase.getInstance().getReference();
+
+        // Initialize views
+        userManagementBtn = findViewById(R.id.userManagementBtn);
+        chatManagementBtn = findViewById(R.id.chatManagementBtn);
+        logoutButton = findViewById(R.id.logoutButton);
+        driverCountBadge = findViewById(R.id.driverCountBadge);
+        restaurantCountBadge = findViewById(R.id.restaurantCountBadge);
+
+        // Setup click listeners
+        userManagementBtn.setOnClickListener(v -> 
+            startActivity(new Intent(this, ManageUsersActivity.class)));
         
-        welcomeText = findViewById(R.id.welcomeAdminText);
-        btnManageUsers = findViewById(R.id.btnManageUsers);
-        btnLogout = findViewById(R.id.btnLogout);
-
-        if (currentUser != null) {
-            checkAdminStatus(currentUser.getUid());
-        }
-
-        // Set click listener for Manage Users button
-        btnManageUsers.setOnClickListener(v -> {
-            Intent intent = new Intent(AdminActivity.this, ManageUsersActivity.class);
-            startActivity(intent);
-        });
-
-        // Set click listener for Logout button
-        btnLogout.setOnClickListener(v -> {
-            mAuth.signOut();
-            Toast.makeText(AdminActivity.this, "Logged out successfully", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(AdminActivity.this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
-        });
+        logoutButton.setOnClickListener(v -> handleLogout());
+        
+        // Setup document count listeners
+        setupDocumentCountListeners();
     }
 
-    private void checkAdminStatus(String uid) {
-        adminRef.child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
+    private void setupDocumentCountListeners() {
+        // Listen for pending driver documents
+        databaseRef.child("drivers").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    String fullName = dataSnapshot.child("fullName").getValue(String.class);
-                    welcomeText.setText("Welcome, " + fullName + "!");
-                    // Here you can initialize other admin features
-                } else {
-                    Toast.makeText(AdminActivity.this, "Unauthorized access", Toast.LENGTH_SHORT).show();
-                    finish();
+                int pendingCount = 0;
+                for (DataSnapshot driverSnapshot : dataSnapshot.getChildren()) {
+                    Boolean documentsSubmitted = driverSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                    String status = driverSnapshot.child("documents").child("status").getValue(String.class);
+                    if (documentsSubmitted != null && documentsSubmitted && 
+                        (status == null || status.equals("pending_review"))) {
+                        pendingCount++;
+                    }
                 }
+                updateDriverBadge(pendingCount);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(AdminActivity.this, "Error: " + databaseError.getMessage(), 
-                    Toast.LENGTH_SHORT).show();
+                Toast.makeText(AdminActivity.this, 
+                    "Error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+
+        // Listen for pending restaurant documents
+        databaseRef.child("restaurants").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                int pendingCount = 0;
+                for (DataSnapshot restaurantSnapshot : dataSnapshot.getChildren()) {
+                    Boolean documentsSubmitted = restaurantSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                    String status = restaurantSnapshot.child("documents").child("status").getValue(String.class);
+                    if (documentsSubmitted != null && documentsSubmitted && 
+                        (status == null || status.equals("pending_review"))) {
+                        pendingCount++;
+                    }
+                }
+                updateRestaurantBadge(pendingCount);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(AdminActivity.this, 
+                    "Error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void updateDriverBadge(int count) {
+        if (count > 0) {
+            driverCountBadge.setVisibility(View.VISIBLE);
+            driverCountBadge.setText(String.valueOf(count));
+        } else {
+            driverCountBadge.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateRestaurantBadge(int count) {
+        if (count > 0) {
+            restaurantCountBadge.setVisibility(View.VISIBLE);
+            restaurantCountBadge.setText(String.valueOf(count));
+        } else {
+            restaurantCountBadge.setVisibility(View.GONE);
+        }
+    }
+
+    private void handleLogout() {
+        FirebaseAuth.getInstance().signOut();
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
     }
 } 

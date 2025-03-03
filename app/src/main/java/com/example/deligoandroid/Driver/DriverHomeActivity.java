@@ -1,10 +1,14 @@
 package com.example.deligoandroid.Driver;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -17,6 +21,7 @@ public class DriverHomeActivity extends AppCompatActivity {
 
     private LinearLayout pendingReviewLayout;
     private LinearLayout normalHomeLayout;
+    private Button logoutButton;
     private DatabaseReference databaseRef;
     private String userId;
 
@@ -28,6 +33,14 @@ public class DriverHomeActivity extends AppCompatActivity {
         // Initialize views
         pendingReviewLayout = findViewById(R.id.pendingReviewLayout);
         normalHomeLayout = findViewById(R.id.normalHomeLayout);
+        logoutButton = findViewById(R.id.logoutButton);
+
+        // Set initial visibility
+        pendingReviewLayout.setVisibility(View.GONE);
+        normalHomeLayout.setVisibility(View.GONE);
+
+        // Setup logout button
+        logoutButton.setOnClickListener(v -> handleLogout());
 
         // Initialize Firebase
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -40,18 +53,33 @@ public class DriverHomeActivity extends AppCompatActivity {
     private void checkDocumentStatus() {
         databaseRef.child("drivers")
                 .child(userId)
-                .child("documents")
-                .child("status")
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                        String status = dataSnapshot.getValue(String.class);
-                        updateUI(status);
+                        if (dataSnapshot.exists()) {
+                            // Check if documents are submitted
+                            Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                            if (documentsSubmitted != null && documentsSubmitted) {
+                                // Documents are submitted, check status
+                                DataSnapshot statusSnapshot = dataSnapshot.child("documents").child("status");
+                                String status = statusSnapshot.getValue(String.class);
+                                updateUI(status);
+                            } else {
+                                // Documents not submitted
+                                updateUI("not_submitted");
+                            }
+                        } else {
+                            // Driver data doesn't exist
+                            Toast.makeText(DriverHomeActivity.this, 
+                                "Error: Driver data not found", Toast.LENGTH_LONG).show();
+                            finish();
+                        }
                     }
 
                     @Override
                     public void onCancelled(DatabaseError databaseError) {
-                        // Handle error
+                        Toast.makeText(DriverHomeActivity.this, 
+                            "Error: " + databaseError.getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
     }
@@ -63,6 +91,15 @@ public class DriverHomeActivity extends AppCompatActivity {
         } else if (status.equals("approved")) {
             pendingReviewLayout.setVisibility(View.GONE);
             normalHomeLayout.setVisibility(View.VISIBLE);
+        } else if (status.equals("not_submitted")) {
+            // Redirect to document upload
+            finish();
         }
+    }
+
+    private void handleLogout() {
+        FirebaseAuth.getInstance().signOut();
+        startActivity(new Intent(this, LoginActivity.class));
+        finish();
     }
 } 

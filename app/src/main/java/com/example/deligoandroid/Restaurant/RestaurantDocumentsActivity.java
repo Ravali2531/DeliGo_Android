@@ -1,11 +1,12 @@
-package com.example.deligoandroid.Driver;
+package com.example.deligoandroid.Restaurant;
 
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.webkit.MimeTypeMap;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -21,31 +22,32 @@ import com.google.firebase.storage.StorageReference;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DriverDocumentsActivity extends AppCompatActivity {
+public class RestaurantDocumentsActivity extends AppCompatActivity {
 
-    private ImageView govtIdPreview, licensePreview;
-    private Button uploadGovtIdButton, uploadLicenseButton, submitButton;
-    private Uri govtIdUri, licenseUri;
+    private ImageView restaurantProofPreview, ownerIdPreview;
+    private Button uploadRestaurantProofButton, uploadOwnerIdButton, submitButton;
+    private TimePicker openingTimePicker, closingTimePicker;
+    private Uri restaurantProofUri, ownerIdUri;
     private FirebaseStorage storage;
     private DatabaseReference databaseRef;
     private String userId;
 
-    private final ActivityResultLauncher<String> govtIdPicker = registerForActivityResult(
+    private final ActivityResultLauncher<String> restaurantProofPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
             uri -> {
                 if (uri != null) {
-                    govtIdUri = uri;
-                    updatePreview(govtIdPreview, uri);
+                    restaurantProofUri = uri;
+                    updatePreview(restaurantProofPreview, uri);
                     updateSubmitButtonState();
                 }
             });
 
-    private final ActivityResultLauncher<String> licensePicker = registerForActivityResult(
+    private final ActivityResultLauncher<String> ownerIdPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
             uri -> {
                 if (uri != null) {
-                    licenseUri = uri;
-                    updatePreview(licensePreview, uri);
+                    ownerIdUri = uri;
+                    updatePreview(ownerIdPreview, uri);
                     updateSubmitButtonState();
                 }
             });
@@ -53,7 +55,7 @@ public class DriverDocumentsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_driver_documents);
+        setContentView(R.layout.activity_restaurant_documents);
 
         // Initialize Firebase
         storage = FirebaseStorage.getInstance();
@@ -64,17 +66,34 @@ public class DriverDocumentsActivity extends AppCompatActivity {
         initializeViews();
 
         // Setup click listeners
-        uploadGovtIdButton.setOnClickListener(v -> openDocumentPicker(govtIdPicker));
-        uploadLicenseButton.setOnClickListener(v -> openDocumentPicker(licensePicker));
+        uploadRestaurantProofButton.setOnClickListener(v -> openDocumentPicker(restaurantProofPicker));
+        uploadOwnerIdButton.setOnClickListener(v -> openDocumentPicker(ownerIdPicker));
         submitButton.setOnClickListener(v -> uploadDocuments());
 
         // Create initial database structure
         createInitialStructure();
     }
 
+    private void initializeViews() {
+        restaurantProofPreview = findViewById(R.id.restaurantProofPreview);
+        ownerIdPreview = findViewById(R.id.ownerIdPreview);
+        uploadRestaurantProofButton = findViewById(R.id.uploadRestaurantProofButton);
+        uploadOwnerIdButton = findViewById(R.id.uploadOwnerIdButton);
+        submitButton = findViewById(R.id.submitButton);
+        openingTimePicker = findViewById(R.id.openingTimePicker);
+        closingTimePicker = findViewById(R.id.closingTimePicker);
+
+        // Set 24-hour format for time pickers
+        openingTimePicker.setIs24HourView(true);
+        closingTimePicker.setIs24HourView(true);
+
+        // Set initial placeholder images
+        restaurantProofPreview.setImageResource(R.drawable.id_placeholder);
+        ownerIdPreview.setImageResource(R.drawable.id_placeholder);
+    }
+
     private void createInitialStructure() {
-        // First check if structure already exists
-        databaseRef.child("drivers").child(userId).get()
+        databaseRef.child("restaurants").child(userId).get()
             .addOnSuccessListener(dataSnapshot -> {
                 if (!dataSnapshot.exists()) {
                     Map<String, Object> initialData = new HashMap<>();
@@ -82,7 +101,7 @@ public class DriverDocumentsActivity extends AppCompatActivity {
                     initialData.put("documents/status", "not_submitted");
                     initialData.put("documents/files", new HashMap<>());
 
-                    databaseRef.child("drivers")
+                    databaseRef.child("restaurants")
                             .child(userId)
                             .setValue(initialData)
                             .addOnFailureListener(e -> handleError("Failed to create initial structure: " + e.getMessage()));
@@ -101,41 +120,20 @@ public class DriverDocumentsActivity extends AppCompatActivity {
 
     private void updatePreview(ImageView preview, Uri uri) {
         try {
-            if (preview == govtIdPreview) {
-                preview.setImageURI(null); // Clear the previous image
-                preview.setImageURI(uri);
-            } else if (preview == licensePreview) {
-                preview.setImageURI(null); // Clear the previous image
-                preview.setImageURI(uri);
-            }
+            preview.setImageURI(null);
+            preview.setImageURI(uri);
         } catch (Exception e) {
             handleError("Failed to update preview: " + e.getMessage());
-            if (preview == govtIdPreview) {
-                preview.setImageResource(R.drawable.id_placeholder);
-            } else {
-                preview.setImageResource(R.drawable.license_placeholder);
-            }
+            preview.setImageResource(R.drawable.id_placeholder);
         }
     }
 
-    private void initializeViews() {
-        govtIdPreview = findViewById(R.id.govtIdPreview);
-        licensePreview = findViewById(R.id.licensePreview);
-        uploadGovtIdButton = findViewById(R.id.uploadGovtIdButton);
-        uploadLicenseButton = findViewById(R.id.uploadLicenseButton);
-        submitButton = findViewById(R.id.submitButton);
-
-        // Set initial placeholder images
-        govtIdPreview.setImageResource(R.drawable.id_placeholder);
-        licensePreview.setImageResource(R.drawable.license_placeholder);
-    }
-
     private void updateSubmitButtonState() {
-        submitButton.setEnabled(govtIdUri != null && licenseUri != null);
+        submitButton.setEnabled(restaurantProofUri != null && ownerIdUri != null);
     }
 
     private void uploadDocuments() {
-        if (govtIdUri == null || licenseUri == null) {
+        if (restaurantProofUri == null || ownerIdUri == null) {
             Toast.makeText(this, "Please select both documents", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -143,15 +141,19 @@ public class DriverDocumentsActivity extends AppCompatActivity {
         submitButton.setEnabled(false);
         submitButton.setText("Uploading...");
 
-        try {
-            // Upload government ID first
-            uploadFile(govtIdUri, "govt_id", () -> {
-                // Then upload license
-                uploadFile(licenseUri, "license", this::finalizeUpload);
-            });
-        } catch (Exception e) {
-            handleError("Failed to start upload: " + e.getMessage());
-        }
+        // Save opening and closing hours
+        Map<String, String> hours = new HashMap<>();
+        hours.put("opening", String.format("%02d:%02d", openingTimePicker.getHour(), openingTimePicker.getMinute()));
+        hours.put("closing", String.format("%02d:%02d", closingTimePicker.getHour(), closingTimePicker.getMinute()));
+
+        databaseRef.child("restaurants").child(userId).child("hours").setValue(hours)
+            .addOnSuccessListener(aVoid -> {
+                // After saving hours, upload documents
+                uploadFile(restaurantProofUri, "restaurant_proof", () -> {
+                    uploadFile(ownerIdUri, "owner_id", this::finalizeUpload);
+                });
+            })
+            .addOnFailureListener(e -> handleError("Failed to save business hours: " + e.getMessage()));
     }
 
     private void uploadFile(Uri fileUri, String type, Runnable onComplete) {
@@ -161,11 +163,10 @@ public class DriverDocumentsActivity extends AppCompatActivity {
         }
 
         StorageReference ref = storage.getReference()
-                .child("driver_documents")
+                .child("restaurant_documents")
                 .child(userId)
                 .child(type + "_" + System.currentTimeMillis() + ".jpg");
 
-        // Create a map for the file metadata
         Map<String, Object> fileData = new HashMap<>();
         fileData.put("uploadTime", System.currentTimeMillis());
 
@@ -175,8 +176,7 @@ public class DriverDocumentsActivity extends AppCompatActivity {
                             .addOnSuccessListener(uri -> {
                                 fileData.put("url", uri.toString());
                                 
-                                // Update the database with file information
-                                databaseRef.child("drivers")
+                                databaseRef.child("restaurants")
                                         .child(userId)
                                         .child("documents")
                                         .child("files")
@@ -195,14 +195,14 @@ public class DriverDocumentsActivity extends AppCompatActivity {
         updates.put("documentsSubmitted", true);
         updates.put("documents/status", "pending_review");
 
-        databaseRef.child("drivers")
+        databaseRef.child("restaurants")
                 .child(userId)
                 .updateChildren(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, 
                         "Documents uploaded successfully! They will be reviewed shortly.", 
                         Toast.LENGTH_LONG).show();
-                    startActivity(new Intent(this, DriverHomeActivity.class));
+                    startActivity(new Intent(this, RestaurantHomeActivity.class));
                     finish();
                 })
                 .addOnFailureListener(e -> handleError("Failed to finalize upload: " + e.getMessage()));
