@@ -56,6 +56,14 @@
         <activity
             android:name=".Driver.DriverHomeActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantDocumentsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantHomeActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

@@ -2,11 +2,12 @@ package com.example.deligoandroid.Admin;
 
 import android.os.Bundle;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.widget.Toast;
 
 import com.example.deligoandroid.R;
 import com.google.firebase.database.DataSnapshot;
@@ -14,122 +15,128 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ManageUsersActivity extends AppCompatActivity {
-    private Button btnCustomers, btnDrivers, btnRestaurants;
-    private RecyclerView userListRecyclerView;
-    private TextView userTypeTitle;
-    private LinearLayout userDetailsContainer;
-    private DatabaseReference mDatabase;
+public class  ManageUsersActivity extends AppCompatActivity {
+    private Button customersTab, driversTab, restaurantsTab;
+    private RecyclerView usersRecyclerView;
+    private DatabaseReference databaseRef;
+    private UserDocumentsAdapter adapter;
+    private String currentUserType = "customers";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_manage_users);
 
-        mDatabase = FirebaseDatabase.getInstance().getReference();
-        
-        // Initialize views
-        btnCustomers = findViewById(R.id.btnCustomers);
-        btnDrivers = findViewById(R.id.btnDrivers);
-        btnRestaurants = findViewById(R.id.btnRestaurants);
-        userTypeTitle = findViewById(R.id.userTypeTitle);
-        userListRecyclerView = findViewById(R.id.userListRecyclerView);
-        
-        // Set up RecyclerView
-        userListRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        // Initialize Firebase
+        databaseRef = FirebaseDatabase.getInstance().getReference();
 
-        // Set click listeners
-        btnCustomers.setOnClickListener(v -> loadUsers("customers"));
-        btnDrivers.setOnClickListener(v -> loadUsers("drivers"));
-        btnRestaurants.setOnClickListener(v -> loadUsers("restaurants"));
+        // Initialize views
+        customersTab = findViewById(R.id.customersTab);
+        driversTab = findViewById(R.id.driversTab);
+        restaurantsTab = findViewById(R.id.restaurantsTab);
+        usersRecyclerView = findViewById(R.id.usersRecyclerView);
+
+        // Setup RecyclerView
+        usersRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new UserDocumentsAdapter();
+        usersRecyclerView.setAdapter(adapter);
+
+        // Setup click listeners
+        customersTab.setOnClickListener(v -> showUserType("customers"));
+        driversTab.setOnClickListener(v -> showUserType("drivers"));
+        restaurantsTab.setOnClickListener(v -> showUserType("restaurants"));
+
+        // Show customers by default
+        showUserType("customers");
+    }
+
+    private void showUserType(String userType) {
+        currentUserType = userType;
+        resetTabColors();
+        
+        switch (userType) {
+            case "customers":
+                customersTab.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.orange)));
+                break;
+            case "drivers":
+                driversTab.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.orange)));
+                break;
+            case "restaurants":
+                restaurantsTab.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.orange)));
+                break;
+        }
+        
+        loadUsers(userType);
+    }
+
+    private void resetTabColors() {
+        int gray = Color.parseColor("#CCCCCC");
+        customersTab.setBackgroundTintList(ColorStateList.valueOf(gray));
+        driversTab.setBackgroundTintList(ColorStateList.valueOf(gray));
+        restaurantsTab.setBackgroundTintList(ColorStateList.valueOf(gray));
     }
 
     private void loadUsers(String userType) {
-        userTypeTitle.setText(userType.substring(0, 1).toUpperCase() + userType.substring(1));
-        
-        mDatabase.child(userType).addListenerForSingleValueEvent(new ValueEventListener() {
+        databaseRef.child(userType).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                List<UserData> userList = new ArrayList<>();
+                List<UserDocument> users = new ArrayList<>();
                 
                 for (DataSnapshot userSnapshot : dataSnapshot.getChildren()) {
-                    String userId = userSnapshot.getKey();
-                    String email = userSnapshot.child("email").getValue(String.class);
-                    String fullName = userSnapshot.child("fullName").getValue(String.class);
-                    String phone = userSnapshot.child("phone").getValue(String.class);
+                    UserDocument user = new UserDocument();
+                    user.userId = userSnapshot.getKey();
+                    user.userType = userType;
+                    user.name = userSnapshot.child("fullName").getValue(String.class);
+                    user.email = userSnapshot.child("email").getValue(String.class);
+                    user.phone = userSnapshot.child("phone").getValue(String.class);
+                    user.address = userSnapshot.child("address").getValue(String.class);
+
+                    if (userType.equals("restaurants")) {
+                        user.restaurantName = userSnapshot.child("restaurantName").getValue(String.class);
+                        user.openingHours = userSnapshot.child("hours/opening").getValue(String.class);
+                        user.closingHours = userSnapshot.child("hours/closing").getValue(String.class);
+                    }
+
+                    if (userType.equals("drivers") || userType.equals("restaurants")) {
+                        user.documentsSubmitted = userSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                        if (user.documentsSubmitted != null && user.documentsSubmitted) {
+                            user.documentStatus = userSnapshot.child("documents/status").getValue(String.class);
+                            
+                            if (userType.equals("drivers")) {
+                                user.document1Url = userSnapshot.child("documents/files/govt_id/url").getValue(String.class);
+                                user.document2Url = userSnapshot.child("documents/files/license/url").getValue(String.class);
+                            } else {
+                                user.document1Url = userSnapshot.child("documents/files/restaurant_proof/url").getValue(String.class);
+                                user.document2Url = userSnapshot.child("documents/files/owner_id/url").getValue(String.class);
+                            }
+                        }
+                    }
                     
-                    UserData userData = new UserData(userId, email, fullName, phone);
-                    userList.add(userData);
+                    users.add(user);
                 }
                 
-                UserListAdapter adapter = new UserListAdapter(userList);
-                userListRecyclerView.setAdapter(adapter);
+                adapter.setDocuments(users, userType);
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
                 Toast.makeText(ManageUsersActivity.this, 
-                    "Error loading users: " + databaseError.getMessage(), 
-                    Toast.LENGTH_SHORT).show();
+                    "Error: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    // Data class for user information
-    private static class UserData {
-        String userId;
-        String email;
-        String fullName;
-        String phone;
-
-        UserData(String userId, String email, String fullName, String phone) {
-            this.userId = userId;
-            this.email = email;
-            this.fullName = fullName;
-            this.phone = phone;
-        }
-    }
-
-    // RecyclerView Adapter
-    private class UserListAdapter extends RecyclerView.Adapter<UserListAdapter.UserViewHolder> {
-        private List<UserData> userList;
-
-        UserListAdapter(List<UserData> userList) {
-            this.userList = userList;
-        }
-
-        @Override
-        public UserViewHolder onCreateViewHolder(android.view.ViewGroup parent, int viewType) {
-            android.view.View view = getLayoutInflater().inflate(R.layout.item_user, parent, false);
-            return new UserViewHolder(view);
-        }
-
-        @Override
-        public void onBindViewHolder(UserViewHolder holder, int position) {
-            UserData userData = userList.get(position);
-            holder.nameText.setText("Name: " + userData.fullName);
-            holder.emailText.setText("Email: " + userData.email);
-            holder.phoneText.setText("Phone: " + userData.phone);
-        }
-
-        @Override
-        public int getItemCount() {
-            return userList.size();
-        }
-
-        class UserViewHolder extends RecyclerView.ViewHolder {
-            TextView nameText, emailText, phoneText;
-
-            UserViewHolder(android.view.View itemView) {
-                super(itemView);
-                nameText = itemView.findViewById(R.id.userName);
-                emailText = itemView.findViewById(R.id.userEmail);
-                phoneText = itemView.findViewById(R.id.userPhone);
-            }
-        }
+    void updateDocumentStatus(UserDocument document, String status) {
+        DatabaseReference userRef = databaseRef.child(document.userType).child(document.userId);
+        userRef.child("documents/status").setValue(status)
+            .addOnSuccessListener(aVoid -> {
+                String message = status.equals("approved") ? "Document approved!" : "Document rejected!";
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+            })
+            .addOnFailureListener(e -> 
+                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 } 
