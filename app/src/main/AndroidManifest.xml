@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
+        android:name=".DeliGoApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -64,6 +65,26 @@
         <activity
             android:name=".Restaurant.RestaurantHomeActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.AddCustomizationActivity"
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.AddOptionActivity"
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.AddMenuItemActivity"
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.Activities.EditMenuItemActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"/>
     </application>
 
 </manifest>

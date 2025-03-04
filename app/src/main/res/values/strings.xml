@@ -5,4 +5,10 @@
         <item>Driver</item>
         <item>Restaurant</item>
     </string-array>
+    <string-array name="food_categories">
+        <item>Appetizer</item>
+        <item>Main Course</item>
+        <item>Dessert</item>
+        <item>Beverage</item>
+    </string-array>
 </resources>

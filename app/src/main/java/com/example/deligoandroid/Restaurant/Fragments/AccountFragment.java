@@ -5,65 +5,99 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.example.deligoandroid.Authentication.LoginActivity;
-import com.example.deligoandroid.R;
+import com.example.deligoandroid.Utils.PreferencesManager;
+import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.*;
 
 public class AccountFragment extends Fragment {
-    private TextView restaurantNameText, emailText, phoneText;
-    private Button logoutButton;
-    private DatabaseReference databaseRef;
-    private String userId;
+    private FragmentAccountBinding binding;
+    private FirebaseAuth auth;
+    private PreferencesManager preferencesManager;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_account, container, false);
-
-        initializeViews(view);
-        loadRestaurantDetails();
-
-        return view;
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        auth = FirebaseAuth.getInstance();
+        preferencesManager = new PreferencesManager(requireContext());
     }
 
-    private void initializeViews(View view) {
-        restaurantNameText = view.findViewById(R.id.restaurantNameText);
-        emailText = view.findViewById(R.id.emailText);
-        phoneText = view.findViewById(R.id.phoneText);
-        logoutButton = view.findViewById(R.id.logoutButton);
-
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseRef = FirebaseDatabase.getInstance().getReference();
-
-        logoutButton.setOnClickListener(v -> handleLogout());
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        binding = FragmentAccountBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
-    private void loadRestaurantDetails() {
-        databaseRef.child("restaurants").child(userId)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(DataSnapshot dataSnapshot) {
-                    if (dataSnapshot.exists()) {
-                        restaurantNameText.setText(dataSnapshot.child("restaurantName").getValue(String.class));
-                        emailText.setText(dataSnapshot.child("email").getValue(String.class));
-                        phoneText.setText(dataSnapshot.child("phone").getValue(String.class));
-                    }
-                }
-
-                @Override
-                public void onCancelled(DatabaseError databaseError) {
-                    // Handle error
-                }
-            });
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        setupUI();
+        setupClickListeners();
     }
 
-    private void handleLogout() {
-        FirebaseAuth.getInstance().signOut();
-        startActivity(new Intent(getContext(), LoginActivity.class));
-        requireActivity().finish();
+    private void setupUI() {
+        // Set email from Firebase
+        if (auth.getCurrentUser() != null) {
+            String email = auth.getCurrentUser().getEmail();
+            binding.emailText.setText(email);
+            binding.emailSubText.setText(email);
+        }
+
+        // Set dark mode switch state
+        binding.darkModeSwitch.setChecked(preferencesManager.isDarkMode());
+    }
+
+    private void setupClickListeners() {
+        // Store Hours
+        binding.storeHoursLayout.setOnClickListener(v -> {
+            // TODO: Implement store hours screen
+            Toast.makeText(requireContext(), "Store Hours - Coming Soon", Toast.LENGTH_SHORT).show();
+        });
+
+        // Store Information
+        binding.storeInfoLayout.setOnClickListener(v -> {
+            // TODO: Implement store information screen
+            Toast.makeText(requireContext(), "Store Information - Coming Soon", Toast.LENGTH_SHORT).show();
+        });
+
+        // Dark Mode Switch
+        binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferencesManager.setDarkMode(isChecked);
+            if (isChecked) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+        });
+
+        // Language Switch
+        binding.languageSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // TODO: Implement language change
+            Toast.makeText(requireContext(), "Language Change - Coming Soon", Toast.LENGTH_SHORT).show();
+        });
+
+        // Sign Out
+        binding.signOutButton.setOnClickListener(v -> signOut());
+    }
+
+    private void signOut() {
+        auth.signOut();
+        Intent intent = new Intent(requireContext(), LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 } 

@@ -1,25 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="20dp"
     android:gravity="center"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="?android:colorBackground">
 
     <!-- Logo -->
-
-    <!-- Role Selector -->
-<!--    <Spinner-->
-<!--        android:id="@+id/roleSpinner"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginTop="10dp"-->
-<!--        android:entries="@array/user_roles"-->
-<!--        android:background="@android:drawable/editbox_background"-->
-<!--        android:padding="10dp" />-->
-
-    <!-- Email Input -->
     <ImageView
         android:id="@+id/logoImage"
         android:layout_width="120dp"
@@ -27,56 +16,70 @@
         android:src="@drawable/deligo_logo"
         android:layout_marginBottom="100dp"/>
 
-    <EditText
-        android:id="@+id/emailInput"
+    <!-- Email Input -->
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Email"
-        android:drawableStart="@android:drawable/ic_dialog_email"
-        android:inputType="textEmailAddress"
-        android:padding="10dp"
-        android:background="@android:drawable/editbox_background" />
+        app:startIconDrawable="@android:drawable/ic_dialog_email"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/emailInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textEmailAddress"
+            android:textColor="?android:textColorPrimary"/>
+    </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Password Input -->
-    <EditText
-        android:id="@+id/passwordInput"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Password"
-        android:drawableStart="@android:drawable/ic_lock_idle_lock"
-        android:inputType="textPassword"
-        android:padding="10dp"
-        android:background="@android:drawable/editbox_background"
-        android:layout_marginTop="10dp" />
+        android:layout_marginTop="10dp"
+        app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+        app:endIconMode="password_toggle"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/passwordInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:textColor="?android:textColorPrimary"/>
+    </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Login Button -->
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/loginButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Login"
-        android:backgroundTint="#F4A261"
-        android:textColor="@android:color/white"
-        android:layout_marginTop="15dp" />
+        android:textColor="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary"
+        android:layout_marginTop="15dp"/>
 
     <!-- Forgot Password -->
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/forgotPassword"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Forgot Password?"
-        android:textColor="#1E88E5"
+        android:textColor="?attr/colorPrimary"
         android:layout_marginTop="10dp"
-        android:clickable="true" />
+        android:clickable="true"
+        android:focusable="true"/>
 
     <!-- Signup Link -->
-    <TextView
+    <com.google.android.material.textview.MaterialTextView
         android:id="@+id/signupText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Don't have an account? Signup"
-        android:textColor="#1E88E5"
+        android:textColor="?attr/colorPrimary"
         android:layout_marginTop="10dp"
-        android:clickable="true" />
+        android:clickable="true"
+        android:focusable="true"/>
 
 </LinearLayout>

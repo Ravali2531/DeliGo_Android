@@ -18,7 +18,7 @@ import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Restaurant.Adapters.MenuAdapter;
 import com.example.deligoandroid.Restaurant.Adapters.OrdersAdapter;
-import com.example.deligoandroid.Restaurant.Models.MenuItem;
+import com.example.deligoandroid.Restaurant.Models.MenuItemModel;
 import com.example.deligoandroid.Restaurant.Models.Order;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -248,8 +248,8 @@ public class RestaurantHomeActivity extends AppCompatActivity {
         ImageView icon = (ImageView) ((LinearLayout) tabView).getChildAt(0);
         TextView text = (TextView) ((LinearLayout) tabView).getChildAt(1);
 
-        int color = isSelected ? Color.parseColor("#2196F3") : Color.BLACK; // Material Blue when selected
-        icon.setColorFilter(color);
+        int color = isSelected ? Color.parseColor("#2196F3") : Color.parseColor("#000000");
+        icon.setImageTintList(ColorStateList.valueOf(color));
         text.setTextColor(color);
     }
 } 
