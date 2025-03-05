@@ -68,23 +68,29 @@
 
         <activity
             android:name=".Restaurant.AddCustomizationActivity"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:theme="@style/Theme.DeliGoAndroid"
             android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".Restaurant.AddOptionActivity"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:theme="@style/Theme.DeliGoAndroid"
             android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".Restaurant.AddMenuItemActivity"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"
+            android:theme="@style/Theme.DeliGoAndroid"
             android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".Restaurant.Activities.EditMenuItemActivity"
             android:exported="false"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar"/>
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <activity
+            android:name=".Restaurant.StoreInformationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
     </application>
 
 </manifest>

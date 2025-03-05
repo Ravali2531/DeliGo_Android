@@ -17,8 +17,10 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
+import com.example.deligoandroid.Admin.ManageUsersActivity;
 import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
+import com.example.deligoandroid.Restaurant.StoreInformationActivity;
 import com.example.deligoandroid.Utils.PreferencesManager;
 import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -77,7 +79,8 @@ public class AccountFragment extends Fragment {
 
         // Store Information
         binding.storeInfoLayout.setOnClickListener(v -> {
-            Toast.makeText(requireContext(), getString(R.string.store_info_coming_soon), Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(requireContext(), StoreInformationActivity.class));
+
         });
 
         // Dark Mode Switch
