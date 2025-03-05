@@ -83,9 +83,8 @@ public class AccountFragment extends Fragment {
         // Dark Mode Switch
         binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             try {
-                // Save current tab and dark mode preference
-                int selectedItemId = getBottomNavSelectedItemId();
-                preferencesManager.setSelectedTabId(selectedItemId);
+                // Always save account tab as the selected tab when switching theme
+                preferencesManager.setSelectedTabId(R.id.navigation_account);
                 preferencesManager.setDarkMode(isChecked);
 
                 // Delay the theme change slightly to allow preferences to be saved
@@ -105,9 +104,8 @@ public class AccountFragment extends Fragment {
         binding.languageSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             try {
                 isCurrentlyFrench = isChecked;
-                // Save current tab
-                int selectedItemId = getBottomNavSelectedItemId();
-                preferencesManager.setSelectedTabId(selectedItemId);
+                // Always save account tab as the selected tab when switching language
+                preferencesManager.setSelectedTabId(R.id.navigation_account);
                 
                 // Save language preference
                 String languageCode = isCurrentlyFrench ? "fr" : "en";

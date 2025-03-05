@@ -24,10 +24,6 @@ public class RestaurantMainActivity extends AppCompatActivity {
         // Setup Bottom Navigation
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
         
-        // Restore the selected tab
-        int savedItemId = preferencesManager.getSelectedTabId(R.id.navigation_orders);
-        bottomNavigationView.setSelectedItemId(savedItemId);
-
         bottomNavigationView.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
@@ -53,12 +49,26 @@ public class RestaurantMainActivity extends AppCompatActivity {
             return false;
         });
 
-        // Set initial fragment if this is the first creation
-        if (savedInstanceState == null) {
-            getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.nav_host_fragment_activity_restaurant_main, new OrdersFragment())
-                .commit();
+        // Restore the selected tab and set initial fragment
+        int savedItemId = preferencesManager.getSelectedTabId(R.id.navigation_orders);
+        
+        // Create and set the initial fragment
+        Fragment initialFragment;
+        if (savedItemId == R.id.navigation_orders) {
+            initialFragment = new OrdersFragment();
+        } else if (savedItemId == R.id.navigation_menu) {
+            initialFragment = new MenuFragment();
+        } else {
+            initialFragment = new AccountFragment();
         }
+
+        // Set the selected tab
+        bottomNavigationView.setSelectedItemId(savedItemId);
+
+        // Set initial fragment
+        getSupportFragmentManager()
+            .beginTransaction()
+            .replace(R.id.nav_host_fragment_activity_restaurant_main, initialFragment)
+            .commit();
     }
 } 
