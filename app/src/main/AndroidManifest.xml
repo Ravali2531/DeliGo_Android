@@ -3,9 +3,14 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
+        android:name=".DeliGoApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -54,6 +59,58 @@
         <activity
             android:name=".Driver.DriverHomeActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantDocumentsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.RestaurantHomeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.AddCustomizationActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.AddOptionActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.AddMenuItemActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
+            android:name=".Restaurant.Activities.EditMenuItemActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <activity
+            android:name=".Restaurant.LocationPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <activity
+            android:name=".Restaurant.StoreInformationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <activity
+            android:name=".Admin.RestaurantDetailsActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".Admin.DocumentPreviewActivity"
+            android:exported="false"/>
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key"/>
+
     </application>
 
 </manifest>

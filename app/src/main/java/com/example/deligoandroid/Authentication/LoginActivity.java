@@ -20,6 +20,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.example.deligoandroid.Restaurant.RestaurantDocumentsActivity;
+import com.example.deligoandroid.Restaurant.RestaurantHomeActivity;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -162,12 +164,24 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    redirectUser("Restaurant");
-                } else {
-                    // User not found in any role
-                    Toast.makeText(LoginActivity.this, "User role not found", Toast.LENGTH_SHORT).show();
-                    mAuth.signOut();
+                    // Check if documents are submitted
+                    Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                    if (documentsSubmitted == null || !documentsSubmitted) {
+                        // Documents not submitted, redirect to upload page
+                        Intent intent = new Intent(LoginActivity.this, RestaurantDocumentsActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        // Documents submitted, go to restaurant home
+                        Intent intent = new Intent(LoginActivity.this, RestaurantHomeActivity.class);
+                        startActivity(intent);
+                        finish();
+                    }
+                    return;
                 }
+                // User not found in any role
+                Toast.makeText(LoginActivity.this, "User role not found", Toast.LENGTH_SHORT).show();
+                mAuth.signOut();
                 loginButton.setEnabled(true);
                 loginButton.setText("Login");
             }
@@ -190,10 +204,10 @@ public class LoginActivity extends AppCompatActivity {
                 intent = new Intent(LoginActivity.this, MainActivity.class);
                 break;
             case "Driver":
-                intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
                 break;
             case "Restaurant":
-                intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent = new Intent(LoginActivity.this, RestaurantHomeActivity.class);
                 break;
             default:
                 return;

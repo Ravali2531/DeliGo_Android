@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?android:colorBackground">
+
+    <!-- Top Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="8dp"
+            android:layout_marginEnd="16dp"
+            app:tint="?android:textColorPrimary"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Select Location"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="?android:textColorPrimary"/>
+
+        <Button
+            android:id="@+id/confirmButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Confirm"
+            android:textColor="?attr/colorPrimary"
+            style="@style/Widget.MaterialComponents.Button.TextButton"/>
+    </LinearLayout>
+
+    <!-- Places Autocomplete Fragment -->
+    <fragment
+        android:id="@+id/autocomplete_fragment"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Map Container -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <!-- Center Pin -->
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_location_pin"
+            android:layout_gravity="center"
+            app:tint="?attr/colorPrimary"/>
+
+        <!-- Selected Location Info -->
+        <LinearLayout
+            android:id="@+id/locationInfoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="?android:colorBackground"
+            android:layout_gravity="bottom">
+
+            <TextView
+                android:id="@+id/selectedLocationText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textColor="?android:textColorPrimary"/>
+
+            <TextView
+                android:id="@+id/locationDetailsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="?android:textColorSecondary"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout> 

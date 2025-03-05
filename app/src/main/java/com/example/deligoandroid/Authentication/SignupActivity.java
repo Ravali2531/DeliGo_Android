@@ -18,6 +18,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.widget.ArrayAdapter;
+
 public class SignupActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
@@ -59,10 +61,17 @@ public class SignupActivity extends AppCompatActivity {
         phoneInput = findViewById(R.id.phoneInput);
         signupButton = findViewById(R.id.signupButton);
         loginLink = findViewById(R.id.loginLink);
+
+        // Setup role spinner
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.user_roles, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        roleSpinner.setAdapter(adapter);
     }
 
     private void handleSignup() {
-        String role = roleSpinner.getSelectedItem().toString();
+        String role = roleSpinner.getSelectedItem() != null ? 
+            roleSpinner.getSelectedItem().toString() : "";
         String fullName = fullNameInput.getText().toString().trim();
         String email = emailInput.getText().toString().trim();
         String password = passwordInput.getText().toString().trim();
@@ -70,7 +79,7 @@ public class SignupActivity extends AppCompatActivity {
         String phone = phoneInput.getText().toString().trim();
 
         // Validation
-        if (fullName.isEmpty() || email.isEmpty() || password.isEmpty() || 
+        if (role.isEmpty() || fullName.isEmpty() || email.isEmpty() || password.isEmpty() || 
             confirmPassword.isEmpty() || phone.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return;

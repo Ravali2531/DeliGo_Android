@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?android:colorBackground"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/account"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginBottom="24dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_account_circle"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:id="@+id/emailText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:textColor="?android:textColorPrimary"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/store_settings"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/storeHoursLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_access_time"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/store_hours"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="?android:textColorSecondary"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/storeInfoLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_info"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/store_information"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="?android:textColorSecondary"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/appearance"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/darkModeLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_dark_mode"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/dark_mode"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/darkModeSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"/>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/language"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/languageLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_language"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/language"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/languageSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/signOutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/sign_out"
+        android:textColor="?attr/colorOnPrimary"
+        app:backgroundTint="?attr/colorPrimary"
+        android:padding="12dp"/>
+
+</LinearLayout> 
