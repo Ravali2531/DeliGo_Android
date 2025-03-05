@@ -150,12 +150,31 @@
         android:elevation="8dp"
         android:padding="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/saveButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Save"
-            app:backgroundTint="@color/accent_orange"/>
+            android:orientation="horizontal">
+
+            <!-- Delete Button - Only visible in edit mode -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/deleteButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="Delete"
+                android:visibility="gone"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:textColor="#FF0000"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/saveButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Save"
+                app:backgroundTint="@color/accent_orange"/>
+        </LinearLayout>
 
         <ProgressBar
             android:id="@+id/progressBar"
