@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:name=".DeliGoApplication"
@@ -87,9 +89,19 @@
             android:theme="@style/Theme.DeliGoAndroid"/>
 
         <activity
+            android:name=".Restaurant.LocationPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <activity
             android:name=".Restaurant.StoreInformationActivity"
             android:exported="false"
             android:theme="@style/Theme.DeliGoAndroid"/>
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key"/>
 
     </application>
 

@@ -1,8 +1,11 @@
 package com.example.deligoandroid.Restaurant;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.deligoandroid.R;
 import com.google.android.material.textfield.TextInputEditText;
@@ -16,7 +19,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class StoreInformationActivity extends AppCompatActivity {
-    private TextInputEditText storeNumberInput;
     private TextInputEditText storeNameInput;
     private TextInputEditText locationInput;
     private TextInputEditText phoneInput;
@@ -27,6 +29,25 @@ public class StoreInformationActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
     private String userId;
+    
+    private double selectedLat = 0;
+    private double selectedLng = 0;
+    private String selectedLocationName = "";
+
+    private final ActivityResultLauncher<Intent> locationPicker = registerForActivityResult(
+        new ActivityResultContracts.StartActivityForResult(),
+        result -> {
+            if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                Intent data = result.getData();
+                selectedLocationName = data.getStringExtra("name");
+                String address = data.getStringExtra("address");
+                selectedLat = data.getDoubleExtra("latitude", 0);
+                selectedLng = data.getDoubleExtra("longitude", 0);
+                
+                locationInput.setText(address);
+            }
+        }
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +72,8 @@ public class StoreInformationActivity extends AppCompatActivity {
             // Load existing data
             loadStoreInformation();
 
-            // Setup save button
-            saveButton.setOnClickListener(v -> saveStoreInformation());
+            // Setup click listeners
+            setupClickListeners();
             
         } catch (Exception e) {
             Toast.makeText(this, "Error initializing: " + e.getMessage(), 
@@ -76,6 +97,15 @@ public class StoreInformationActivity extends AppCompatActivity {
         }
     }
 
+    private void setupClickListeners() {
+        locationInput.setOnClickListener(v -> {
+            Intent intent = new Intent(this, LocationPickerActivity.class);
+            locationPicker.launch(intent);
+        });
+
+        saveButton.setOnClickListener(v -> saveStoreInformation());
+    }
+
     private void loadStoreInformation() {
         try {
             mDatabase.child("restaurants").child(userId)
@@ -84,11 +114,23 @@ public class StoreInformationActivity extends AppCompatActivity {
                         public void onDataChange(DataSnapshot dataSnapshot) {
                             if (dataSnapshot.exists()) {
                                 try {
-
                                     String fullName = dataSnapshot.hasChild("fullName") ? 
                                         String.valueOf(dataSnapshot.child("fullName").getValue()) : "";
-                                    String location = dataSnapshot.hasChild("location") ? 
-                                        String.valueOf(dataSnapshot.child("location").getValue()) : "";
+                                    
+                                    // Load location data
+                                    if (dataSnapshot.hasChild("location")) {
+                                        DataSnapshot locationSnapshot = dataSnapshot.child("location");
+                                        String locationName = locationSnapshot.hasChild("name") ?
+                                            String.valueOf(locationSnapshot.child("name").getValue()) : "";
+                                        selectedLat = locationSnapshot.hasChild("latitude") ?
+                                            (double) locationSnapshot.child("latitude").getValue() : 0;
+                                        selectedLng = locationSnapshot.hasChild("longitude") ?
+                                            (double) locationSnapshot.child("longitude").getValue() : 0;
+                                        
+                                        locationInput.setText(locationName);
+                                        selectedLocationName = locationName;
+                                    }
+                                    
                                     String phone = dataSnapshot.hasChild("phone") ? 
                                         String.valueOf(dataSnapshot.child("phone").getValue()) : "";
                                     String email = dataSnapshot.hasChild("email") ? 
@@ -97,7 +139,6 @@ public class StoreInformationActivity extends AppCompatActivity {
                                         String.valueOf(dataSnapshot.child("about").getValue()) : "";
 
                                     if (storeNameInput != null) storeNameInput.setText(fullName);
-                                    if (locationInput != null) locationInput.setText(location);
                                     if (phoneInput != null) phoneInput.setText(phone);
                                     if (emailInput != null) emailInput.setText(email);
                                     if (aboutInput != null) aboutInput.setText(about);
@@ -128,15 +169,17 @@ public class StoreInformationActivity extends AppCompatActivity {
             // Create a map of store information
             Map<String, Object> storeUpdates = new HashMap<>();
             
-            if (storeNumberInput != null) {
-                storeUpdates.put("storeNumber", storeNumberInput.getText().toString().trim());
-            }
             if (storeNameInput != null) {
                 storeUpdates.put("fullName", storeNameInput.getText().toString().trim());
             }
-            if (locationInput != null) {
-                storeUpdates.put("location", locationInput.getText().toString().trim());
-            }
+            
+            // Save location information
+            Map<String, Object> locationData = new HashMap<>();
+            locationData.put("name", selectedLocationName);
+            locationData.put("latitude", selectedLat);
+            locationData.put("longitude", selectedLng);
+            storeUpdates.put("location", locationData);
+            
             if (phoneInput != null) {
                 storeUpdates.put("phone", phoneInput.getText().toString().trim());
             }

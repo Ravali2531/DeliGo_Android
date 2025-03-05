@@ -47,4 +47,7 @@
     <string name="coming_soon">Coming Soon</string>
     <string name="store_hours_coming_soon">Store Hours - Coming Soon</string>
     <string name="store_info_coming_soon">Store Information - Coming Soon</string>
+    
+    <!-- API Keys -->
+    <string name="google_maps_key">AIzaSyD1MmIqbJht-bbIu5wn1KU9_EMUYi-jjyI</string>
 </resources>
