@@ -4,259 +4,201 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:colorBackground">
+    android:background="?android:colorBackground"
+    android:padding="16dp">
 
     <TextView
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Account"
+        android:text="@string/account"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="?android:textColorPrimary"
-        android:gravity="center"
-        android:padding="16dp"/>
+        android:layout_marginBottom="24dp"/>
 
-    <!-- Account Info Card -->
-    <androidx.cardview.widget.CardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/cardBackgroundColor">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_account_circle"
+            app:tint="?attr/colorPrimary"/>
+
+        <TextView
+            android:id="@+id/emailText"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:layout_marginStart="16dp"
+            android:textColor="?android:textColorPrimary"
+            android:textSize="16sp"/>
+    </LinearLayout>
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_account_circle"
-                app:tint="?attr/colorPrimary"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginStart="16dp">
-
-                <TextView
-                    android:id="@+id/emailText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="restaurant@gmail.com"
-                    android:textSize="16sp"
-                    android:textColor="?android:textColorPrimary"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/emailSubText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="restaurant@gmail.com"
-                    android:textSize="14sp"
-                    android:textColor="?android:textColorSecondary"/>
-            </LinearLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- Store Settings Section -->
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/store_settings"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/storeHoursLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="STORE SETTINGS"
-        android:textSize="14sp"
-        android:textColor="?android:textColorSecondary"
-        android:padding="16dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/cardBackgroundColor">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_access_time"
+            app:tint="?attr/colorPrimary"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_weight="1"
+            android:text="@string/store_hours"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
 
-            <!-- Store Hours -->
-            <LinearLayout
-                android:id="@+id/storeHoursLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="?android:textColorSecondary"/>
+    </LinearLayout>
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_access_time"
-                    app:tint="?attr/colorPrimary"/>
+    <LinearLayout
+        android:id="@+id/storeInfoLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Store Hours"
-                    android:textSize="16sp"
-                    android:textColor="?android:textColorPrimary"
-                    android:layout_marginStart="16dp"/>
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_info"
+            app:tint="?attr/colorPrimary"/>
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_chevron_right"
-                    app:tint="?android:textColorSecondary"/>
-            </LinearLayout>
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/store_information"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?android:textColorSecondary"/>
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="?android:textColorSecondary"/>
+    </LinearLayout>
 
-            <!-- Store Information -->
-            <LinearLayout
-                android:id="@+id/storeInfoLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground">
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_info"
-                    app:tint="?attr/colorPrimary"/>
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Store Information"
-                    android:textSize="16sp"
-                    android:textColor="?android:textColorPrimary"
-                    android:layout_marginStart="16dp"/>
-
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_chevron_right"
-                    app:tint="?android:textColorSecondary"/>
-            </LinearLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- Appearance Section -->
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/appearance"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/darkModeLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="APPEARANCE"
-        android:textSize="14sp"
-        android:textColor="?android:textColorSecondary"
-        android:padding="16dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/cardBackgroundColor">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_dark_mode"
+            app:tint="?attr/colorPrimary"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:layout_weight="1"
+            android:text="@string/dark_mode"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:src="@drawable/ic_dark_mode"
-                app:tint="?attr/colorPrimary"/>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/darkModeSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"/>
+    </LinearLayout>
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:layout_weight="1"
-                android:text="Dark Mode"
-                android:textColor="?android:textColorPrimary"
-                android:textSize="16sp"/>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/darkModeSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- Language Section -->
     <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/language"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="?android:textColorPrimary"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="16dp"/>
+
+    <LinearLayout
+        android:id="@+id/languageLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LANGUAGE"
-        android:textSize="14sp"
-        android:textColor="?android:textColorSecondary"
-        android:padding="16dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:background="?attr/selectableItemBackground">
 
-    <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="?attr/cardBackgroundColor">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_language"
+            app:tint="?attr/colorPrimary"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:layout_weight="1"
+            android:text="@string/language"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginStart="16dp"/>
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="51dp"
-                android:src="@drawable/ic_language"
-                app:tint="?attr/colorPrimary"/>
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/languageSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"/>
+    </LinearLayout>
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Français"
-                android:textSize="16sp"
-                android:textColor="?android:textColorPrimary"
-                android:layout_marginStart="16dp"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/languageSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-    <!-- Sign Out Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/signOutButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:text="Sign Out"
+        android:text="@string/sign_out"
         android:textColor="?attr/colorOnPrimary"
-        style="@style/Widget.MaterialComponents.Button"/>
+        app:backgroundTint="?attr/colorPrimary"
+        android:padding="12dp"/>
 
 </LinearLayout> 

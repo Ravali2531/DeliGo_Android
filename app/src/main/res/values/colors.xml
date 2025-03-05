@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand colors -->
-    <color name="primary">#2196F3</color>
-    <color name="primary_variant">#1976D2</color>
+    <color name="primary_light">#FFA500</color>  <!-- Orange -->
+    <color name="primary_dark">#2196F3</color>   <!-- Blue -->
+    <color name="primary_variant_light">#FFA500</color> <!-- Orange -->
+    <color name="primary_variant_dark">#1976D2</color>
     <color name="secondary">#03DAC5</color>
     <color name="secondary_variant">#018786</color>
 
@@ -34,7 +36,7 @@
 
     <!-- Accent colors -->
     <color name="accent_blue">#2196F3</color>
-    <color name="accent_orange">#FF5722</color>
+    <color name="accent_orange">#FFA500</color>
     <color name="sign_out_red">#FF5252</color>
 
     <!-- Standard colors -->
@@ -42,6 +44,6 @@
     <color name="white">#FFFFFFFF</color>
     <color name="unreviewed_background">#FFE0E0</color>
     <color name="reviewed_background">#FFFFFF</color>
-    <color name="orange">#FFA500</color>  <!-- Replace with your desired color -->
+    <color name="orange">#FFA500</color>
 
 </resources>

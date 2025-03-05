@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DeliGo</string>
+    
+    <!-- Arrays -->
+    <string-array name="user_roles">
+        <item>Client</item>
+        <item>Chauffeur</item>
+        <item>Restaurant</item>
+    </string-array>
+
+    <string-array name="food_categories">
+        <item>Entrée</item>
+        <item>Plat Principal</item>
+        <item>Dessert</item>
+        <item>Boisson</item>
+    </string-array>
+    
+    <!-- Common -->
+    <string name="email">Courriel</string>
+    <string name="password">Mot de passe</string>
+    <string name="confirm_password">Confirmer le mot de passe</string>
+    <string name="phone">Téléphone</string>
+    <string name="full_name">Nom complet</string>
+    
+    <!-- Login Screen -->
+    <string name="login">Connexion</string>
+    <string name="forgot_password">Mot de passe oublié?</string>
+    <string name="dont_have_account">Vous n\'avez pas de compte? Inscrivez-vous</string>
+    
+    <!-- Signup Screen -->
+    <string name="signup">S\'inscrire</string>
+    <string name="select_role">Sélectionner le rôle</string>
+    <string name="already_have_account">Vous avez déjà un compte? Connectez-vous</string>
+    
+    <!-- Account Screen -->
+    <string name="account">Compte</string>
+    <string name="store_settings">Paramètres du magasin</string>
+    <string name="store_hours">Heures d\'ouverture</string>
+    <string name="store_information">Informations du magasin</string>
+    <string name="appearance">Apparence</string>
+    <string name="dark_mode">Mode sombre</string>
+    <string name="language">Langue</string>
+    <string name="sign_out">Déconnexion</string>
+    
+    <!-- Messages -->
+    <string name="coming_soon">Bientôt disponible</string>
+    <string name="store_hours_coming_soon">Heures d\'ouverture - Bientôt disponible</string>
+    <string name="store_info_coming_soon">Informations du magasin - Bientôt disponible</string>
+</resources> 
