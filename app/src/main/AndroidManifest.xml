@@ -98,6 +98,14 @@
             android:exported="false"
             android:theme="@style/Theme.DeliGoAndroid"/>
 
+        <activity
+            android:name=".Admin.RestaurantDetailsActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".Admin.DocumentPreviewActivity"
+            android:exported="false"/>
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

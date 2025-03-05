@@ -45,5 +45,6 @@
     <color name="unreviewed_background">#FFE0E0</color>
     <color name="reviewed_background">#FFFFFF</color>
     <color name="orange">#FFA500</color>
+    <color name="green">#4CAF50</color>
 
 </resources>

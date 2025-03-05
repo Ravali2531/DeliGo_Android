@@ -51,8 +51,6 @@
                 android:textSize="16sp"
                 android:layout_marginBottom="16dp"/>
 
-
-
             <!-- Store Name -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -76,11 +74,13 @@
                 android:layout_marginTop="8dp"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <AutoCompleteTextView
                     android:id="@+id/locationInput"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text"/>
+                    android:layout_height="49dp"
+                    android:completionThreshold="3"
+                    android:hint="Location"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Phone -->

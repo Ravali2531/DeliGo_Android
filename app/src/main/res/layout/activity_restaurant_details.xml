@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Toolbar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Restaurant Details"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/doneButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Done"
+            android:textColor="#007AFF"
+            android:textSize="18sp"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Basic Information Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F5F5F5"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Basic Information"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_person"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Name:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/restaurantName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#000000"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_email"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Email:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/restaurantEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#000000"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_phone"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Phone:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/restaurantPhone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#000000"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Document Status Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F5F5F5"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Document Status"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Status:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/documentStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#4CAF50"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Business Hours"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Opening:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/openingHours"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#000000"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Closing:"
+                        android:textColor="#9B9B9B"
+                        android:layout_marginEnd="8dp"/>
+
+                    <TextView
+                        android:id="@+id/closingHours"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="#000000"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Documents Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F5F5F5"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Documents"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"/>
+
+                <LinearLayout
+                    android:id="@+id/viewLicenseButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_document"
+                        android:tint="#007AFF"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="View Restaurant License"
+                        android:textColor="#007AFF"/>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_right"
+                        android:tint="#9B9B9B"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/viewIdButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_document"
+                        android:tint="#007AFF"
+                        android:layout_marginEnd="16dp"/>
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="View Owner's ID"
+                        android:textColor="#007AFF"/>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_arrow_right"
+                        android:tint="#9B9B9B"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Actions Section -->
+    <LinearLayout
+        android:id="@+id/actionsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#F5F5F5"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Actions"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/approveButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Approve"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#4CAF50"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/rejectButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Reject"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#F44336"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout> 
