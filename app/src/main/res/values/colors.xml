@@ -58,4 +58,8 @@
     <color name="gray_600">#757575</color>
     <color name="red_500">#F44336</color>
 
+    <color name="colorPrimary">#F4A261</color>
+    <color name="colorPrimaryDark">#E76F51</color>
+    <color name="colorAccent">#F4A261</color>
+
 </resources>

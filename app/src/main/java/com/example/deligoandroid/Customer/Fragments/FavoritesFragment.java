@@ -12,6 +12,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.Customer.Adapters.MenuAdapter;
 import com.example.deligoandroid.Customer.Models.CartItem;
 import com.example.deligoandroid.Customer.Models.MenuItem;
+import com.example.deligoandroid.Customer.Models.CustomizationOption;
+import com.example.deligoandroid.Customer.Models.CustomizationItem;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
@@ -91,6 +93,74 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
                         menuItem.setPrice(price);
                         menuItem.setImageURL(imageURL);
                         menuItem.setAvailable(true);
+
+                        // Load customization options
+                        if (itemSnapshot.hasChild("customizationOptions")) {
+                            Log.d("FavoritesFragment", "Loading customization options for: " + name);
+                            List<CustomizationOption> customizationOptions = new ArrayList<>();
+                            DataSnapshot optionsSnapshot = itemSnapshot.child("customizationOptions");
+                            
+                            for (DataSnapshot optionSnapshot : optionsSnapshot.getChildren()) {
+                                try {
+                                    String optionId = optionSnapshot.child("id").getValue(String.class);
+                                    String optionName = optionSnapshot.child("name").getValue(String.class);
+                                    String optionType = optionSnapshot.child("type").getValue(String.class);
+                                    Boolean required = optionSnapshot.child("required").getValue(Boolean.class);
+
+                                    Log.d("FavoritesFragment", "Found option: " + optionName + ", Type: " + optionType);
+
+                                    CustomizationOption option = new CustomizationOption();
+                                    option.setId(optionId);
+                                    option.setName(optionName);
+                                    option.setType(optionType);
+                                    option.setRequired(required != null && required);
+
+                                    List<CustomizationItem> items = new ArrayList<>();
+                                    DataSnapshot optionsData = optionSnapshot.child("options");
+                                    Log.d("FavoritesFragment", "Number of items in option: " + optionsData.getChildrenCount());
+
+                                    for (DataSnapshot itemOptionSnapshot : optionsData.getChildren()) {
+                                        try {
+                                            CustomizationItem customItem = new CustomizationItem();
+                                            customItem.setId(itemOptionSnapshot.child("id").getValue(String.class));
+                                            customItem.setName(itemOptionSnapshot.child("name").getValue(String.class));
+                                            Double itemPrice = itemOptionSnapshot.child("price").getValue(Double.class);
+                                            customItem.setPrice(itemPrice != null ? itemPrice : 0.0);
+                                            items.add(customItem);
+                                            
+                                            Log.d("FavoritesFragment", "Added item: " + customItem.getName() + ", Price: " + customItem.getPrice());
+                                        } catch (Exception e) {
+                                            Log.e("FavoritesFragment", "Error processing customization item: " + e.getMessage());
+                                        }
+                                    }
+                                    option.setOptions(items);
+                                    customizationOptions.add(option);
+                                } catch (Exception e) {
+                                    Log.e("FavoritesFragment", "Error processing option: " + e.getMessage());
+                                }
+                            }
+                            
+                            // Only set customization options if we actually loaded some
+                            if (!customizationOptions.isEmpty()) {
+                                Log.d("FavoritesFragment", "Setting " + customizationOptions.size() + " customization options");
+                                menuItem.setCustomizationOptions(customizationOptions);
+                                menuItem.setHasCustomizations(true);
+                                // Add detailed logging
+                                Log.d("FavoritesFragment", "MenuItem state after setting options:");
+                                Log.d("FavoritesFragment", "- Name: " + menuItem.getName());
+                                Log.d("FavoritesFragment", "- HasCustomizations: " + menuItem.hasCustomizations());
+                                Log.d("FavoritesFragment", "- Options size: " + menuItem.getCustomizationOptions().size());
+                                for (CustomizationOption opt : menuItem.getCustomizationOptions()) {
+                                    Log.d("FavoritesFragment", "  - Option: " + opt.getName() + " (Items: " + opt.getOptions().size() + ")");
+                                }
+                            } else {
+                                Log.d("FavoritesFragment", "No customization options were loaded");
+                                menuItem.setHasCustomizations(false);
+                            }
+                        } else {
+                            Log.d("FavoritesFragment", "No customizationOptions child for: " + name);
+                            menuItem.setHasCustomizations(false);
+                        }
 
                         favoriteItems.add(menuItem);
                     } catch (Exception e) {

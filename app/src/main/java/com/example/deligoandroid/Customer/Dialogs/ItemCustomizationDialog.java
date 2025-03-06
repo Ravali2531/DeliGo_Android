@@ -2,6 +2,7 @@ package com.example.deligoandroid.Customer.Dialogs;
 
 import android.app.Dialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,7 +52,19 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
         
         if (getArguments() != null) {
             menuItem = (MenuItem) getArguments().getSerializable("menuItem");
+            Log.d("ItemCustomizationDialog", "MenuItem received: " + menuItem.getName());
+            Log.d("ItemCustomizationDialog", "Has customizations: " + menuItem.hasCustomizations());
+            if (menuItem.getCustomizationOptions() != null) {
+                Log.d("ItemCustomizationDialog", "Number of options: " + menuItem.getCustomizationOptions().size());
+                for (CustomizationOption option : menuItem.getCustomizationOptions()) {
+                    Log.d("ItemCustomizationDialog", "Option: " + option.getName() + ", Items: " + option.getOptions().size());
+                }
+            } else {
+                Log.d("ItemCustomizationDialog", "Customization options is null");
+            }
             totalPrice = menuItem.getPrice();
+        } else {
+            Log.e("ItemCustomizationDialog", "No arguments received");
         }
     }
 
@@ -119,9 +132,27 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
     }
 
     private void setupCustomizationOptions(ViewGroup container) {
-        if (menuItem.getCustomizationOptions() == null) return;
+        if (menuItem == null) {
+            Log.e("ItemCustomizationDialog", "MenuItem is null");
+            return;
+        }
 
+        Log.d("ItemCustomizationDialog", "MenuItem details:");
+        Log.d("ItemCustomizationDialog", "- Name: " + menuItem.getName());
+        Log.d("ItemCustomizationDialog", "- HasCustomizations: " + menuItem.hasCustomizations());
+        
+        if (menuItem.getCustomizationOptions() == null) {
+            Log.e("ItemCustomizationDialog", "Customization options is null");
+            return;
+        }
+
+        Log.d("ItemCustomizationDialog", "Setting up " + menuItem.getCustomizationOptions().size() + " options");
         for (CustomizationOption option : menuItem.getCustomizationOptions()) {
+            Log.d("ItemCustomizationDialog", "Processing option: " + option.getName());
+            Log.d("ItemCustomizationDialog", "- Type: " + option.getType());
+            Log.d("ItemCustomizationDialog", "- Required: " + option.isRequired());
+            Log.d("ItemCustomizationDialog", "- Items count: " + option.getOptions().size());
+            
             View optionView = getLayoutInflater().inflate(R.layout.item_customization_group, container, false);
             
             TextView titleText = optionView.findViewById(R.id.optionTitle);
@@ -133,6 +164,7 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
                 requiredText.setVisibility(View.VISIBLE);
             }
 
+            Log.d("ItemCustomizationDialog", "Setting up option: " + option.getName() + ", Type: " + option.getType());
             if (option.getType().equals("single")) {
                 setupRadioGroup(optionsContainer, option);
             } else {

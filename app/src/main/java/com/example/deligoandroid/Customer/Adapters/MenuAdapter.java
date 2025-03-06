@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +21,8 @@ import com.bumptech.glide.Glide;
 import com.example.deligoandroid.Customer.Dialogs.ItemCustomizationDialog;
 import com.example.deligoandroid.Customer.Models.CartItem;
 import com.example.deligoandroid.Customer.Models.MenuItem;
+import com.example.deligoandroid.Customer.Models.CustomizationOption;
+import com.example.deligoandroid.Customer.Models.CustomizationItem;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -198,10 +201,19 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 // Handle item click
                 menuItemHolder.itemView.setOnClickListener(v -> {
                     if (context instanceof FragmentActivity) {
-                        ItemCustomizationDialog dialog = new ItemCustomizationDialog();
-                        Bundle args = new Bundle();
-                        args.putSerializable("menuItem", menuItem);
-                        dialog.setArguments(args);
+                        // Add debug logging
+                        Log.d("MenuAdapter", "Item clicked: " + menuItem.getName());
+                        Log.d("MenuAdapter", "Has customizations: " + menuItem.hasCustomizations());
+                        if (menuItem.getCustomizationOptions() != null) {
+                            Log.d("MenuAdapter", "Number of customization options: " + menuItem.getCustomizationOptions().size());
+                            for (CustomizationOption option : menuItem.getCustomizationOptions()) {
+                                Log.d("MenuAdapter", "Option: " + option.getName() + ", Type: " + option.getType());
+                            }
+                        } else {
+                            Log.d("MenuAdapter", "Customization options is null");
+                        }
+
+                        ItemCustomizationDialog dialog = ItemCustomizationDialog.newInstance(menuItem);
                         dialog.show(((FragmentActivity) context).getSupportFragmentManager(), "customization");
                     }
                 });
@@ -268,6 +280,33 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             favoriteData.put("imageURL", menuItem.getImageURL());
             favoriteData.put("category", menuItem.getCategory());
             favoriteData.put("timestamp", ServerValue.TIMESTAMP);
+            favoriteData.put("hasCustomizations", menuItem.hasCustomizations());
+            
+            // Add customization options
+            if (menuItem.hasCustomizations() && menuItem.getCustomizationOptions() != null) {
+                List<Map<String, Object>> customizationOptionsList = new ArrayList<>();
+                for (CustomizationOption option : menuItem.getCustomizationOptions()) {
+                    Map<String, Object> optionData = new HashMap<>();
+                    optionData.put("id", option.getId());
+                    optionData.put("name", option.getName());
+                    optionData.put("type", option.getType());
+                    optionData.put("required", option.isRequired());
+                    
+                    List<Map<String, Object>> itemsList = new ArrayList<>();
+                    if (option.getOptions() != null) {
+                        for (CustomizationItem item : option.getOptions()) {
+                            Map<String, Object> itemData = new HashMap<>();
+                            itemData.put("id", item.getId());
+                            itemData.put("name", item.getName());
+                            itemData.put("price", item.getPrice());
+                            itemsList.add(itemData);
+                        }
+                    }
+                    optionData.put("options", itemsList);
+                    customizationOptionsList.add(optionData);
+                }
+                favoriteData.put("customizationOptions", customizationOptionsList);
+            }
 
             favoritesRef.child(itemId).setValue(favoriteData)
                 .addOnFailureListener(e -> 
