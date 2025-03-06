@@ -22,9 +22,12 @@ import com.example.deligoandroid.Customer.Models.CartItem;
 import com.example.deligoandroid.Customer.Models.MenuItem;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +47,7 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private OnFavoriteClickListener onFavoriteClickListener;
     private Set<String> favoriteItemIds;
     private DatabaseReference favoritesRef;
+    private ValueEventListener favoritesListener;
 
     public MenuAdapter(Context context) {
         this.context = context;
@@ -56,6 +60,43 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             .child("users")
             .child(userId)
             .child("favorites");
+
+        // Set up real-time favorites listener
+        setupFavoritesListener();
+    }
+
+    private void setupFavoritesListener() {
+        // Remove existing listener if any
+        if (favoritesListener != null) {
+            favoritesRef.removeEventListener(favoritesListener);
+        }
+
+        favoritesListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                favoriteItemIds.clear();
+                for (DataSnapshot itemSnapshot : snapshot.getChildren()) {
+                    favoriteItemIds.add(itemSnapshot.getKey());
+                }
+                notifyDataSetChanged();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(context, "Error loading favorites", Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        favoritesRef.addValueEventListener(favoritesListener);
+    }
+
+    @Override
+    public void onDetachedFromRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        // Clean up listener when adapter is detached
+        if (favoritesListener != null) {
+            favoritesRef.removeEventListener(favoritesListener);
+        }
     }
 
     public interface OnAddToCartListener {
@@ -203,11 +244,6 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (isFavorite) {
             // Remove from favorites
             favoritesRef.child(itemId).removeValue()
-                .addOnSuccessListener(aVoid -> {
-                    favoriteItemIds.remove(itemId);
-                    notifyDataSetChanged();
-                    Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show();
-                })
                 .addOnFailureListener(e -> 
                     Toast.makeText(context, "Failed to remove from favorites", Toast.LENGTH_SHORT).show()
                 );
@@ -223,11 +259,6 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             favoriteData.put("timestamp", ServerValue.TIMESTAMP);
 
             favoritesRef.child(itemId).setValue(favoriteData)
-                .addOnSuccessListener(aVoid -> {
-                    favoriteItemIds.add(itemId);
-                    notifyDataSetChanged();
-                    Toast.makeText(context, "Added to favorites", Toast.LENGTH_SHORT).show();
-                })
                 .addOnFailureListener(e -> 
                     Toast.makeText(context, "Failed to add to favorites", Toast.LENGTH_SHORT).show()
                 );
