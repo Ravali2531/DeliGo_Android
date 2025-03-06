@@ -10,6 +10,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.deligoandroid.Admin.AdminActivity;
+import com.example.deligoandroid.Customer.Activities.CustomerHomeActivity;
 import com.example.deligoandroid.Driver.DriverDocumentsActivity;
 import com.example.deligoandroid.Driver.DriverHomeActivity;
 import com.example.deligoandroid.MainActivity;
@@ -201,7 +202,7 @@ public class LoginActivity extends AppCompatActivity {
                 intent = new Intent(LoginActivity.this, AdminActivity.class);
                 break;
             case "Customer":
-                intent = new Intent(LoginActivity.this, MainActivity.class);
+                intent = new Intent(LoginActivity.this, CustomerHomeActivity.class);
                 break;
             case "Driver":
                 intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
