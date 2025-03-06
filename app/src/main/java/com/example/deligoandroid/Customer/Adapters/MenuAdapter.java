@@ -21,6 +21,10 @@ import com.example.deligoandroid.Customer.Dialogs.ItemCustomizationDialog;
 import com.example.deligoandroid.Customer.Models.CartItem;
 import com.example.deligoandroid.Customer.Models.MenuItem;
 import com.example.deligoandroid.R;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,11 +43,19 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private OnAddToCartListener onAddToCartListener;
     private OnFavoriteClickListener onFavoriteClickListener;
     private Set<String> favoriteItemIds;
+    private DatabaseReference favoritesRef;
 
     public MenuAdapter(Context context) {
         this.context = context;
         this.groupedItems = new HashMap<>();
         this.favoriteItemIds = new HashSet<>();
+        
+        // Initialize Firebase reference
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        this.favoritesRef = FirebaseDatabase.getInstance().getReference()
+            .child("users")
+            .child(userId)
+            .child("favorites");
     }
 
     public interface OnAddToCartListener {
@@ -107,7 +119,7 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 MenuItemViewHolder menuItemHolder = (MenuItemViewHolder) holder;
                 menuItemHolder.nameTextView.setText(menuItem.getName());
                 menuItemHolder.descriptionTextView.setText(menuItem.getDescription());
-                menuItemHolder.priceTextView.setText(String.format(Locale.getDefault(), "$%.2f", menuItem.getPrice()));
+                menuItemHolder.priceTextView.setText(String.format("$%.2f", menuItem.getPrice()));
 
                 // Load image using Glide
                 if (menuItem.getImageURL() != null && !menuItem.getImageURL().isEmpty()) {
@@ -120,41 +132,25 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     menuItemHolder.itemImageView.setImageResource(R.drawable.ic_food_placeholder);
                 }
 
-                // Set availability indicator
-                menuItemHolder.availabilityIndicator.setBackgroundTintList(ColorStateList.valueOf(
-                    menuItem.isAvailable() ? 
-                    ContextCompat.getColor(context, android.R.color.holo_green_light) : 
-                    ContextCompat.getColor(context, android.R.color.holo_red_light)
-                ));
-
                 // Set favorite state
                 boolean isFavorite = favoriteItemIds.contains(menuItem.getId());
-                menuItemHolder.favoriteButton.setImageResource(isFavorite ? 
-                    R.drawable.ic_favorite_filled : 
-                    R.drawable.ic_favorite_outline);
+                menuItemHolder.favoriteButton.setImageResource(
+                    isFavorite ? R.drawable.ic_favorite_filled : R.drawable.ic_favorite_outline
+                );
+                menuItemHolder.favoriteButton.setColorFilter(
+                    ContextCompat.getColor(context, R.color.favorite_red),
+                    android.graphics.PorterDuff.Mode.SRC_IN
+                );
 
                 // Handle favorite click
-                menuItemHolder.favoriteButton.setOnClickListener(v -> {
-                    if (onFavoriteClickListener != null) {
-                        boolean newState = !isFavorite;
-                        onFavoriteClickListener.onFavoriteClick(menuItem, newState);
-                    }
-                });
-
-                // Handle add to cart click
-                menuItemHolder.addToCartButton.setOnClickListener(v -> {
-                    if (onAddToCartListener != null && menuItem.isAvailable()) {
-                        CartItem cartItem = new CartItem(menuItem);
-                        onAddToCartListener.onAddToCart(cartItem);
-                    } else if (!menuItem.isAvailable()) {
-                        Toast.makeText(context, "This item is currently unavailable", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                menuItemHolder.favoriteButton.setOnClickListener(v -> toggleFavorite(menuItem));
 
                 // Show customization info if available
                 if (menuItem.hasCustomizations()) {
+                    menuItemHolder.bulletPoint.setVisibility(View.VISIBLE);
                     menuItemHolder.customizationInfo.setVisibility(View.VISIBLE);
                 } else {
+                    menuItemHolder.bulletPoint.setVisibility(View.GONE);
                     menuItemHolder.customizationInfo.setVisibility(View.GONE);
                 }
             }
@@ -184,10 +180,9 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         TextView nameTextView;
         TextView descriptionTextView;
         TextView priceTextView;
-        View availabilityIndicator;
-        ImageButton favoriteButton;
-        Button addToCartButton;
+        TextView bulletPoint;
         TextView customizationInfo;
+        ImageButton favoriteButton;
 
         MenuItemViewHolder(View itemView) {
             super(itemView);
@@ -195,10 +190,47 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             nameTextView = itemView.findViewById(R.id.itemName);
             descriptionTextView = itemView.findViewById(R.id.itemDescription);
             priceTextView = itemView.findViewById(R.id.itemPrice);
-            availabilityIndicator = itemView.findViewById(R.id.availabilityIndicator);
-            favoriteButton = itemView.findViewById(R.id.favoriteButton);
-            addToCartButton = itemView.findViewById(R.id.addToCartButton);
+            bulletPoint = itemView.findViewById(R.id.bulletPoint);
             customizationInfo = itemView.findViewById(R.id.customizationInfo);
+            favoriteButton = itemView.findViewById(R.id.favoriteButton);
+        }
+    }
+
+    private void toggleFavorite(MenuItem menuItem) {
+        String itemId = menuItem.getId();
+        boolean isFavorite = favoriteItemIds.contains(itemId);
+
+        if (isFavorite) {
+            // Remove from favorites
+            favoritesRef.child(itemId).removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    favoriteItemIds.remove(itemId);
+                    notifyDataSetChanged();
+                    Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> 
+                    Toast.makeText(context, "Failed to remove from favorites", Toast.LENGTH_SHORT).show()
+                );
+        } else {
+            // Add to favorites
+            Map<String, Object> favoriteData = new HashMap<>();
+            favoriteData.put("id", menuItem.getId());
+            favoriteData.put("name", menuItem.getName());
+            favoriteData.put("description", menuItem.getDescription());
+            favoriteData.put("price", menuItem.getPrice());
+            favoriteData.put("imageURL", menuItem.getImageURL());
+            favoriteData.put("category", menuItem.getCategory());
+            favoriteData.put("timestamp", ServerValue.TIMESTAMP);
+
+            favoritesRef.child(itemId).setValue(favoriteData)
+                .addOnSuccessListener(aVoid -> {
+                    favoriteItemIds.add(itemId);
+                    notifyDataSetChanged();
+                    Toast.makeText(context, "Added to favorites", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> 
+                    Toast.makeText(context, "Failed to add to favorites", Toast.LENGTH_SHORT).show()
+                );
         }
     }
 } 

@@ -7,10 +7,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.example.deligoandroid.Customer.Models.MenuItem;
 import com.example.deligoandroid.Restaurant.Models.MenuItemModel;
 import com.example.deligoandroid.R;
 import java.util.ArrayList;
@@ -18,7 +16,7 @@ import java.util.List;
 
 public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHolder> {
     private Context context;
-    private List<MenuItemModel> menuItems = new ArrayList<>();
+    private List<MenuItemModel> menuItems;
     private OnMenuItemClickListener listener;
 
     public interface OnMenuItemClickListener {
@@ -27,6 +25,7 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHo
 
     public MenuAdapter(Context context) {
         this.context = context;
+        this.menuItems = new ArrayList<>();
     }
 
     public void setOnMenuItemClickListener(OnMenuItemClickListener listener) {
@@ -47,7 +46,8 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHo
 
     @Override
     public void onBindViewHolder(@NonNull MenuItemViewHolder holder, int position) {
-        holder.bind(menuItems.get(position));
+        MenuItemModel menuItem = menuItems.get(position);
+        holder.bind(menuItem);
     }
 
     @Override
@@ -57,23 +57,20 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHo
 
     class MenuItemViewHolder extends RecyclerView.ViewHolder {
         private ImageView itemImage;
-        private ImageView placeholderImage;
         private TextView itemName;
         private TextView itemDescription;
         private TextView itemPrice;
         private TextView customizationInfo;
-        private View availabilityIndicator;
 
-        MenuItemViewHolder(@NonNull View itemView) {
+        MenuItemViewHolder(View itemView) {
             super(itemView);
             itemImage = itemView.findViewById(R.id.itemImage);
-            placeholderImage = itemView.findViewById(R.id.placeholderImage);
             itemName = itemView.findViewById(R.id.itemName);
             itemDescription = itemView.findViewById(R.id.itemDescription);
             itemPrice = itemView.findViewById(R.id.itemPrice);
             customizationInfo = itemView.findViewById(R.id.customizationInfo);
-            availabilityIndicator = itemView.findViewById(R.id.availabilityIndicator);
 
+            // Set click listener for the entire item
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && listener != null) {
@@ -82,37 +79,28 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHo
             });
         }
 
-        void bind(MenuItemModel item) {
-            itemName.setText(item.getName());
-            itemDescription.setText(item.getDescription());
-            itemPrice.setText(String.format("$%.2f", item.getPrice()));
+        void bind(MenuItemModel menuItem) {
+            itemName.setText(menuItem.getName());
+            itemDescription.setText(menuItem.getDescription());
+            itemPrice.setText(String.format("$%.2f", menuItem.getPrice()));
 
-            // Handle image loading
-            if (item.getImageURL() != null && !item.getImageURL().isEmpty()) {
-                itemImage.setVisibility(View.VISIBLE);
-                placeholderImage.setVisibility(View.GONE);
+            // Load image using Glide
+            if (menuItem.getImageURL() != null && !menuItem.getImageURL().isEmpty()) {
                 Glide.with(context)
-                    .load(item.getImageURL())
-                    .centerCrop()
+                    .load(menuItem.getImageURL())
+                    .placeholder(R.drawable.ic_food_placeholder)
+                    .error(R.drawable.ic_food_placeholder)
                     .into(itemImage);
             } else {
-                itemImage.setVisibility(View.GONE);
-                placeholderImage.setVisibility(View.VISIBLE);
+                itemImage.setImageResource(R.drawable.ic_food_placeholder);
             }
 
-            // Show customization info if item has customization options
-            if (item.getCustomizationOptions() != null && !item.getCustomizationOptions().isEmpty()) {
+            // Show customization info if available
+            if (menuItem.getCustomizationOptions() != null && !menuItem.getCustomizationOptions().isEmpty()) {
                 customizationInfo.setVisibility(View.VISIBLE);
             } else {
                 customizationInfo.setVisibility(View.GONE);
             }
-
-            // Set availability indicator color
-            availabilityIndicator.setBackgroundResource(R.drawable.circle_background);
-            availabilityIndicator.getBackground().setTint(
-                ContextCompat.getColor(context, item.isAvailable() ? 
-                    android.R.color.holo_green_light : android.R.color.holo_red_light)
-            );
         }
     }
 } 

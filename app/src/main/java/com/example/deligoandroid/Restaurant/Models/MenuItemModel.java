@@ -1,9 +1,10 @@
 package com.example.deligoandroid.Restaurant.Models;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 
-public class MenuItemModel {
+public class MenuItemModel implements Serializable {
     private String id;
     private String name;
     private String description;
@@ -15,6 +16,7 @@ public class MenuItemModel {
 
     public MenuItemModel() {
         // Required empty constructor for Firebase
+        this.customizationOptions = new ArrayList<>();
     }
 
     public MenuItemModel(String name, String description, double price) {
@@ -34,7 +36,7 @@ public class MenuItemModel {
         this.imageURL = imageURL;
         this.category = category;
         this.isAvailable = isAvailable;
-        this.customizationOptions = customizationOptions;
+        this.customizationOptions = customizationOptions != null ? customizationOptions : new ArrayList<>();
     }
 
     // Getters and Setters
@@ -61,6 +63,6 @@ public class MenuItemModel {
     
     public List<CustomizationOption> getCustomizationOptions() { return customizationOptions; }
     public void setCustomizationOptions(List<CustomizationOption> customizationOptions) { 
-        this.customizationOptions = customizationOptions; 
+        this.customizationOptions = customizationOptions != null ? customizationOptions : new ArrayList<>(); 
     }
 } 
