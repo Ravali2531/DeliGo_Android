@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.view.LayoutInflater;
 
 import com.bumptech.glide.Glide;
 import com.example.deligoandroid.R;
@@ -584,5 +585,29 @@ public class EditMenuItemActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateCustomizationsList() {
+        binding.customizationsContainer.removeAllViews();
+        for (CustomizationOption option : customizationOptions) {
+            View view = LayoutInflater.from(this).inflate(
+                R.layout.item_customization_edit, binding.customizationsContainer, false);
+
+            TextView nameText = view.findViewById(R.id.customizationName);
+            TextView typeText = view.findViewById(R.id.customizationType);
+            ImageButton deleteButton = view.findViewById(R.id.deleteButton);
+
+            nameText.setText(option.getName());
+            String typeDescription = option.isSingleSelection() ? 
+                "Single Selection" : String.format("Multiple Selection (up to %d)", option.getMaxSelections());
+            typeText.setText(String.format("%s%s", typeDescription, option.isRequired() ? " • Required" : ""));
+
+            deleteButton.setOnClickListener(v -> {
+                customizationOptions.remove(option);
+                updateCustomizationsList();
+            });
+
+            binding.customizationsContainer.addView(view);
+        }
     }
 }

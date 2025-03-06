@@ -2,8 +2,9 @@ package com.example.deligoandroid.Restaurant.Models;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.Serializable;
 
-public class CustomizationOption {
+public class CustomizationOption implements Serializable {
     private String id;
     private String name;
     private String type; // "single" or "multiple"
@@ -77,6 +78,10 @@ public class CustomizationOption {
             options = new ArrayList<>();
         }
         options.add(option);
+    }
+
+    public boolean isSingleSelection() {
+        return "single".equalsIgnoreCase(type);
     }
 }
 //

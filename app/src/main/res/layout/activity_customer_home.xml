@@ -53,6 +53,14 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+            <!-- Loading Progress Bar -->
+            <ProgressBar
+                android:id="@+id/loadingProgressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
+
             <!-- Empty State -->
             <LinearLayout
                 android:id="@+id/emptyStateLayout"
@@ -60,7 +68,8 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                android:visibility="gone">
 
                 <ImageView
                     android:layout_width="100dp"
@@ -91,8 +100,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="8dp"
-                android:clipToPadding="false"
-                android:visibility="gone"/>
+                android:clipToPadding="false"/>
 
         </FrameLayout>
     </LinearLayout>

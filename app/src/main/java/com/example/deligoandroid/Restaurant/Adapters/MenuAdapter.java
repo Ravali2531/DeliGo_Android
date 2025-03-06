@@ -4,48 +4,33 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.example.deligoandroid.R;
+import com.example.deligoandroid.Customer.Models.MenuItem;
 import com.example.deligoandroid.Restaurant.Models.MenuItemModel;
-import com.google.android.material.imageview.ShapeableImageView;
+import com.example.deligoandroid.R;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuViewHolder> {
-    private List<MenuItemModel> menuItems;
-    private OnItemClickListener listener;
+public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuItemViewHolder> {
     private Context context;
+    private List<MenuItemModel> menuItems = new ArrayList<>();
+    private OnMenuItemClickListener listener;
 
-    public interface OnItemClickListener {
-        void onItemClick(MenuItemModel item);
+    public interface OnMenuItemClickListener {
+        void onMenuItemClick(MenuItemModel item);
     }
 
-    public MenuAdapter(Context context, OnItemClickListener listener) {
+    public MenuAdapter(Context context) {
         this.context = context;
-        this.menuItems = new ArrayList<>();
+    }
+
+    public void setOnMenuItemClickListener(OnMenuItemClickListener listener) {
         this.listener = listener;
-    }
-
-    @NonNull
-    @Override
-    public MenuViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context)
-                .inflate(R.layout.item_menu, parent, false);
-        return new MenuViewHolder(view);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull MenuViewHolder holder, int position) {
-        MenuItemModel item = menuItems.get(position);
-        holder.bind(item);
-    }
-
-    @Override
-    public int getItemCount() {
-        return menuItems.size();
     }
 
     public void setMenuItems(List<MenuItemModel> menuItems) {
@@ -53,25 +38,46 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuViewHolder
         notifyDataSetChanged();
     }
 
-    class MenuViewHolder extends RecyclerView.ViewHolder {
-        private final ShapeableImageView itemImage;
-        private final TextView itemName;
-        private final TextView itemDescription;
-        private final TextView itemPrice;
-        private final View availabilityIndicator;
+    @NonNull
+    @Override
+    public MenuItemViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(context).inflate(R.layout.item_restaurant_menu, parent, false);
+        return new MenuItemViewHolder(view);
+    }
 
-        MenuViewHolder(@NonNull View itemView) {
+    @Override
+    public void onBindViewHolder(@NonNull MenuItemViewHolder holder, int position) {
+        holder.bind(menuItems.get(position));
+    }
+
+    @Override
+    public int getItemCount() {
+        return menuItems.size();
+    }
+
+    class MenuItemViewHolder extends RecyclerView.ViewHolder {
+        private ImageView itemImage;
+        private ImageView placeholderImage;
+        private TextView itemName;
+        private TextView itemDescription;
+        private TextView itemPrice;
+        private TextView customizationInfo;
+        private View availabilityIndicator;
+
+        MenuItemViewHolder(@NonNull View itemView) {
             super(itemView);
             itemImage = itemView.findViewById(R.id.itemImage);
+            placeholderImage = itemView.findViewById(R.id.placeholderImage);
             itemName = itemView.findViewById(R.id.itemName);
             itemDescription = itemView.findViewById(R.id.itemDescription);
             itemPrice = itemView.findViewById(R.id.itemPrice);
+            customizationInfo = itemView.findViewById(R.id.customizationInfo);
             availabilityIndicator = itemView.findViewById(R.id.availabilityIndicator);
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onItemClick(menuItems.get(position));
+                    listener.onMenuItemClick(menuItems.get(position));
                 }
             });
         }
@@ -80,23 +86,33 @@ public class MenuAdapter extends RecyclerView.Adapter<MenuAdapter.MenuViewHolder
             itemName.setText(item.getName());
             itemDescription.setText(item.getDescription());
             itemPrice.setText(String.format("$%.2f", item.getPrice()));
-            
-            // Set availability indicator color
-            availabilityIndicator.setBackgroundResource(
-                item.isAvailable() ? R.drawable.circle_background_green : R.drawable.circle_background_red
-            );
 
-            // Load image using Glide
+            // Handle image loading
             if (item.getImageURL() != null && !item.getImageURL().isEmpty()) {
+                itemImage.setVisibility(View.VISIBLE);
+                placeholderImage.setVisibility(View.GONE);
                 Glide.with(context)
                     .load(item.getImageURL())
-                    .placeholder(R.drawable.placeholder_image)
-                    .error(R.drawable.error_image)
                     .centerCrop()
                     .into(itemImage);
             } else {
-                itemImage.setImageResource(R.drawable.placeholder_image);
+                itemImage.setVisibility(View.GONE);
+                placeholderImage.setVisibility(View.VISIBLE);
             }
+
+            // Show customization info if item has customization options
+            if (item.getCustomizationOptions() != null && !item.getCustomizationOptions().isEmpty()) {
+                customizationInfo.setVisibility(View.VISIBLE);
+            } else {
+                customizationInfo.setVisibility(View.GONE);
+            }
+
+            // Set availability indicator color
+            availabilityIndicator.setBackgroundResource(R.drawable.circle_background);
+            availabilityIndicator.getBackground().setTint(
+                ContextCompat.getColor(context, item.isAvailable() ? 
+                    android.R.color.holo_green_light : android.R.color.holo_red_light)
+            );
         }
     }
 } 

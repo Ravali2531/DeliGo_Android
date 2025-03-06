@@ -25,7 +25,7 @@ import com.google.firebase.database.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickListener {
+public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClickListener {
     private RecyclerView menuRecyclerView;
     private LinearLayout emptyMenuLayout;
     private MenuAdapter menuAdapter;
@@ -60,7 +60,8 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickLis
             .child("restaurants").child(userId).child("menu_items");
 
         menuRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        menuAdapter = new MenuAdapter(getContext(), this);
+        menuAdapter = new MenuAdapter(getContext());
+        menuAdapter.setOnMenuItemClickListener(this);
         menuRecyclerView.setAdapter(menuAdapter);
 
         setupSearchView();
@@ -232,7 +233,7 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickLis
     }
 
     @Override
-    public void onItemClick(MenuItemModel item) {
+    public void onMenuItemClick(MenuItemModel item) {
         try {
             if (getContext() == null) {
                 Log.e("MenuFragment", "Context is null");

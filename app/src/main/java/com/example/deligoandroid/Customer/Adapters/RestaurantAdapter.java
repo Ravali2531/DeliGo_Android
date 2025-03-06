@@ -1,6 +1,7 @@
 package com.example.deligoandroid.Customer.Adapters;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,7 +25,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
     }
 
     public void setRestaurants(List<Restaurant> restaurants) {
-        this.restaurants = restaurants;
+        this.restaurants = restaurants != null ? restaurants : new ArrayList<>();
         notifyDataSetChanged();
     }
 
@@ -41,8 +42,12 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
 
     @Override
     public void onBindViewHolder(@NonNull RestaurantViewHolder holder, int position) {
-        Restaurant restaurant = restaurants.get(position);
-        holder.bind(restaurant);
+        try {
+            Restaurant restaurant = restaurants.get(position);
+            holder.bind(restaurant);
+        } catch (Exception e) {
+            Log.e("RestaurantAdapter", "Error binding restaurant at position " + position, e);
+        }
     }
 
     @Override
@@ -51,42 +56,73 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
     }
 
     class RestaurantViewHolder extends RecyclerView.ViewHolder {
-        private ImageView imageView;
+        private ImageView restaurantImage;
+        private ImageView placeholderImage;
         private TextView nameText;
-        private TextView descriptionText;
+        private TextView cuisineText;
         private TextView ratingText;
-        private TextView statusText;
+        private TextView numberOfRatingsText;
+        private TextView statusBadge;
 
         RestaurantViewHolder(@NonNull View itemView) {
             super(itemView);
-            imageView = itemView.findViewById(R.id.restaurantImage);
+            restaurantImage = itemView.findViewById(R.id.restaurantImage);
+            placeholderImage = itemView.findViewById(R.id.placeholderImage);
             nameText = itemView.findViewById(R.id.restaurantName);
-            descriptionText = itemView.findViewById(R.id.restaurantDescription);
-            ratingText = itemView.findViewById(R.id.restaurantRating);
-            statusText = itemView.findViewById(R.id.restaurantStatus);
+            cuisineText = itemView.findViewById(R.id.cuisineType);
+            ratingText = itemView.findViewById(R.id.ratingText);
+            numberOfRatingsText = itemView.findViewById(R.id.numberOfRatings);
+            statusBadge = itemView.findViewById(R.id.statusBadge);
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onRestaurantClick(restaurants.get(position));
+                    try {
+                        listener.onRestaurantClick(restaurants.get(position));
+                    } catch (Exception e) {
+                        Log.e("RestaurantAdapter", "Error handling restaurant click", e);
+                    }
                 }
             });
         }
 
         void bind(Restaurant restaurant) {
-            nameText.setText(restaurant.getName());
-            descriptionText.setText(restaurant.getDescription());
-            ratingText.setText(String.format("%.1f", restaurant.getRating()));
-            statusText.setText(restaurant.isOpen() ? "Open" : "Closed");
-            statusText.setTextColor(context.getColor(
-                restaurant.isOpen() ? android.R.color.holo_green_dark : android.R.color.holo_red_dark
-            ));
+            try {
+                if (restaurant == null) {
+                    Log.e("RestaurantAdapter", "Attempted to bind null restaurant");
+                    return;
+                }
 
-            if (restaurant.getImageUrl() != null && !restaurant.getImageUrl().isEmpty()) {
-                Glide.with(context)
-                    .load(restaurant.getImageUrl())
-                    .centerCrop()
-                    .into(imageView);
+                nameText.setText(restaurant.getName());
+                cuisineText.setText(restaurant.getCuisine());
+                ratingText.setText(String.format("%.1f", restaurant.getRating()));
+                numberOfRatingsText.setText(String.format("(%d)", restaurant.getNumberOfRatings()));
+
+                // Handle image loading
+                String imageUrl = restaurant.getImageUrl();
+                if (imageUrl != null && !imageUrl.isEmpty()) {
+                    restaurantImage.setVisibility(View.VISIBLE);
+                    placeholderImage.setVisibility(View.GONE);
+                    Glide.with(context)
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_restaurant)
+                        .error(R.drawable.ic_restaurant)
+                        .centerCrop()
+                        .into(restaurantImage);
+                } else {
+                    restaurantImage.setVisibility(View.GONE);
+                    placeholderImage.setVisibility(View.VISIBLE);
+                }
+
+                // Handle status badge
+                if (!restaurant.isOpen()) {
+                    statusBadge.setVisibility(View.VISIBLE);
+                    statusBadge.setText("CLOSED");
+                } else {
+                    statusBadge.setVisibility(View.GONE);
+                }
+            } catch (Exception e) {
+                Log.e("RestaurantAdapter", "Error binding restaurant data", e);
             }
         }
     }
