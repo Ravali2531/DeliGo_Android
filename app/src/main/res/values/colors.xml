@@ -54,4 +54,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="favorite_red">#FF4B4B</color>
 
+    <color name="primary">#FF4081</color>
+    <color name="gray_600">#757575</color>
+    <color name="red_500">#F44336</color>
+
 </resources>

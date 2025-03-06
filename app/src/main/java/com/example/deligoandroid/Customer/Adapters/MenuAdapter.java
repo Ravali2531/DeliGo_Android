@@ -194,6 +194,17 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     menuItemHolder.bulletPoint.setVisibility(View.GONE);
                     menuItemHolder.customizationInfo.setVisibility(View.GONE);
                 }
+
+                // Handle item click
+                menuItemHolder.itemView.setOnClickListener(v -> {
+                    if (context instanceof FragmentActivity) {
+                        ItemCustomizationDialog dialog = new ItemCustomizationDialog();
+                        Bundle args = new Bundle();
+                        args.putSerializable("menuItem", menuItem);
+                        dialog.setArguments(args);
+                        dialog.show(((FragmentActivity) context).getSupportFragmentManager(), "customization");
+                    }
+                });
             }
         }
     }
