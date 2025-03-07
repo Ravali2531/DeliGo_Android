@@ -47,7 +47,7 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
         
         // Setup RecyclerView
         favoritesRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        menuAdapter = new MenuAdapter(getContext());
+        menuAdapter = new MenuAdapter(getContext(), "favorites");
         menuAdapter.setOnAddToCartListener(this);
         favoritesRecyclerView.setAdapter(menuAdapter);
 

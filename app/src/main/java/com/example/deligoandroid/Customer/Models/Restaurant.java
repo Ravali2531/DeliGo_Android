@@ -14,7 +14,7 @@ public class Restaurant implements Serializable {
     private double rating;
     private int numberOfRatings;
     private String address;
-    private String imageUrl;
+    private String imageURL;
     private boolean isOpen;
 
     public Restaurant() {
@@ -29,7 +29,7 @@ public class Restaurant implements Serializable {
         this.rating = 0.0;
         this.numberOfRatings = 0;
         this.address = "";
-        this.imageUrl = "";
+        this.imageURL = "";
         this.isOpen = false;
     }
 
@@ -64,8 +64,8 @@ public class Restaurant implements Serializable {
     public String getAddress() { return address != null ? address : ""; }
     public void setAddress(String address) { this.address = address != null ? address : ""; }
 
-    public String getImageUrl() { return imageUrl != null ? imageUrl : ""; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl != null ? imageUrl : ""; }
+    public String getImageURL() { return imageURL; }
+    public void setImageURL(String imageURL) { this.imageURL = imageURL; }
 
     public boolean isOpen() { return isOpen; }
     public void setOpen(boolean open) { isOpen = open; }
@@ -88,7 +88,7 @@ public class Restaurant implements Serializable {
         if (!getCuisine().equals(that.getCuisine())) return false;
         if (!getPriceRange().equals(that.getPriceRange())) return false;
         if (!getAddress().equals(that.getAddress())) return false;
-        return getImageUrl().equals(that.getImageUrl());
+        return getImageURL().equals(that.getImageURL());
     }
 
     @Override
@@ -106,7 +106,7 @@ public class Restaurant implements Serializable {
         result = 31 * result + (int) (temp ^ (temp >>> 32));
         result = 31 * result + numberOfRatings;
         result = 31 * result + getAddress().hashCode();
-        result = 31 * result + getImageUrl().hashCode();
+        result = 31 * result + getImageURL().hashCode();
         result = 31 * result + (isOpen ? 1 : 0);
         return result;
     }
@@ -125,7 +125,7 @@ public class Restaurant implements Serializable {
                 ", rating=" + rating +
                 ", numberOfRatings=" + numberOfRatings +
                 ", address='" + getAddress() + '\'' +
-                ", imageUrl='" + getImageUrl() + '\'' +
+                ", imageURL='" + getImageURL() + '\'' +
                 ", isOpen=" + isOpen +
                 '}';
     }

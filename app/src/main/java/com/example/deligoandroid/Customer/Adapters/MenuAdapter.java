@@ -51,9 +51,11 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private Set<String> favoriteItemIds;
     private DatabaseReference favoritesRef;
     private ValueEventListener favoritesListener;
+    private String restaurantId;
 
-    public MenuAdapter(Context context) {
+    public MenuAdapter(Context context, String restaurantId) {
         this.context = context;
+        this.restaurantId = restaurantId;
         this.groupedItems = new HashMap<>();
         this.favoriteItemIds = new HashSet<>();
         
@@ -214,6 +216,12 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         }
 
                         ItemCustomizationDialog dialog = ItemCustomizationDialog.newInstance(menuItem);
+                        dialog.setOnAddToCartListener(cartItem -> {
+                            if (onAddToCartListener != null) {
+                                cartItem.setRestaurantId(restaurantId);
+                                onAddToCartListener.onAddToCart(cartItem);
+                            }
+                        });
                         dialog.show(((FragmentActivity) context).getSupportFragmentManager(), "customization");
                     }
                 });

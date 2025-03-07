@@ -6,157 +6,76 @@
     android:layout_height="match_parent"
     android:background="#F5F5F5">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/white">
-
-        <com.google.android.material.appbar.CollapsingToolbarLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed">
-
-            <!-- Restaurant Header -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp">
-
-                    <ImageView
-                        android:id="@+id/restaurantImage"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"/>
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:background="#33000000"/>
-
-                    <ImageButton
-                        android:id="@+id/backButton"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_margin="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_back"
-                        android:tint="@android:color/white"/>
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:background="@android:color/white">
-
-                    <TextView
-                        android:id="@+id/restaurantName"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/black"/>
-
-                    <TextView
-                        android:id="@+id/cuisineType"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@android:color/darker_gray"
-                        android:layout_marginTop="4dp"/>
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp"
-                        android:gravity="center_vertical">
-
-                        <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
-                            android:src="@drawable/ic_star"
-                            android:tint="#FFD700"/>
-
-                        <TextView
-                            android:id="@+id/rating"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:textColor="@android:color/black"/>
-
-                        <TextView
-                            android:id="@+id/numberOfRatings"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@android:color/darker_gray"
-                            android:layout_marginStart="4dp"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="•"
-                            android:layout_marginHorizontal="8dp"
-                            android:textColor="@android:color/darker_gray"/>
-
-                        <TextView
-                            android:id="@+id/priceRange"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@android:color/black"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                app:layout_collapseMode="pin"/>
-
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
-
-        <!-- Search Bar -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <androidx.appcompat.widget.SearchView
-                android:id="@+id/searchView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                app:queryHint="Search menu items..."
-                app:iconifiedByDefault="false"/>
-
-        </com.google.android.material.card.MaterialCardView>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <!-- Loading View -->
-    <ProgressBar
-        android:id="@+id/loadingView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"/>
-
-    <!-- Menu Items RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/menuRecyclerView"
+    <!-- Loading Layout -->
+    <FrameLayout
+        android:id="@+id/loadingLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
-        android:clipToPadding="false"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </FrameLayout>
+
+    <!-- Content Layout -->
+    <LinearLayout
+        android:id="@+id/contentLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Restaurant Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <ImageView
+                android:id="@+id/restaurantImage"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:scaleType="centerCrop"
+                android:background="@android:color/darker_gray" />
+
+            <TextView
+                android:id="@+id/restaurantName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/restaurantDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@android:color/darker_gray" />
+        </LinearLayout>
+
+        <!-- Search Bar -->
+        <androidx.appcompat.widget.SearchView
+            android:id="@+id/searchView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/search_background"
+            app:iconifiedByDefault="false"
+            app:queryHint="Search menu items" />
+
+        <!-- Menu Items -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/menuRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:padding="16dp" />
+    </LinearLayout>
 
     <!-- Empty State -->
     <LinearLayout

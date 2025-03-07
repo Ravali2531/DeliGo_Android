@@ -99,7 +99,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
                 numberOfRatingsText.setText(String.format("(%d)", restaurant.getNumberOfRatings()));
 
                 // Handle image loading
-                String imageUrl = restaurant.getImageUrl();
+                String imageUrl = restaurant.getImageURL();
                 if (imageUrl != null && !imageUrl.isEmpty()) {
                     restaurantImage.setVisibility(View.VISIBLE);
                     placeholderImage.setVisibility(View.GONE);

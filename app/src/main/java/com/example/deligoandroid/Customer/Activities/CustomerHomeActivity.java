@@ -62,7 +62,7 @@ public class CustomerHomeActivity extends AppCompatActivity
         binding.restaurantsRecyclerView.setAdapter(restaurantAdapter);
 
         // Initialize MenuAdapter
-        menuAdapter = new MenuAdapter(this);
+        menuAdapter = new MenuAdapter(this, "all");
         menuAdapter.setOnFavoriteClickListener(this);
         loadFavoriteItemIds(menuAdapter);
 
@@ -180,7 +180,7 @@ public class CustomerHomeActivity extends AppCompatActivity
                             restaurant.setCuisine("Restaurant");
                             restaurant.setPhone("");
                             restaurant.setPriceRange("$");
-                            restaurant.setImageUrl("");
+                            restaurant.setImageURL("");
                             restaurant.setRating(0.0);
                             restaurant.setNumberOfRatings(0);
 
@@ -289,8 +289,15 @@ public class CustomerHomeActivity extends AppCompatActivity
             restaurantData.put("email", restaurant.getEmail());
             restaurantData.put("description", restaurant.getDescription());
             restaurantData.put("isOpen", restaurant.isOpen());
+            restaurantData.put("cuisine", restaurant.getCuisine());
+            restaurantData.put("priceRange", restaurant.getPriceRange());
+            restaurantData.put("rating", restaurant.getRating());
+            restaurantData.put("numberOfRatings", restaurant.getNumberOfRatings());
+            restaurantData.put("address", restaurant.getAddress());
+            restaurantData.put("imageURL", restaurant.getImageURL());
 
-            Log.d("CustomerHomeActivity", "Created HashMap with restaurant data");
+            Log.d("CustomerHomeActivity", "Created HashMap with restaurant data: " + restaurantData.toString());
+            Log.d("CustomerHomeActivity", "Verifying restaurant ID in HashMap: " + restaurantData.get("id"));
 
             try {
                 Intent intent = new Intent(CustomerHomeActivity.this, RestaurantMenuActivity.class);
