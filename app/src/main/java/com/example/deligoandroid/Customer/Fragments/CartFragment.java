@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.Customer.Adapters.CartAdapter;
 import com.example.deligoandroid.Customer.Models.CartItem;
+import com.example.deligoandroid.Customer.Models.CustomizationSelection;
+import com.example.deligoandroid.Customer.Models.SelectedItem;
 import com.example.deligoandroid.R;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
@@ -24,7 +26,9 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CartFragment extends Fragment implements CartAdapter.CartItemListener {
     private View emptyStateView;
@@ -152,9 +156,51 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
     @Override
     public void onUpdateQuantity(String itemId, int newQuantity) {
-        cartRef.child(itemId).child("quantity").setValue(newQuantity)
-            .addOnFailureListener(e -> 
-                Toast.makeText(getContext(), "Failed to update quantity", Toast.LENGTH_SHORT).show());
+        DatabaseReference itemRef = cartRef.child(itemId);
+        
+        // First get the current item to calculate new total
+        itemRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                CartItem cartItem = snapshot.getValue(CartItem.class);
+                if (cartItem != null) {
+                    // Calculate new total price
+                    double basePrice = cartItem.getPrice();
+                    double customizationsTotal = 0;
+                    
+                    // Add customization prices
+                    Map<String, List<CustomizationSelection>> customizations = cartItem.getCustomizations();
+                    if (customizations != null) {
+                        for (List<CustomizationSelection> selections : customizations.values()) {
+                            for (CustomizationSelection selection : selections) {
+                                if (selection.getSelectedItems() != null) {
+                                    for (SelectedItem item : selection.getSelectedItems()) {
+                                        customizationsTotal += item.getPrice();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Calculate new total
+                    double newTotal = (basePrice + customizationsTotal) * newQuantity;
+
+                    // Update both quantity and total price
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("quantity", newQuantity);
+                    updates.put("totalPrice", newTotal);
+
+                    itemRef.updateChildren(updates)
+                        .addOnFailureListener(e -> 
+                            Toast.makeText(getContext(), "Failed to update quantity", Toast.LENGTH_SHORT).show());
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(getContext(), "Failed to update quantity", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
