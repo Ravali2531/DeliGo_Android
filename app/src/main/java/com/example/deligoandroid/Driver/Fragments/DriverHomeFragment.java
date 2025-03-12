@@ -8,14 +8,20 @@ import android.widget.TextView;
 import android.widget.Switch;
 import android.widget.ImageView;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class DriverHomeFragment extends Fragment {
     private TextView statusText;
     private Switch availabilitySwitch;
+    private RecyclerView availableOrdersRecyclerView;
+    private TextView noOrdersText;
     private DatabaseReference databaseRef;
     private String userId;
 
@@ -35,9 +41,14 @@ public class DriverHomeFragment extends Fragment {
         // Initialize views
         statusText = view.findViewById(R.id.statusText);
         availabilitySwitch = view.findViewById(R.id.availabilitySwitch);
+        availableOrdersRecyclerView = view.findViewById(R.id.availableOrdersRecyclerView);
+        noOrdersText = view.findViewById(R.id.noOrdersText);
 
         // Setup availability switch
         setupAvailabilitySwitch();
+
+        // Load available orders
+        loadAvailableOrders();
 
         return view;
     }
@@ -66,5 +77,31 @@ public class DriverHomeFragment extends Fragment {
         statusText.setText(isAvailable ? "You are available for orders" : "You are currently offline");
         statusText.setTextColor(getResources().getColor(
                 isAvailable ? android.R.color.holo_green_dark : android.R.color.darker_gray));
+    }
+
+    private void loadAvailableOrders() {
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference().child("orders");
+        ordersRef.orderByChild("status").equalTo("pending").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (!dataSnapshot.exists() || !dataSnapshot.hasChildren()) {
+                    // No orders available
+                    availableOrdersRecyclerView.setVisibility(View.GONE);
+                    noOrdersText.setVisibility(View.VISIBLE);
+                } else {
+                    // Orders available
+                    availableOrdersRecyclerView.setVisibility(View.VISIBLE);
+                    noOrdersText.setVisibility(View.GONE);
+                    // TODO: Set up RecyclerView adapter with the orders
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle error
+                availableOrdersRecyclerView.setVisibility(View.GONE);
+                noOrdersText.setVisibility(View.VISIBLE);
+            }
+        });
     }
 } 

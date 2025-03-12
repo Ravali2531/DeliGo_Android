@@ -6,7 +6,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.ImageView;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.R;
@@ -14,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 import androidx.viewpager2.widget.ViewPager2;
 
 public class DriverOrdersFragment extends Fragment {
@@ -33,23 +37,42 @@ public class DriverOrdersFragment extends Fragment {
 
         // Setup header
         View header = view.findViewById(R.id.header);
+        ((TextView) header.findViewById(R.id.headerTitle)).setText("DeliGo Driver");
 
         // Initialize views
         tabLayout = view.findViewById(R.id.tabLayout);
         viewPager = view.findViewById(R.id.viewPager);
 
-        // Setup tabs
-        setupTabs();
+        // Setup ViewPager
+        setupViewPager();
 
         return view;
     }
 
-    private void setupTabs() {
-        // Add tabs
-        tabLayout.addTab(tabLayout.newTab().setText("Current"));
-        tabLayout.addTab(tabLayout.newTab().setText("Past"));
+    private void setupViewPager() {
+        OrdersPagerAdapter pagerAdapter = new OrdersPagerAdapter(requireActivity());
+        viewPager.setAdapter(pagerAdapter);
 
-        // TODO: Setup ViewPager adapter for Current and Past orders
-        // This will be implemented when we create the order adapters
+        // Connect TabLayout with ViewPager2
+        new TabLayoutMediator(tabLayout, viewPager,
+                (tab, position) -> tab.setText(position == 0 ? "Current" : "Past")
+        ).attach();
+    }
+
+    private class OrdersPagerAdapter extends FragmentStateAdapter {
+        public OrdersPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
+            super(fragmentActivity);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position) {
+            return position == 0 ? new CurrentOrdersFragment() : new PastOrdersFragment();
+        }
+
+        @Override
+        public int getItemCount() {
+            return 2;
+        }
     }
 } 
