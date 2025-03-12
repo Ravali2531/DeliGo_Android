@@ -63,6 +63,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
         private TextView ratingText;
         private TextView numberOfRatingsText;
         private TextView statusBadge;
+        private TextView distanceText;
 
         RestaurantViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -73,6 +74,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
             ratingText = itemView.findViewById(R.id.ratingText);
             numberOfRatingsText = itemView.findViewById(R.id.numberOfRatings);
             statusBadge = itemView.findViewById(R.id.statusBadge);
+            distanceText = itemView.findViewById(R.id.distanceText);
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
@@ -97,6 +99,20 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
                 cuisineText.setText(restaurant.getCuisine());
                 ratingText.setText(String.format("%.1f", restaurant.getRating()));
                 numberOfRatingsText.setText(String.format("(%d)", restaurant.getNumberOfRatings()));
+
+                // Display distance if available
+                if (restaurant.getDistance() > 0) {
+                    distanceText.setVisibility(View.VISIBLE);
+                    if (restaurant.getDistance() < 1) {
+                        // Show in meters if less than 1 km
+                        distanceText.setText(String.format("%.0f m", restaurant.getDistance() * 1000));
+                    } else {
+                        // Show in kilometers if 1 km or more
+                        distanceText.setText(String.format("%.1f km", restaurant.getDistance()));
+                    }
+                } else {
+                    distanceText.setVisibility(View.GONE);
+                }
 
                 // Handle image loading
                 String imageUrl = restaurant.getImageURL();

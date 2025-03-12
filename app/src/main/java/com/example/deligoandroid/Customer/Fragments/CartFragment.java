@@ -79,7 +79,7 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
         // Initialize Firebase reference
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         cartRef = FirebaseDatabase.getInstance().getReference()
-            .child("users")
+            .child("customers")
             .child(userId)
             .child("cart");
     }

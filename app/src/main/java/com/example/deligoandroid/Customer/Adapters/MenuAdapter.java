@@ -62,7 +62,7 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // Initialize Firebase reference
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         this.favoritesRef = FirebaseDatabase.getInstance().getReference()
-            .child("users")
+            .child("customers")
             .child(userId)
             .child("favorites");
 

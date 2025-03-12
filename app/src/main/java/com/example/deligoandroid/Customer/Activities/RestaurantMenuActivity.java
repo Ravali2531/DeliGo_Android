@@ -194,7 +194,7 @@ public class RestaurantMenuActivity extends AppCompatActivity implements MenuAda
 
         // Setup cart reference
         cartRef = FirebaseDatabase.getInstance().getReference()
-            .child("users")
+            .child("customers")
             .child(userId)
             .child("cart");
     }

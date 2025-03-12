@@ -54,7 +54,7 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
         // Initialize Firebase reference
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         favoritesRef = FirebaseDatabase.getInstance().getReference()
-            .child("users")
+            .child("customers")
             .child(userId)
             .child("favorites");
     }
@@ -206,7 +206,7 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
     public void onAddToCart(CartItem cartItem) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         DatabaseReference cartRef = FirebaseDatabase.getInstance().getReference()
-            .child("users")
+            .child("customers")
             .child(userId)
             .child("cart");
 

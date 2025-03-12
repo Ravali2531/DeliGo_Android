@@ -90,6 +90,15 @@
                     android:textSize="12sp"
                     android:textColor="@android:color/darker_gray"
                     android:layout_marginStart="4dp"/>
+
+                <TextView
+                    android:id="@+id/distanceText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/design_default_color_primary"
+                    android:layout_marginStart="8dp"
+                    android:visibility="gone"/>
             </LinearLayout>
         </LinearLayout>
 
@@ -98,17 +107,13 @@
             android:id="@+id/statusBadge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Closed"
-            android:textSize="12sp"
-            android:textColor="#FF0000"
-            android:background="#1AFF0000"
+            android:background="@drawable/badge_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="4dp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginStart="8dp"
-            android:visibility="gone"
-            android:layout_marginLeft="8dp"
-            android:layout_marginRight="8dp"/>
+            android:text="CLOSED"
+            android:textColor="#FF0000"
+            android:textSize="12sp"
+            android:visibility="gone"/>
 
     </LinearLayout>
 </androidx.cardview.widget.CardView> 
