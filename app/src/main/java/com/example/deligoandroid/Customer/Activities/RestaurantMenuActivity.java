@@ -68,7 +68,11 @@ public class RestaurantMenuActivity extends AppCompatActivity implements MenuAda
         restaurant.setNumberOfRatings(((Number) restaurantData.get("numberOfRatings")).intValue());
         restaurant.setAddress((String) restaurantData.get("address"));
         restaurant.setImageURL((String) restaurantData.get("imageURL"));
+        restaurant.setOpening((String) restaurantData.get("opening"));
+        restaurant.setClosing((String) restaurantData.get("closing"));
 
+// Log entire restaurant data received from Firebase
+        Log.d("RestaurantMenuActivity", "Full Restaurant Data: " + restaurantData.toString());
         // Log restaurant object
         Log.d("RestaurantMenuActivity", "Created restaurant object with ID: " + restaurant.getId());
         Log.d("RestaurantMenuActivity", "Restaurant name: " + restaurant.getName());
@@ -88,10 +92,15 @@ public class RestaurantMenuActivity extends AppCompatActivity implements MenuAda
         // Setup header
         TextView restaurantName = findViewById(R.id.restaurantName);
         TextView restaurantDescription = findViewById(R.id.restaurantDescription);
+        TextView restaurantAddress = findViewById(R.id.restaurantAddress);
+        TextView restaurantHours = findViewById(R.id.restaurantHours);
         ImageView restaurantImage = findViewById(R.id.restaurantImage);
 
         restaurantName.setText(restaurant.getName());
         restaurantDescription.setText(restaurant.getDescription());
+
+        restaurantAddress.setText("📍 " + restaurant.getAddress()); // Display address
+        restaurantHours.setText("🕒 " + restaurant.getOpening() + " - " + restaurant.getClosing()); // Opening & Closing hours
 
         if (restaurant.getImageURL() != null && !restaurant.getImageURL().isEmpty()) {
             Glide.with(this)

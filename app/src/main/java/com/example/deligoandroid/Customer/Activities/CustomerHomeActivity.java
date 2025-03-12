@@ -273,7 +273,6 @@ public class CustomerHomeActivity extends AppCompatActivity
 
                             DataSnapshot storeInfosnapshot = snapshot.child("store_info");
 
-
                             // Get basic info with default values
                             String name = storeInfosnapshot.child("name").getValue(String.class);
                             restaurant.setName(name != null ? name : "Unnamed Restaurant");
@@ -289,6 +288,19 @@ public class CustomerHomeActivity extends AppCompatActivity
                             Boolean isOpen = snapshot.child("isOpen").getValue(Boolean.class);
                             restaurant.setOpen(isOpen != null ? isOpen : false);
 
+                            String address = storeInfosnapshot.child("address").getValue(String.class);
+                            restaurant.setAddress(address != null ? address : "");
+
+                            DataSnapshot hoursInfosnapshot = snapshot.child("hours");
+
+                            // Get about info
+                            String closing = hoursInfosnapshot.child("closing").getValue(String.class);
+                            restaurant.setClosing(closing != null ? closing : "");
+
+                            // Get about info
+                            String opening = hoursInfosnapshot.child("opening").getValue(String.class);
+                            restaurant.setOpening(opening != null ? opening : "");
+
                             // Get location info
                             DataSnapshot locationSnapshot = snapshot.child("location");
                             if (locationSnapshot.exists()) {
@@ -298,7 +310,6 @@ public class CustomerHomeActivity extends AppCompatActivity
                                 
                                 restaurant.setLatitude(lat != null ? lat : 0.0);
                                 restaurant.setLongitude(lng != null ? lng : 0.0);
-                                restaurant.setAddress(locationName != null ? locationName : "");
 
                                 Log.d("CustomerHomeActivity", "Restaurant " + restaurant.getName() + 
                                     " location - Lat: " + restaurant.getLatitude() + 
@@ -461,6 +472,8 @@ public class CustomerHomeActivity extends AppCompatActivity
             restaurantData.put("numberOfRatings", restaurant.getNumberOfRatings());
             restaurantData.put("address", restaurant.getAddress());
             restaurantData.put("imageURL", restaurant.getImageURL());
+            restaurantData.put("closing", restaurant.getClosing());
+            restaurantData.put("opening", restaurant.getOpening());
 
             Log.d("CustomerHomeActivity", "Created HashMap with restaurant data: " + restaurantData.toString());
             Log.d("CustomerHomeActivity", "Verifying restaurant ID in HashMap: " + restaurantData.get("id"));

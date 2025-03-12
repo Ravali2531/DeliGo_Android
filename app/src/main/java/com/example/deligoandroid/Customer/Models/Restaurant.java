@@ -19,6 +19,8 @@ public class Restaurant implements Serializable {
     private double latitude;
     private double longitude;
     private double distance;
+    private String opening;
+    private String closing;
 
     public Restaurant() {
         // Required empty constructor for Firebase
@@ -37,6 +39,8 @@ public class Restaurant implements Serializable {
         this.latitude = 0.0;
         this.longitude = 0.0;
         this.distance = 0.0;
+        this.opening = "";
+        this.closing = "";
     }
 
     // Getters and Setters with null checks
@@ -84,6 +88,13 @@ public class Restaurant implements Serializable {
 
     public double getDistance() { return distance; }
     public void setDistance(double distance) { this.distance = distance; }
+
+    // Getters and Setters
+    public String getOpening() { return opening != null ? opening : ""; }
+    public void setOpening(String opening) { this.opening = opening != null ? opening : ""; }
+
+    public String getClosing() { return closing != null ? closing : ""; }
+    public void setClosing(String closing) { this.closing = closing != null ? closing : ""; }
 
     @Override
     public boolean equals(Object o) {
