@@ -107,27 +107,113 @@ public class SignupActivity extends AppCompatActivity {
 
     }
 
-    private void saveUserData(String userId, String role, String fullName, String email, String phone) {
-        // Create user data map
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("fullName", fullName);
-        userData.put("email", email);
-        userData.put("phone", phone);
-        userData.put("role", role);
+//    private void saveUserData(String userId, String role, String fullName, String email, String phone) {
+//        // Create user data map
+//        Map<String, Object> userData = new HashMap<>();
+//        userData.put("name", fullName);
+//        userData.put("email", email);
+//        userData.put("phone", phone);
+//        userData.put("role", role);
+//
+//        // Save user data in the appropriate collection based on role
+//        mDatabase.child(role.toLowerCase() + "s").child(userId).child("store_info")
+//                .setValue(userData)
+//                .addOnCompleteListener(task -> {
+//                    if (task.isSuccessful()) {
+//                        Toast.makeText(SignupActivity.this, "Signup successful!",
+//                                     Toast.LENGTH_SHORT).show();
+//                        startActivity(new Intent(SignupActivity.this, LoginActivity.class));
+//                        finish();
+//                    } else {
+//                        Toast.makeText(SignupActivity.this, "Failed to save user data: " +
+//                                     task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//    }
 
-        // Save user data in the appropriate collection based on role
-        mDatabase.child(role.toLowerCase() + "s").child(userId)
-                .setValue(userData)
+//    private void saveUserData(String userId, String role, String fullName, String email, String phone) {
+//        // Create user data map for store_info
+//        Map<String, Object> storeInfo = new HashMap<>();
+//        storeInfo.put("name", fullName);
+//        storeInfo.put("email", email);
+//        storeInfo.put("phone", phone);
+//
+//        // Save role separately under restaurants/userId
+//        mDatabase.child(role.toLowerCase() + "s").child(userId).child("role")
+//                .setValue(role)
+//                .addOnCompleteListener(task -> {
+//                    if (task.isSuccessful()) {
+//                        // Save store info under restaurants/userId/store_info
+//                        mDatabase.child(role.toLowerCase() + "s").child(userId).child("store_info")
+//                                .setValue(storeInfo)
+//                                .addOnCompleteListener(storeTask -> {
+//                                    if (storeTask.isSuccessful()) {
+//                                        Toast.makeText(SignupActivity.this, "Signup successful!",
+//                                                Toast.LENGTH_SHORT).show();
+//                                        startActivity(new Intent(SignupActivity.this, LoginActivity.class));
+//                                        finish();
+//                                    } else {
+//                                        Toast.makeText(SignupActivity.this, "Failed to save store info: " +
+//                                                storeTask.getException().getMessage(), Toast.LENGTH_SHORT).show();
+//                                    }
+//                                });
+//                    } else {
+//                        Toast.makeText(SignupActivity.this, "Failed to save role: " +
+//                                task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+//                    }
+//                });
+//    }
+
+    private void saveUserData(String userId, String role, String fullName, String email, String phone) {
+        // Create user data map for store_info if the role is 'restaurant'
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("name", fullName);
+        userInfo.put("email", email);
+        userInfo.put("phone", phone);
+        userInfo.put("role", role);
+
+        // Save role separately under roles/userId
+        mDatabase.child(role.toLowerCase() + "s").child(userId).child("role")
+                .setValue(role)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        Toast.makeText(SignupActivity.this, "Signup successful!", 
-                                     Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(SignupActivity.this, LoginActivity.class));
-                        finish();
+                        // For restaurants, save store info under restaurants/userId/store_info
+                        if (role.equalsIgnoreCase("restaurant")) {
+                            mDatabase.child("restaurants").child(userId).child("store_info")
+                                    .setValue(userInfo)
+                                    .addOnCompleteListener(storeTask -> {
+                                        if (storeTask.isSuccessful()) {
+                                            Toast.makeText(SignupActivity.this, "Signup successful!",
+                                                    Toast.LENGTH_SHORT).show();
+                                            startActivity(new Intent(SignupActivity.this, LoginActivity.class));
+                                            finish();
+                                        } else {
+                                            Toast.makeText(SignupActivity.this, "Failed to save store info: " +
+                                                    storeTask.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        } else {
+                            // For other roles, save under a common 'stores' node
+                            mDatabase.child(role.toLowerCase() + "s").child(userId)
+                                    .setValue(userInfo)
+                                    .addOnCompleteListener(storeTask -> {
+                                        if (storeTask.isSuccessful()) {
+                                            Toast.makeText(SignupActivity.this, "Signup successful!",
+                                                    Toast.LENGTH_SHORT).show();
+                                            startActivity(new Intent(SignupActivity.this, LoginActivity.class));
+                                            finish();
+                                        } else {
+                                            Toast.makeText(SignupActivity.this, "Failed to save stores info: " +
+                                                    storeTask.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        }
                     } else {
-                        Toast.makeText(SignupActivity.this, "Failed to save user data: " + 
-                                     task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(SignupActivity.this, "Failed to save role: " +
+                                task.getException().getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
     }
+
+
 }

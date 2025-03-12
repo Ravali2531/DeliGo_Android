@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.view.LayoutInflater;
 
 import com.bumptech.glide.Glide;
 import com.example.deligoandroid.R;
@@ -112,6 +113,10 @@ public class EditMenuItemActivity extends AppCompatActivity {
         binding.itemImageLayout.setOnClickListener(v -> openImagePicker());
         binding.addCustomizationButton.setOnClickListener(v -> showAddCustomizationDialog());
         binding.saveButton.setOnClickListener(v -> updateMenuItem());
+        
+        // Show and setup delete button
+        binding.deleteButton.setVisibility(View.VISIBLE);
+        binding.deleteButton.setOnClickListener(v -> showDeleteConfirmationDialog());
     }
 
     private void loadMenuItem() {
@@ -513,6 +518,66 @@ public class EditMenuItemActivity extends AppCompatActivity {
             });
     }
 
+    private void showDeleteConfirmationDialog() {
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Delete Menu Item")
+            .setMessage("Are you sure you want to delete this menu item? This action cannot be undone.")
+            .setPositiveButton("Delete", (dialog, which) -> deleteMenuItem())
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void deleteMenuItem() {
+        if (itemId == null) {
+            Toast.makeText(this, "Error: Item ID not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference menuRef = FirebaseDatabase.getInstance().getReference()
+            .child("restaurants")
+            .child(userId)
+            .child("menu_items")
+            .child(itemId);
+
+        // Show progress
+        binding.progressBar.setVisibility(View.VISIBLE);
+        binding.deleteButton.setEnabled(false);
+        binding.saveButton.setEnabled(false);
+
+        // If there's an image URL, delete it from storage first
+        if (currentImageUrl != null && !currentImageUrl.isEmpty()) {
+            FirebaseStorage.getInstance().getReferenceFromUrl(currentImageUrl)
+                .delete()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        Log.w(TAG, "Error deleting image file", task.getException());
+                    }
+                    // Continue with deleting the database entry regardless of image deletion result
+                    deleteMenuItemFromDatabase(menuRef);
+                });
+        } else {
+            // No image to delete, just delete the database entry
+            deleteMenuItemFromDatabase(menuRef);
+        }
+    }
+
+    private void deleteMenuItemFromDatabase(DatabaseReference menuRef) {
+        menuRef.removeValue()
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Menu item deleted successfully", Toast.LENGTH_SHORT).show();
+                setResult(RESULT_OK);
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                binding.progressBar.setVisibility(View.GONE);
+                binding.deleteButton.setEnabled(true);
+                binding.saveButton.setEnabled(true);
+                Toast.makeText(this, "Failed to delete menu item: " + e.getMessage(), 
+                    Toast.LENGTH_SHORT).show();
+            });
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -520,5 +585,29 @@ public class EditMenuItemActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void updateCustomizationsList() {
+        binding.customizationsContainer.removeAllViews();
+        for (CustomizationOption option : customizationOptions) {
+            View view = LayoutInflater.from(this).inflate(
+                R.layout.item_customization_edit, binding.customizationsContainer, false);
+
+            TextView nameText = view.findViewById(R.id.customizationName);
+            TextView typeText = view.findViewById(R.id.customizationType);
+            ImageButton deleteButton = view.findViewById(R.id.deleteButton);
+
+            nameText.setText(option.getName());
+            String typeDescription = option.isSingleSelection() ? 
+                "Single Selection" : String.format("Multiple Selection (up to %d)", option.getMaxSelections());
+            typeText.setText(String.format("%s%s", typeDescription, option.isRequired() ? " • Required" : ""));
+
+            deleteButton.setOnClickListener(v -> {
+                customizationOptions.remove(option);
+                updateCustomizationsList();
+            });
+
+            binding.customizationsContainer.addView(view);
+        }
     }
 }

@@ -25,7 +25,7 @@ import com.google.firebase.database.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickListener {
+public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClickListener {
     private RecyclerView menuRecyclerView;
     private LinearLayout emptyMenuLayout;
     private MenuAdapter menuAdapter;
@@ -60,7 +60,8 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickLis
             .child("restaurants").child(userId).child("menu_items");
 
         menuRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        menuAdapter = new MenuAdapter(getContext(), this);
+        menuAdapter = new MenuAdapter(getContext());
+        menuAdapter.setOnMenuItemClickListener(this);
         menuRecyclerView.setAdapter(menuAdapter);
 
         setupSearchView();
@@ -232,41 +233,11 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnItemClickLis
     }
 
     @Override
-    public void onItemClick(MenuItemModel item) {
-        try {
-            if (getContext() == null) {
-                Log.e("MenuFragment", "Context is null");
-                return;
-            }
-            
-            if (item == null) {
-                Log.e("MenuFragment", "Item is null");
-                Toast.makeText(getContext(), "Error: Invalid menu item", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            if (item.getId() == null) {
-                Log.e("MenuFragment", "Item ID is null");
-                Toast.makeText(getContext(), "Error: Invalid menu item ID", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            Log.d("MenuFragment", "Attempting to edit item: " + item.getId());
-            Log.d("MenuFragment", "Item details - Name: " + item.getName() + ", Category: " + item.getCategory());
-            
-            Intent intent = new Intent(getContext(), EditMenuItemActivity.class);
-            intent.putExtra("itemId", item.getId());
-            startActivityForResult(intent, EDIT_ITEM_REQUEST);
-            
-        } catch (Exception e) {
-            Log.e("MenuFragment", "Error launching edit activity", e);
-            if (getContext() != null) {
-                Toast.makeText(getContext(), 
-                    "Error launching edit screen: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-            }
-            e.printStackTrace();
-        }
+    public void onMenuItemClick(MenuItemModel item) {
+        // Open EditMenuItemActivity with the selected item
+        Intent intent = new Intent(getActivity(), EditMenuItemActivity.class);
+        intent.putExtra("menuItem", item);
+        startActivity(intent);
     }
 
     @Override

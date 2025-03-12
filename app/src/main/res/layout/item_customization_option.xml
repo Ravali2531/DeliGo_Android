@@ -1,45 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp"
-    android:gravity="center_vertical">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#F5F5F5"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp">
 
+    <!-- Option Header -->
     <LinearLayout
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <TextView
-            android:id="@+id/customizationName"
-            android:layout_width="match_parent"
+            android:id="@+id/optionName"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:textSize="16sp"
-            android:textColor="@android:color/black"
             android:textStyle="bold"/>
 
         <TextView
-            android:id="@+id/customizationType"
-            android:layout_width="match_parent"
+            android:id="@+id/requiredText"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="#757575"
-            android:layout_marginTop="4dp"/>
-
+            android:text="Required"
+            android:textColor="#FF0000"
+            android:textSize="12sp"
+            android:visibility="gone"/>
     </LinearLayout>
 
-    <ImageButton
-        android:id="@+id/deleteButton"
+    <!-- Selection Limit Text (for multiple selection) -->
+    <TextView
+        android:id="@+id/selectionLimitText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_delete"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:padding="8dp"
-        android:contentDescription="Delete customization"/>
+        android:textSize="12sp"
+        android:textColor="@android:color/darker_gray"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"/>
+
+    <!-- Options Container -->
+    <LinearLayout
+        android:id="@+id/optionsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"/>
 
 </LinearLayout> 

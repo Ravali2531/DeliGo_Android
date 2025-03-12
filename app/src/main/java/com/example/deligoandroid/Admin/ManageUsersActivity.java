@@ -95,7 +95,9 @@ public class  ManageUsersActivity extends AppCompatActivity {
                     user.address = userSnapshot.child("address").getValue(String.class);
 
                     if (userType.equals("restaurants")) {
-                        user.restaurantName = userSnapshot.child("restaurantName").getValue(String.class);
+                        user.restaurantName = userSnapshot.child("store_info/name").getValue(String.class);
+                        user.email = userSnapshot.child("store_info/email").getValue(String.class);
+                        user.phone = userSnapshot.child("store_info/phone").getValue(String.class);
                         user.openingHours = userSnapshot.child("hours/opening").getValue(String.class);
                         user.closingHours = userSnapshot.child("hours/closing").getValue(String.class);
                     }

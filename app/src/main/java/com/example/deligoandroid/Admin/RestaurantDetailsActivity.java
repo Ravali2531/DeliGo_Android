@@ -84,9 +84,9 @@ public class RestaurantDetailsActivity extends AppCompatActivity {
                 }
 
                 // Set basic info
-                restaurantName.setText(dataSnapshot.child("restaurantName").getValue(String.class));
-                restaurantEmail.setText(dataSnapshot.child("email").getValue(String.class));
-                restaurantPhone.setText(dataSnapshot.child("phone").getValue(String.class));
+                restaurantName.setText(dataSnapshot.child("store_info/name").getValue(String.class));
+                restaurantEmail.setText(dataSnapshot.child("store_info/email").getValue(String.class));
+                restaurantPhone.setText(dataSnapshot.child("store_info/phone").getValue(String.class));
 
                 // Set document status
                 String status = dataSnapshot.child("documents/status").getValue(String.class);

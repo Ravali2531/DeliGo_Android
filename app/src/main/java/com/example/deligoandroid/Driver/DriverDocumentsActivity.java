@@ -179,7 +179,6 @@ public class DriverDocumentsActivity extends AppCompatActivity {
                                 databaseRef.child("drivers")
                                         .child(userId)
                                         .child("documents")
-                                        .child("files")
                                         .child(type)
                                         .setValue(fileData)
                                         .addOnSuccessListener(aVoid -> onComplete.run())

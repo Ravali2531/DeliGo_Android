@@ -8,6 +8,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TimePicker;
 import android.widget.Toast;
+import android.widget.TextView;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,19 +19,35 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.model.TypeFilter;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.gms.common.api.Status;
+import com.google.android.libraries.places.api.model.LocationBias;
+import com.google.android.libraries.places.api.model.LocationRestriction;
+import com.google.android.libraries.places.api.model.RectangularBounds;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
 
 public class RestaurantDocumentsActivity extends AppCompatActivity {
 
     private ImageView restaurantProofPreview, ownerIdPreview;
     private Button uploadRestaurantProofButton, uploadOwnerIdButton, submitButton;
     private TimePicker openingTimePicker, closingTimePicker;
+    private TextView coordinatesText;
     private Uri restaurantProofUri, ownerIdUri;
     private FirebaseStorage storage;
     private DatabaseReference databaseRef;
     private String userId;
+    private double selectedLatitude = 0;
+    private double selectedLongitude = 0;
+    private String selectedAddress = "";
 
     private final ActivityResultLauncher<String> restaurantProofPicker = registerForActivityResult(
             new ActivityResultContracts.GetContent(),
@@ -57,6 +74,11 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_restaurant_documents);
 
+        // Initialize Places API with custom options
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), getString(R.string.google_maps_key));
+        }
+
         // Initialize Firebase
         storage = FirebaseStorage.getInstance();
         databaseRef = FirebaseDatabase.getInstance().getReference();
@@ -64,6 +86,9 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
 
         // Initialize views
         initializeViews();
+
+        // Setup Places Autocomplete
+        setupPlacesAutocomplete();
 
         // Setup click listeners
         uploadRestaurantProofButton.setOnClickListener(v -> openDocumentPicker(restaurantProofPicker));
@@ -82,6 +107,7 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         submitButton = findViewById(R.id.submitButton);
         openingTimePicker = findViewById(R.id.openingTimePicker);
         closingTimePicker = findViewById(R.id.closingTimePicker);
+        coordinatesText = findViewById(R.id.coordinatesText);
 
         // Set 24-hour format for time pickers
         openingTimePicker.setIs24HourView(true);
@@ -90,6 +116,64 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         // Set initial placeholder images
         restaurantProofPreview.setImageResource(R.drawable.id_placeholder);
         ownerIdPreview.setImageResource(R.drawable.id_placeholder);
+    }
+
+    private void setupPlacesAutocomplete() {
+        // Initialize Places Fragment
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
+        if (autocompleteFragment != null) {
+            // Specify the types of place data to return
+            autocompleteFragment.setPlaceFields(Arrays.asList(
+                    Place.Field.ID,
+                    Place.Field.NAME,
+                    Place.Field.ADDRESS,
+                    Place.Field.LAT_LNG,
+                    Place.Field.ADDRESS_COMPONENTS
+            ));
+
+            // Set type filter to establishments and addresses
+            autocompleteFragment.setTypeFilter(TypeFilter.ADDRESS);
+            
+            // Set hint text
+            autocompleteFragment.setHint("Enter restaurant address");
+
+            // Set location bias to Canada
+            // This creates a bounding box that covers most of Canada
+            LatLngBounds canadaBounds = new LatLngBounds(
+                new LatLng(41.676556, -141.001875),  // SW corner
+                new LatLng(83.110626, -52.619062)    // NE corner
+            );
+            
+            autocompleteFragment.setLocationBias(RectangularBounds.newInstance(canadaBounds));
+
+            // Set country restriction to Canada
+            autocompleteFragment.setCountries("CA");
+
+            // Set up a PlaceSelectionListener to handle the response
+            autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+                @Override
+                public void onPlaceSelected(Place place) {
+                    if (place.getLatLng() != null) {
+                        selectedLatitude = place.getLatLng().latitude;
+                        selectedLongitude = place.getLatLng().longitude;
+                        selectedAddress = place.getAddress();
+                        
+                        // Update UI
+                        coordinatesText.setText(String.format("%.6f, %.6f", selectedLatitude, selectedLongitude));
+                        updateSubmitButtonState();
+                    }
+                }
+
+                @Override
+                public void onError(Status status) {
+                    Toast.makeText(RestaurantDocumentsActivity.this,
+                            "Error: " + status.getStatusMessage(),
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
     private void createInitialStructure() {
@@ -129,7 +213,10 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
     }
 
     private void updateSubmitButtonState() {
-        submitButton.setEnabled(restaurantProofUri != null && ownerIdUri != null);
+        submitButton.setEnabled(restaurantProofUri != null && 
+                              ownerIdUri != null && 
+                              selectedLatitude != 0 && 
+                              selectedLongitude != 0);
     }
 
     private void uploadDocuments() {
@@ -138,22 +225,33 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
             return;
         }
 
+        if (selectedLatitude == 0 || selectedLongitude == 0) {
+            Toast.makeText(this, "Please select a location", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         submitButton.setEnabled(false);
         submitButton.setText("Uploading...");
 
         // Save opening and closing hours
-        Map<String, String> hours = new HashMap<>();
-        hours.put("opening", String.format("%02d:%02d", openingTimePicker.getHour(), openingTimePicker.getMinute()));
-        hours.put("closing", String.format("%02d:%02d", closingTimePicker.getHour(), closingTimePicker.getMinute()));
+        Map<String, Object> restaurantData = new HashMap<>();
+        restaurantData.put("hours/opening", String.format("%02d:%02d", openingTimePicker.getHour(), openingTimePicker.getMinute()));
+        restaurantData.put("hours/closing", String.format("%02d:%02d", closingTimePicker.getHour(), closingTimePicker.getMinute()));
+        
+        // Save location data
+        restaurantData.put("location/latitude", selectedLatitude);
+        restaurantData.put("location/longitude", selectedLongitude);
+        restaurantData.put("location/address", selectedAddress);
+        restaurantData.put("store_info/address", selectedAddress);
 
-        databaseRef.child("restaurants").child(userId).child("hours").setValue(hours)
+        databaseRef.child("restaurants").child(userId).updateChildren(restaurantData)
             .addOnSuccessListener(aVoid -> {
-                // After saving hours, upload documents
+                // After saving basic info, upload documents
                 uploadFile(restaurantProofUri, "restaurant_proof", () -> {
                     uploadFile(ownerIdUri, "owner_id", this::finalizeUpload);
                 });
             })
-            .addOnFailureListener(e -> handleError("Failed to save business hours: " + e.getMessage()));
+            .addOnFailureListener(e -> handleError("Failed to save restaurant data: " + e.getMessage()));
     }
 
     private void uploadFile(Uri fileUri, String type, Runnable onComplete) {

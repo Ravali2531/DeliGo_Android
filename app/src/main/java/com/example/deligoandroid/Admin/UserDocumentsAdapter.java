@@ -49,16 +49,18 @@ public class UserDocumentsAdapter extends RecyclerView.Adapter<UserDocumentsAdap
             holder.restaurantStatus.setVisibility(View.GONE);
         }
 
-        // Set click listener for restaurants
-        if (currentUserType.equals("restaurants")) {
-            holder.itemView.setOnClickListener(v -> {
+        // Set click listener based on user type
+        holder.itemView.setOnClickListener(v -> {
+            if (currentUserType.equals("restaurants")) {
                 Intent intent = new Intent(context, RestaurantDetailsActivity.class);
                 intent.putExtra("restaurantId", document.userId);
                 context.startActivity(intent);
-            });
-        } else {
-            holder.itemView.setOnClickListener(null);
-        }
+            } else if (currentUserType.equals("drivers")) {
+                Intent intent = new Intent(context, DriverDetailsActivity.class);
+                intent.putExtra("driver_id", document.userId);
+                context.startActivity(intent);
+            }
+        });
     }
 
     @Override
