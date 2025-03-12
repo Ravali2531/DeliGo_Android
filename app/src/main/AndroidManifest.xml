@@ -103,6 +103,10 @@
             android:exported="false"/>
 
         <activity
+            android:name=".Admin.DriverDetailsActivity"
+            android:exported="false"/>
+
+        <activity
             android:name=".Admin.DocumentPreviewActivity"
             android:exported="false"/>
 
