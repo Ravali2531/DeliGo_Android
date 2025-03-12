@@ -5,6 +5,11 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Include Header -->
+    <include
+        android:id="@+id/header"
+        layout="@layout/layout_fragment_header"/>
+
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"

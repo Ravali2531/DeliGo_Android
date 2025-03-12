@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.ImageView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -28,6 +30,9 @@ public class DriverOrdersFragment extends Fragment {
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         databaseRef = FirebaseDatabase.getInstance().getReference()
                 .child("drivers").child(userId).child("orders");
+
+        // Setup header
+        View header = view.findViewById(R.id.header);
 
         // Initialize views
         tabLayout = view.findViewById(R.id.tabLayout);

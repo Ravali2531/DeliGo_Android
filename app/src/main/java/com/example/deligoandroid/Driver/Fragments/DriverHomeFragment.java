@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Switch;
+import android.widget.ImageView;
 import androidx.fragment.app.Fragment;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
@@ -26,6 +27,10 @@ public class DriverHomeFragment extends Fragment {
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         databaseRef = FirebaseDatabase.getInstance().getReference()
                 .child("drivers").child(userId);
+
+        // Setup header
+        View header = view.findViewById(R.id.header);
+        ((TextView) header.findViewById(R.id.headerTitle)).setText("DeliGo Driver");
 
         // Initialize views
         statusText = view.findViewById(R.id.statusText);
