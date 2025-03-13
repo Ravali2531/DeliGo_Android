@@ -22,6 +22,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.deligoandroid.Customer.Adapters.CartAdapter;
 import com.example.deligoandroid.Customer.Models.CartItem;
+import com.example.deligoandroid.Customer.Models.CustomizationSelection;
+import com.example.deligoandroid.Customer.Models.SelectedItem;
 import com.example.deligoandroid.R;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.maps.model.LatLng;
@@ -385,31 +387,94 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
 
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
-        String orderId = ordersRef.push().getKey();
+        String orderId = java.util.UUID.randomUUID().toString().toUpperCase();
 
-        Map<String, Object> orderData = new HashMap<>();
-        orderData.put("userId", userId);
-        orderData.put("items", cartItems);
-        orderData.put("subtotal", subtotal);
-        orderData.put("tipPercentage", tipPercentage);
-        orderData.put("tipAmount", (subtotal * tipPercentage) / 100.0);
-        orderData.put("isDelivery", isDelivery);
-        orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
-        orderData.put("total", calculateTotal());
-        orderData.put("status", "pending");
-        orderData.put("timestamp", System.currentTimeMillis());
-        orderData.put("paymentMethod", paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? "card" : "cod");
-
-        if (isDelivery && selectedPlace != null) {
-            Map<String, Object> deliveryAddress = new HashMap<>();
-            deliveryAddress.put("address", selectedPlace.getAddress());
-            deliveryAddress.put("latitude", selectedPlace.getLatLng().latitude);
-            deliveryAddress.put("longitude", selectedPlace.getLatLng().longitude);
-            deliveryAddress.put("unit", unitInput.getText().toString().trim());
-            deliveryAddress.put("instructions", instructionsInput.getText().toString().trim());
-            orderData.put("deliveryAddress", deliveryAddress);
+        // Calculate final amounts
+        double tipAmount = (subtotal * tipPercentage) / 100.0;
+        double total = subtotal + tipAmount;
+        if (isDelivery) {
+            total += DELIVERY_FEE;
         }
 
+        Map<String, Object> orderData = new HashMap<>();
+        orderData.put("id", orderId);
+        orderData.put("userId", userId);
+        orderData.put("timestamp", System.currentTimeMillis());
+        orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
+        orderData.put("deliveryOption", isDelivery ? "delivery" : "pickup");
+        orderData.put("status", "pending");
+        orderData.put("subtotal", subtotal);
+        orderData.put("tipAmount", tipAmount);
+        orderData.put("tipPercentage", tipPercentage);
+        orderData.put("total", total);
+        orderData.put("paymentMethod", paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? 
+            "Credit Card" : "Cash on Delivery");
+
+        // Get restaurant ID from the first item
+        if (cartItems != null && !cartItems.isEmpty()) {
+            CartItem firstItem = cartItems.get(0);
+            String restaurantId = firstItem.getRestaurantId(); // Get restaurant ID directly
+            Log.d(TAG, "Setting restaurant ID: " + restaurantId);
+            orderData.put("restaurantId", restaurantId);
+        }
+
+        // Format items according to the required structure
+        List<Map<String, Object>> formattedItems = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            Map<String, Object> formattedItem = new HashMap<>();
+            formattedItem.put("id", item.getId());
+            formattedItem.put("menuItemId", item.getMenuItemId());
+            formattedItem.put("name", item.getName());
+            formattedItem.put("description", item.getDescription());
+            formattedItem.put("price", item.getPrice());
+            formattedItem.put("imageURL", item.getImageURL());
+            formattedItem.put("quantity", item.getQuantity());
+            
+            // Add customizations if they exist
+            Map<String, List<CustomizationSelection>> customizationsMap = item.getCustomizations();
+            if (customizationsMap != null && !customizationsMap.isEmpty()) {
+                List<Map<String, Object>> formattedCustomizations = new ArrayList<>();
+                
+                for (Map.Entry<String, List<CustomizationSelection>> entry : customizationsMap.entrySet()) {
+                    for (CustomizationSelection selection : entry.getValue()) {
+                        for (SelectedItem selectedItem : selection.getSelectedItems()) {
+                            Map<String, Object> customization = new HashMap<>();
+                            customization.put("name", entry.getKey());
+                            customization.put("choice", selectedItem.getName());
+                            customization.put("price", selectedItem.getPrice());
+                            formattedCustomizations.add(customization);
+                        }
+                    }
+                }
+                
+                if (!formattedCustomizations.isEmpty()) {
+                    Log.d(TAG, "Adding customizations for item: " + item.getName() + ", count: " + formattedCustomizations.size());
+                    formattedItem.put("customizations", formattedCustomizations);
+                }
+            }
+            
+            formattedItems.add(formattedItem);
+        }
+        orderData.put("items", formattedItems);
+
+        if (isDelivery && selectedPlace != null) {
+            // Create address object
+            Map<String, Object> addressData = new HashMap<>();
+            addressData.put("street", selectedPlace.getAddress());
+            if (!TextUtils.isEmpty(unitInput.getText())) {
+                addressData.put("unit", unitInput.getText().toString().trim());
+            }
+            if (!TextUtils.isEmpty(instructionsInput.getText())) {
+                addressData.put("instructions", instructionsInput.getText().toString().trim());
+            }
+            orderData.put("address", addressData);
+            
+            // Add coordinates separately
+            orderData.put("latitude", selectedPlace.getLatLng().latitude);
+            orderData.put("longitude", selectedPlace.getLatLng().longitude);
+        }
+
+        // Add order to Firebase
         ordersRef.child(orderId).setValue(orderData)
                 .addOnSuccessListener(aVoid -> {
                     // Clear cart after successful order
@@ -426,15 +491,6 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                     Toast.makeText(this, "Failed to place order: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();
                 });
-    }
-
-    private double calculateTotal() {
-        double tipAmount = (subtotal * tipPercentage) / 100.0;
-        double total = subtotal + tipAmount;
-        if (isDelivery) {
-            total += DELIVERY_FEE;
-        }
-        return total;
     }
 
     @Override
