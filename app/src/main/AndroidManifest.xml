@@ -119,6 +119,10 @@
             android:exported="false"/>
 
         <activity
+            android:name=".Customer.CheckoutActivity"
+            android:exported="false"/>
+
+        <activity
             android:name=".Driver.DocumentsUnderReviewActivity"
             android:exported="false"
             android:noHistory="true" />
