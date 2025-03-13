@@ -413,8 +413,14 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         // Get restaurant ID from the first item
         if (cartItems != null && !cartItems.isEmpty()) {
             CartItem firstItem = cartItems.get(0);
-            String restaurantId = firstItem.getRestaurantId(); // Get restaurant ID directly
-            Log.d(TAG, "Setting restaurant ID: " + restaurantId);
+            String restaurantId = firstItem.getRestaurantId();
+            Log.d(TAG, "Getting restaurant ID from first cart item: " + firstItem.getName());
+            Log.d(TAG, "Restaurant ID: " + restaurantId);
+            if (restaurantId == null || restaurantId.isEmpty()) {
+                Log.e(TAG, "Restaurant ID is missing or empty!");
+                Toast.makeText(this, "Error: Restaurant ID is missing", Toast.LENGTH_SHORT).show();
+                return;
+            }
             orderData.put("restaurantId", restaurantId);
         }
 
