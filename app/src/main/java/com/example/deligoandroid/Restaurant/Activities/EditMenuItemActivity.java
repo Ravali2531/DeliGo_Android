@@ -8,6 +8,9 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -24,6 +27,7 @@ import com.example.deligoandroid.Restaurant.Models.CustomizationOption;
 import com.example.deligoandroid.Restaurant.Models.MenuItemModel;
 import com.example.deligoandroid.databinding.ActivityAddMenuItemBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 import com.google.firebase.storage.FirebaseStorage;
@@ -33,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.UUID;
 
 public class EditMenuItemActivity extends AppCompatActivity {
     private static final String TAG = "EditMenuItemActivity";
@@ -180,58 +185,7 @@ public class EditMenuItemActivity extends AppCompatActivity {
                             Log.d(TAG, "Found customizationOptions in snapshot");
                             DataSnapshot customizationsSnapshot = snapshot.child("customizationOptions");
                             
-                            // Iterate through each customization option
-                            for (DataSnapshot optionSnapshot : customizationsSnapshot.getChildren()) {
-                                try {
-                                    CustomizationOption option = new CustomizationOption();
-                                    
-                                    // Get the ID
-                                    option.setId(optionSnapshot.child("id").getValue(String.class));
-                                    Log.d(TAG, "Processing customization option with ID: " + option.getId());
-                                    
-                                    // Get the name
-                                    String name = optionSnapshot.child("name").getValue(String.class);
-                                    option.setName(name);
-                                    Log.d(TAG, "Name: " + name);
-                                    
-                                    // Get the type
-                                    String type = optionSnapshot.child("type").getValue(String.class);
-                                    option.setType(type);
-                                    Log.d(TAG, "Type: " + type);
-                                    
-                                    // Get required status
-                                    Boolean required = optionSnapshot.child("required").getValue(Boolean.class);
-                                    option.setRequired(required != null ? required : false);
-                                    Log.d(TAG, "Required: " + required);
-                                    
-                                    // Get max selections
-                                    Long maxSelections = optionSnapshot.child("maxSelections").getValue(Long.class);
-                                    if (maxSelections != null) {
-                                        option.setMaxSelections(maxSelections.intValue());
-                                        Log.d(TAG, "Max Selections: " + maxSelections);
-                                    }
-                                    
-                                    // Get options list
-                                    List<String> options = new ArrayList<>();
-                                    if (optionSnapshot.hasChild("options")) {
-                                        for (DataSnapshot optSnapshot : optionSnapshot.child("options").getChildren()) {
-                                            String opt = optSnapshot.getValue(String.class);
-                                            if (opt != null) {
-                                                options.add(opt);
-                                                Log.d(TAG, "Added option: " + opt);
-                                            }
-                                        }
-                                    }
-                                    option.setOptions(options);
-                                    
-                                    // Add the option to our list
-                                    customizationOptions.add(option);
-                                    Log.d(TAG, "Successfully added customization option: " + name);
-                                    
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Error parsing customization option", e);
-                                }
-                            }
+                            loadCustomizationOptions(customizationsSnapshot);
                         }
 
                         Log.d(TAG, "Total customization options loaded: " + customizationOptions.size());
@@ -267,6 +221,71 @@ public class EditMenuItemActivity extends AppCompatActivity {
                 Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
+
+    private void loadCustomizationOptions(DataSnapshot customizationsSnapshot) {
+        customizationOptions.clear();
+        Log.d(TAG, "Starting to load customization options");
+        Log.d(TAG, "Raw customization data: " + customizationsSnapshot.getValue());
+        
+        Iterable<DataSnapshot> optionsIterable = customizationsSnapshot.getChildren();
+        
+        for (DataSnapshot optionSnapshot : optionsIterable) {
+            try {
+                Log.d(TAG, "Processing option: " + optionSnapshot.getValue());
+                
+                // Get basic properties
+                String name = optionSnapshot.child("name").getValue(String.class);
+                String type = optionSnapshot.child("type").getValue(String.class);
+                Boolean required = optionSnapshot.child("required").getValue(Boolean.class);
+                Long maxSelections = optionSnapshot.child("maxSelections").getValue(Long.class);
+                
+                Log.d(TAG, String.format("Option details - name: %s, type: %s, required: %s, maxSelections: %s",
+                    name, type, required, maxSelections));
+                
+                if (name == null || type == null) {
+                    Log.e(TAG, "Missing required fields for customization option");
+                    continue;
+                }
+                
+                // Create CustomizationOption object
+                CustomizationOption option = new CustomizationOption(name, type, required != null ? required : false);
+                option.setMaxSelections(maxSelections != null ? maxSelections.intValue() : 1);
+                
+                // Get options
+                List<CustomizationOption.CustomizationOptionItem> items = new ArrayList<>();
+                DataSnapshot optionsSnapshot = optionSnapshot.child("options");
+                if (optionsSnapshot.exists()) {
+                    for (DataSnapshot optSnapshot : optionsSnapshot.getChildren()) {
+                        String optName = optSnapshot.child("name").getValue(String.class);
+                        Object priceObj = optSnapshot.child("price").getValue();
+                        
+                        if (optName != null && priceObj != null) {
+                            double price = 0.0;
+                            if (priceObj instanceof Long) {
+                                price = ((Long) priceObj).doubleValue();
+                            } else if (priceObj instanceof Double) {
+                                price = (Double) priceObj;
+                            }
+                            option.addOption(optName, price);
+                        }
+                    }
+                }
+                
+                if (!option.getOptions().isEmpty()) {
+                    Log.d(TAG, "Adding customization option: " + option.getName() + " with " + option.getOptions().size() + " options");
+                    customizationOptions.add(option);
+                    addCustomizationToUI(option);
+                } else {
+                    Log.e(TAG, "Skipping customization option with no options: " + option.getName());
+                }
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing customization option: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        Log.d(TAG, "Finished loading customization options. Total loaded: " + customizationOptions.size());
     }
 
     private void populateFields(MenuItemModel item) {
@@ -347,71 +366,145 @@ public class EditMenuItemActivity extends AppCompatActivity {
         binding.customizationsContainer.requestLayout();
     }
 
-    private void addCustomizationToUI(CustomizationOption customization) {
-        try {
-            View view = getLayoutInflater().inflate(
-                R.layout.item_customization_option,
-                binding.customizationsContainer,
-                false
-            );
-
-            // Add card background and elevation
-            view.setBackgroundResource(android.R.color.white);
-            view.setElevation(4);
-            
-            TextView nameText = view.findViewById(R.id.customizationName);
-            TextView typeText = view.findViewById(R.id.customizationType);
-            ImageButton deleteButton = view.findViewById(R.id.deleteButton);
-
-            if (nameText == null || typeText == null) {
-                Log.e(TAG, "Failed to find views in inflated layout");
-                return;
-            }
-
-            nameText.setText(customization.getName());
-            
-            // Build the type description
-            StringBuilder typeBuilder = new StringBuilder();
-            String type = customization.getType().toLowerCase();
-            typeBuilder.append(type);
-            
-            if ("multiple".equals(type) && customization.getMaxSelections() > 0) {
-                typeBuilder.append(" (max ").append(customization.getMaxSelections()).append(")");
-            }
-            
-            if (customization.isRequired()) {
-                typeBuilder.append(" - Required");
-            }
-            
-            List<String> options = customization.getOptions();
-            if (options != null && !options.isEmpty()) {
-                typeBuilder.append(" - ").append(options.size()).append(" options");
-            }
-            
-            typeText.setText(typeBuilder.toString());
-
-            if (deleteButton != null) {
-                deleteButton.setVisibility(View.VISIBLE);
-                deleteButton.setOnClickListener(v -> {
-                    customizationOptions.remove(customization);
-                    binding.customizationsContainer.removeView(view);
-                });
-            }
-
-            // Add margins and padding
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            );
-            params.setMargins(16, 8, 16, 8);
-            view.setPadding(16, 16, 16, 16);
-            
-            binding.customizationsContainer.addView(view, params);
-            Log.d(TAG, "Added customization view: " + customization.getName());
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error adding customization to UI", e);
+    private void addCustomizationToUI(CustomizationOption option) {
+        View view = getLayoutInflater().inflate(R.layout.item_customization_preview, binding.customizationsContainer, false);
+        
+        TextView nameText = view.findViewById(R.id.customizationName);
+        TextView typeText = view.findViewById(R.id.customizationType);
+        TextView optionsText = view.findViewById(R.id.optionsText);
+        
+        nameText.setText(option.getName());
+        String typeDisplay = String.format("%s (%s, Max: %d)", 
+            option.getType(), 
+            option.isRequired() ? "Required" : "Optional",
+            option.getMaxSelections());
+        typeText.setText(typeDisplay);
+        
+        StringBuilder optionsStr = new StringBuilder();
+        for (CustomizationOption.CustomizationOptionItem item : option.getOptions()) {
+            optionsStr.append(String.format("%s ($%.2f)\n", item.getName(), item.getPrice()));
         }
+        optionsText.setText(optionsStr.toString().trim());
+        
+        ImageButton deleteButton = view.findViewById(R.id.deleteButton);
+        deleteButton.setOnClickListener(v -> {
+            binding.customizationsContainer.removeView(view);
+            customizationOptions.remove(option);
+        });
+
+        // Make the entire view clickable for editing
+        view.setOnClickListener(v -> showEditCustomizationDialog(option, view));
+        
+        binding.customizationsContainer.addView(view);
+    }
+
+    private void showEditCustomizationDialog(CustomizationOption option, View optionView) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_customization, null);
+        TextInputEditText nameInput = dialogView.findViewById(R.id.nameInput);
+        RadioGroup typeGroup = dialogView.findViewById(R.id.typeGroup);
+        CheckBox requiredCheckbox = dialogView.findViewById(R.id.requiredCheckbox);
+        TextInputEditText maxSelectionsInput = dialogView.findViewById(R.id.maxSelectionsInput);
+        LinearLayout optionsContainer = dialogView.findViewById(R.id.optionsContainer);
+        Button addOptionButton = dialogView.findViewById(R.id.addOptionButton);
+
+        // Pre-fill existing values
+        nameInput.setText(option.getName());
+        typeGroup.check(option.getType().equals("single") ? 
+            R.id.singleSelectionRadio : R.id.multipleSelectionRadio);
+        requiredCheckbox.setChecked(option.isRequired());
+        maxSelectionsInput.setText(String.valueOf(option.getMaxSelections()));
+
+        // Pre-fill existing options
+        for (CustomizationOption.CustomizationOptionItem item : option.getOptions()) {
+            View optionItemView = getLayoutInflater().inflate(
+                R.layout.item_customization_option_input, optionsContainer, false);
+            TextInputEditText optionNameInput = optionItemView.findViewById(R.id.optionNameInput);
+            TextInputEditText optionPriceInput = optionItemView.findViewById(R.id.optionPriceInput);
+            ImageButton deleteButton = optionItemView.findViewById(R.id.deleteButton);
+
+            optionNameInput.setText(item.getName());
+            optionPriceInput.setText(String.format("%.2f", item.getPrice()));
+            deleteButton.setOnClickListener(del -> optionsContainer.removeView(optionItemView));
+            
+            optionsContainer.addView(optionItemView);
+        }
+
+        // Add new option button functionality
+        addOptionButton.setOnClickListener(v -> {
+            View optionItemView = getLayoutInflater().inflate(
+                R.layout.item_customization_option_input, optionsContainer, false);
+            TextInputEditText optionNameInput = optionItemView.findViewById(R.id.optionNameInput);
+            TextInputEditText optionPriceInput = optionItemView.findViewById(R.id.optionPriceInput);
+            ImageButton deleteButton = optionItemView.findViewById(R.id.deleteButton);
+
+            deleteButton.setOnClickListener(del -> optionsContainer.removeView(optionItemView));
+            optionsContainer.addView(optionItemView);
+        });
+
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Edit Customization Option")
+            .setView(dialogView)
+            .setPositiveButton("Save", (dialog, which) -> {
+                String name = nameInput.getText().toString().trim();
+                String type = typeGroup.getCheckedRadioButtonId() == R.id.singleSelectionRadio ? 
+                    "single" : "multiple";
+                boolean isRequired = requiredCheckbox.isChecked();
+                int maxSelections = 1;
+                try {
+                    String maxSelectionsStr = maxSelectionsInput.getText().toString().trim();
+                    if (!maxSelectionsStr.isEmpty()) {
+                        maxSelections = Integer.parseInt(maxSelectionsStr);
+                    }
+                } catch (NumberFormatException e) {
+                    maxSelections = 1;
+                }
+
+                // Update the existing customization option
+                option.setName(name);
+                option.setType(type);
+                option.setRequired(isRequired);
+                option.setMaxSelections(maxSelections);
+                option.clearOptions();
+
+                // Add updated options
+                for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+                    View optionItemView = optionsContainer.getChildAt(i);
+                    TextInputEditText optionNameInput = optionItemView.findViewById(R.id.optionNameInput);
+                    TextInputEditText optionPriceInput = optionItemView.findViewById(R.id.optionPriceInput);
+
+                    String optionName = optionNameInput.getText().toString().trim();
+                    String priceStr = optionPriceInput.getText().toString().trim();
+
+                    if (!optionName.isEmpty() && !priceStr.isEmpty()) {
+                        try {
+                            double price = Double.parseDouble(priceStr);
+                            option.addOption(optionName, price);
+                        } catch (NumberFormatException e) {
+                            Log.e(TAG, "Invalid price for option: " + optionName);
+                        }
+                    }
+                }
+
+                // Update the UI
+                TextView nameText = optionView.findViewById(R.id.customizationName);
+                TextView typeText = optionView.findViewById(R.id.customizationType);
+                TextView optionsText = optionView.findViewById(R.id.optionsText);
+
+                nameText.setText(option.getName());
+                String typeDisplay = String.format("%s (%s, Max: %d)", 
+                    option.getType(), 
+                    option.isRequired() ? "Required" : "Optional",
+                    option.getMaxSelections());
+                typeText.setText(typeDisplay);
+
+                StringBuilder optionsStr = new StringBuilder();
+                for (CustomizationOption.CustomizationOptionItem item : option.getOptions()) {
+                    optionsStr.append(String.format("%s ($%.2f)\n", item.getName(), item.getPrice()));
+                }
+                optionsText.setText(optionsStr.toString().trim());
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
     }
 
     private void openImagePicker() {
@@ -421,8 +514,72 @@ public class EditMenuItemActivity extends AppCompatActivity {
     }
 
     private void showAddCustomizationDialog() {
-        // TODO: Implement customization dialog
-        Toast.makeText(this, "Customization options coming soon", Toast.LENGTH_SHORT).show();
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_customization, null);
+        TextInputEditText nameInput = dialogView.findViewById(R.id.nameInput);
+        RadioGroup typeGroup = dialogView.findViewById(R.id.typeGroup);
+        CheckBox requiredCheckbox = dialogView.findViewById(R.id.requiredCheckbox);
+        TextInputEditText maxSelectionsInput = dialogView.findViewById(R.id.maxSelectionsInput);
+        LinearLayout optionsContainer = dialogView.findViewById(R.id.optionsContainer);
+        Button addOptionButton = dialogView.findViewById(R.id.addOptionButton);
+
+        List<Map<String, Object>> options = new ArrayList<>();
+
+        addOptionButton.setOnClickListener(v -> {
+            View optionView = getLayoutInflater().inflate(R.layout.item_customization_option_input, optionsContainer, false);
+            TextInputEditText optionNameInput = optionView.findViewById(R.id.optionNameInput);
+            TextInputEditText optionPriceInput = optionView.findViewById(R.id.optionPriceInput);
+            ImageButton deleteButton = optionView.findViewById(R.id.deleteButton);
+
+            deleteButton.setOnClickListener(del -> optionsContainer.removeView(optionView));
+            optionsContainer.addView(optionView);
+        });
+
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Add Customization Option")
+            .setView(dialogView)
+            .setPositiveButton("Add", (dialog, which) -> {
+                String name = nameInput.getText().toString().trim();
+                String type = typeGroup.getCheckedRadioButtonId() == R.id.singleSelectionRadio ? 
+                    "single" : "multiple";
+                boolean isRequired = requiredCheckbox.isChecked();
+                int maxSelections = 1;
+                try {
+                    String maxSelectionsStr = maxSelectionsInput.getText().toString().trim();
+                    if (!maxSelectionsStr.isEmpty()) {
+                        maxSelections = Integer.parseInt(maxSelectionsStr);
+                    }
+                } catch (NumberFormatException e) {
+                    maxSelections = 1;
+                }
+
+                // Create customization option
+                CustomizationOption customization = new CustomizationOption(name, type, isRequired);
+                customization.setMaxSelections(maxSelections);
+
+                // Add options
+                for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+                    View optionView = optionsContainer.getChildAt(i);
+                    TextInputEditText optionNameInput = optionView.findViewById(R.id.optionNameInput);
+                    TextInputEditText optionPriceInput = optionView.findViewById(R.id.optionPriceInput);
+
+                    String optionName = optionNameInput.getText().toString().trim();
+                    String priceStr = optionPriceInput.getText().toString().trim();
+
+                    if (!optionName.isEmpty() && !priceStr.isEmpty()) {
+                        try {
+                            double price = Double.parseDouble(priceStr);
+                            customization.addOption(optionName, price);
+                        } catch (NumberFormatException e) {
+                            Log.e(TAG, "Invalid price for option: " + optionName);
+                        }
+                    }
+                }
+
+                customizationOptions.add(customization);
+                addCustomizationToUI(customization);
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
     }
 
     private void updateMenuItem() {
@@ -503,7 +660,14 @@ public class EditMenuItemActivity extends AppCompatActivity {
         updates.put("price", price);
         updates.put("category", category);
         updates.put("imageURL", imageUrl);
-        updates.put("customizationOptions", customizationOptions);
+        updates.put("isAvailable", true);
+        
+        // Convert customization options using toMap()
+        List<Map<String, Object>> formattedOptions = new ArrayList<>();
+        for (CustomizationOption option : customizationOptions) {
+            formattedOptions.add(option.toMap());
+        }
+        updates.put("customizationOptions", formattedOptions);
 
         menuRef.updateChildren(updates)
             .addOnSuccessListener(aVoid -> {
@@ -585,29 +749,5 @@ public class EditMenuItemActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void updateCustomizationsList() {
-        binding.customizationsContainer.removeAllViews();
-        for (CustomizationOption option : customizationOptions) {
-            View view = LayoutInflater.from(this).inflate(
-                R.layout.item_customization_edit, binding.customizationsContainer, false);
-
-            TextView nameText = view.findViewById(R.id.customizationName);
-            TextView typeText = view.findViewById(R.id.customizationType);
-            ImageButton deleteButton = view.findViewById(R.id.deleteButton);
-
-            nameText.setText(option.getName());
-            String typeDescription = option.isSingleSelection() ? 
-                "Single Selection" : String.format("Multiple Selection (up to %d)", option.getMaxSelections());
-            typeText.setText(String.format("%s%s", typeDescription, option.isRequired() ? " • Required" : ""));
-
-            deleteButton.setOnClickListener(v -> {
-                customizationOptions.remove(option);
-                updateCustomizationsList();
-            });
-
-            binding.customizationsContainer.addView(view);
-        }
     }
 }

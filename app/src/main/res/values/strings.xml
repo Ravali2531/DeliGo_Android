@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">DeliGo</string>
+    <string name="app_name">DeliGo Android</string>
+    
+    <!-- Customization Types -->
+    <string-array name="customization_types">
+        <item>single</item>
+        <item>multiple</item>
+    </string-array>
     
     <!-- Arrays -->
     <string-array name="user_roles">

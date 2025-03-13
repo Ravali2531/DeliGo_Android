@@ -69,17 +69,18 @@
             android:exported="false" />
 
         <activity
+            android:name=".Restaurant.Activities.AddMenuItemActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:windowSoftInputMode="adjustResize"/>
+
+        <activity
             android:name=".Restaurant.AddCustomizationActivity"
             android:theme="@style/Theme.DeliGoAndroid"
             android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".Restaurant.AddOptionActivity"
-            android:theme="@style/Theme.DeliGoAndroid"
-            android:windowSoftInputMode="adjustResize"/>
-
-        <activity
-            android:name=".Restaurant.AddMenuItemActivity"
             android:theme="@style/Theme.DeliGoAndroid"
             android:windowSoftInputMode="adjustResize"/>
 

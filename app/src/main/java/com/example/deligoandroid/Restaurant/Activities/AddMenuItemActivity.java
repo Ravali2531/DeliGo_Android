@@ -1,12 +1,23 @@
 package com.example.deligoandroid.Restaurant.Activities;
 
+import static android.content.ContentValues.TAG;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -17,6 +28,7 @@ import com.example.deligoandroid.Restaurant.Models.CustomizationItem;
 import com.example.deligoandroid.Restaurant.Models.CustomizationOption;
 import com.example.deligoandroid.databinding.ActivityAddMenuItemBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -25,6 +37,7 @@ import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -84,8 +97,101 @@ public class AddMenuItemActivity extends AppCompatActivity {
     }
 
     private void showAddCustomizationDialog() {
-        // TODO: Implement customization dialog
-        Toast.makeText(this, "Customization options coming soon", Toast.LENGTH_SHORT).show();
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_customization, null);
+        TextInputEditText nameInput = dialogView.findViewById(R.id.nameInput);
+        RadioGroup typeGroup = dialogView.findViewById(R.id.typeGroup);
+        CheckBox requiredCheckbox = dialogView.findViewById(R.id.requiredCheckbox);
+        TextInputEditText maxSelectionsInput = dialogView.findViewById(R.id.maxSelectionsInput);
+        LinearLayout optionsContainer = dialogView.findViewById(R.id.optionsContainer);
+        Button addOptionButton = dialogView.findViewById(R.id.addOptionButton);
+
+        List<Map<String, Object>> options = new ArrayList<>();
+
+        addOptionButton.setOnClickListener(v -> {
+            View optionView = getLayoutInflater().inflate(R.layout.item_customization_option_input, optionsContainer, false);
+            TextInputEditText optionNameInput = optionView.findViewById(R.id.optionNameInput);
+            TextInputEditText optionPriceInput = optionView.findViewById(R.id.optionPriceInput);
+            ImageButton deleteButton = optionView.findViewById(R.id.deleteButton);
+
+            deleteButton.setOnClickListener(del -> optionsContainer.removeView(optionView));
+            optionsContainer.addView(optionView);
+        });
+
+        new MaterialAlertDialogBuilder(this)
+            .setTitle("Add Customization Option")
+            .setView(dialogView)
+            .setPositiveButton("Add", (dialog, which) -> {
+                String name = nameInput.getText().toString().trim();
+                String type = typeGroup.getCheckedRadioButtonId() == R.id.singleSelectionRadio ? 
+                    "single" : "multiple";
+                boolean isRequired = requiredCheckbox.isChecked();
+                int maxSelections = 1;
+                try {
+                    String maxSelectionsStr = maxSelectionsInput.getText().toString().trim();
+                    if (!maxSelectionsStr.isEmpty()) {
+                        maxSelections = Integer.parseInt(maxSelectionsStr);
+                    }
+                } catch (NumberFormatException e) {
+                    maxSelections = 1;
+                }
+
+                // Create customization option
+                CustomizationOption customization = new CustomizationOption(name, type, isRequired);
+                customization.setMaxSelections(maxSelections);
+
+                // Add options
+                for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+                    View optionView = optionsContainer.getChildAt(i);
+                    TextInputEditText optionNameInput = optionView.findViewById(R.id.optionNameInput);
+                    TextInputEditText optionPriceInput = optionView.findViewById(R.id.optionPriceInput);
+
+                    String optionName = optionNameInput.getText().toString().trim();
+                    String priceStr = optionPriceInput.getText().toString().trim();
+
+                    if (!optionName.isEmpty() && !priceStr.isEmpty()) {
+                        try {
+                            double price = Double.parseDouble(priceStr);
+                            customization.addOption(optionName, price);
+                        } catch (NumberFormatException e) {
+                            Log.e(TAG, "Invalid price for option: " + optionName);
+                        }
+                    }
+                }
+
+                customizationOptions.add(customization);
+                addCustomizationToUI(customization);
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    private void addCustomizationToUI(CustomizationOption option) {
+        View view = getLayoutInflater().inflate(R.layout.item_customization_preview, binding.customizationsContainer, false);
+        
+        TextView nameText = view.findViewById(R.id.customizationName);
+        TextView typeText = view.findViewById(R.id.customizationType);
+        TextView optionsText = view.findViewById(R.id.optionsText);
+        
+        nameText.setText(option.getName());
+        String typeDisplay = String.format("%s (%s, Max: %d)", 
+            option.getType(), 
+            option.isRequired() ? "Required" : "Optional",
+            option.getMaxSelections());
+        typeText.setText(typeDisplay);
+        
+        StringBuilder optionsStr = new StringBuilder();
+        for (CustomizationOption.CustomizationOptionItem item : option.getOptions()) {
+            optionsStr.append(String.format("%s ($%.2f)\n", item.getName(), item.getPrice()));
+        }
+        optionsText.setText(optionsStr.toString().trim());
+        
+        ImageButton deleteButton = view.findViewById(R.id.deleteButton);
+        deleteButton.setOnClickListener(v -> {
+            binding.customizationsContainer.removeView(view);
+            customizationOptions.remove(option);
+        });
+        
+        binding.customizationsContainer.addView(view);
     }
 
     private void saveMenuItem() {
@@ -140,7 +246,7 @@ public class AddMenuItemActivity extends AppCompatActivity {
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         String imageUrl = task.getResult().toString();
-                        saveMenuItemToDatabase(menuRef, name, description, price, category, imageUrl);
+                        updateMenuItemInDatabase(menuRef, name, description, price, category, imageUrl);
                     } else {
                         isUploading = false;
                         binding.progressBar.setVisibility(View.GONE);
@@ -150,22 +256,29 @@ public class AddMenuItemActivity extends AppCompatActivity {
                 });
         } else {
             // Save without image
-            saveMenuItemToDatabase(menuRef, name, description, price, category, null);
+            updateMenuItemInDatabase(menuRef, name, description, price, category, null);
         }
     }
 
-    private void saveMenuItemToDatabase(DatabaseReference menuRef, String name, String description,
+    private void updateMenuItemInDatabase(DatabaseReference menuRef, String name, String description,
                                       double price, String category, String imageUrl) {
-        Map<String, Object> menuItem = new HashMap<>();
-        menuItem.put("name", name);
-        menuItem.put("description", description);
-        menuItem.put("price", price);
-        menuItem.put("category", category);
-        menuItem.put("imageURL", imageUrl);
-        menuItem.put("isAvailable", true);
-        menuItem.put("customizationOptions", customizationOptions);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("name", name);
+        updates.put("description", description);
+        updates.put("price", price);
+        updates.put("category", category);
+        updates.put("imageURL", imageUrl);
+        updates.put("isAvailable", true);
+        
+//         Convert customization options to the correct format// Convert customization options using toMap()
+                List<Map<String, Object>> formattedOptions = new ArrayList<>();
+                for (CustomizationOption option : customizationOptions) {
+                    formattedOptions.add(option.toMap());
+                }
 
-        menuRef.setValue(menuItem)
+        updates.put("customizationOptions", formattedOptions);
+
+        menuRef.updateChildren(updates)
             .addOnSuccessListener(aVoid -> {
                 Toast.makeText(this, "Menu item added successfully", Toast.LENGTH_SHORT).show();
                 finish();

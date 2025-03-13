@@ -113,8 +113,8 @@ public class AddCustomizationActivity extends AppCompatActivity {
         String type = typeSpinner.getText().toString();
         boolean required = requiredSwitch.isChecked();
 
-        if (name.isEmpty()) {
-            nameInput.setError("Name is required");
+        if (name.isEmpty() || type.isEmpty()) {
+            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -125,14 +125,17 @@ public class AddCustomizationActivity extends AppCompatActivity {
 
         // Create customization option
         CustomizationOption customization = new CustomizationOption(name, type, required);
-        customization.setOptions(options);
+        
+        // Add options with their prices
+        for (int i = 0; i < options.size(); i++) {
+            String optionName = options.get(i);
+            double optionPrice = optionPrices.get(i);
+            customization.addOption(optionName, optionPrice);
+        }
 
         // Return result
         Intent resultIntent = new Intent();
-        resultIntent.putExtra("name", name);
-        resultIntent.putExtra("type", type);
-        resultIntent.putExtra("required", required);
-        resultIntent.putStringArrayListExtra("options", options);
+        resultIntent.putExtra("customization", customization);
         setResult(RESULT_OK, resultIntent);
         finish();
     }

@@ -15,11 +15,10 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.R;
-import com.example.deligoandroid.Restaurant.AddMenuItemActivity;
 import com.example.deligoandroid.Restaurant.Activities.EditMenuItemActivity;
+import com.example.deligoandroid.Restaurant.Activities.AddMenuItemActivity;
 import com.example.deligoandroid.Restaurant.Adapters.MenuAdapter;
 import com.example.deligoandroid.Restaurant.Models.MenuItemModel;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 import java.util.ArrayList;
@@ -70,15 +69,16 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClic
     private void setupClickListeners() {
         View.OnClickListener addItemListener = v -> {
             try {
-                if (getContext() != null) {
-                    Intent intent = new Intent(getContext(), AddMenuItemActivity.class);
-                    startActivityForResult(intent, ADD_ITEM_REQUEST);
+                if (getActivity() != null) {
+                    Intent intent = new Intent(getActivity(), AddMenuItemActivity.class);
+                    startActivity(intent);
                 }
             } catch (Exception e) {
                 if (getContext() != null) {
                     Toast.makeText(getContext(), 
                         "Error launching add item screen: " + e.getMessage(),
                         Toast.LENGTH_SHORT).show();
+                    e.printStackTrace(); // Add this to see the full error in logcat
                 }
             }
         };
@@ -131,24 +131,23 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClic
             return;
         }
         
-        // Log the database path and user ID
-        Toast.makeText(getContext(), "UserID: " + userId + "\nPath: " + databaseRef.toString(), Toast.LENGTH_LONG).show();
-        
         databaseRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 allMenuItems = new ArrayList<>();
                 
-                // Log the raw data
-                String rawData = String.valueOf(dataSnapshot.getValue());
-                Toast.makeText(getContext(), 
-                    "Raw data: " + (rawData.length() > 100 ? rawData.substring(0, 100) + "..." : rawData), 
-                    Toast.LENGTH_LONG).show();
-                
                 for (DataSnapshot itemSnapshot : dataSnapshot.getChildren()) {
                     try {
                         // Create a new MenuItemModel manually
                         MenuItemModel item = new MenuItemModel();
+                        
+                        // Set the ID first
+                        String itemId = itemSnapshot.getKey();
+                        if (itemId == null) {
+                            Log.e("MenuFragment", "Skipping item: null ID");
+                            continue;
+                        }
+                        item.setId(itemId);
                         
                         // Get the basic fields
                         if (itemSnapshot.hasChild("name")) {
@@ -174,26 +173,17 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClic
                             item.setAvailable(isAvailable != null ? isAvailable : true);
                         }
                         
-                        // Set the ID from the key
-                        item.setId(itemSnapshot.getKey());
-                        
                         // Only add if we have the minimum required fields
-                        if (item.getName() != null && item.getPrice() > 0) {
+                        if (item.getId() != null && item.getName() != null && item.getPrice() > 0) {
+                            Log.d("MenuFragment", "Adding item with ID: " + item.getId());
                             allMenuItems.add(item);
                         } else {
-                            Toast.makeText(getContext(),
-                                "Skipping item " + itemSnapshot.getKey() + ": missing required fields",
-                                Toast.LENGTH_SHORT).show();
+                            Log.e("MenuFragment", "Skipping item " + itemId + ": missing required fields");
                         }
                         
                     } catch (Exception e) {
-                        if (getContext() != null) {
-                            String errorMsg = "Error parsing item at " + itemSnapshot.getKey() + 
-                                "\nError: " + e.getMessage() +
-                                "\nValue: " + itemSnapshot.getValue();
-                            Toast.makeText(getContext(), errorMsg, Toast.LENGTH_LONG).show();
-                            e.printStackTrace();
-                        }
+                        Log.e("MenuFragment", "Error parsing item: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
                 
@@ -208,12 +198,11 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClic
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
+                Log.e("MenuFragment", "Database error: " + databaseError.getMessage());
                 if (getContext() != null) {
                     Toast.makeText(getContext(),
-                        "Database error: " + databaseError.getMessage() +
-                        "\nDetails: " + databaseError.getDetails(),
-                        Toast.LENGTH_LONG).show();
-                    databaseError.toException().printStackTrace();
+                        "Database error: " + databaseError.getMessage(),
+                        Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -236,7 +225,7 @@ public class MenuFragment extends Fragment implements MenuAdapter.OnMenuItemClic
     public void onMenuItemClick(MenuItemModel item) {
         // Open EditMenuItemActivity with the selected item
         Intent intent = new Intent(getActivity(), EditMenuItemActivity.class);
-        intent.putExtra("menuItem", item);
+        intent.putExtra("itemId", item.getId());
         startActivity(intent);
     }
 
