@@ -79,12 +79,6 @@
             android:textColor="@android:color/darker_gray"
             android:layout_marginTop="8dp"/>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@android:color/darker_gray"
-            android:layout_marginVertical="16dp"/>
-
         <!-- Delivery Address Section -->
         <LinearLayout
             android:id="@+id/deliveryAddressSection"
@@ -98,7 +92,8 @@
                 android:text="Delivery Address"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="12dp"/>
+                android:layout_marginBottom="12dp"
+                android:layout_marginTop="12dp"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -147,20 +142,16 @@
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@android:color/darker_gray"
-            android:layout_marginVertical="16dp"/>
-
         <!-- Tip Section -->
         <TextView
+            android:id="@+id/tipSection"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Add a Tip"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp"/>
+            android:layout_marginBottom="12dp"
+            android:layout_marginTop="12dp"/>
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/tipOptions"

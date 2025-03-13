@@ -67,6 +67,8 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private TextInputEditText instructionsInput;
     private ChipGroup tipOptions;
     private View deliveryFeeRow;
+    private View tipSection;
+    private View tipRow;
     
     private PlacesClient placesClient;
     private AutocompleteSessionToken sessionToken;
@@ -120,8 +122,13 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         addressInput.setAdapter(addressAdapter);
         
         // Tip section
+        tipSection = findViewById(R.id.tipSection);
+        tipRow = findViewById(R.id.tipRow);
         tipOptions = findViewById(R.id.tipOptions);
         tipAmountText = findViewById(R.id.tipAmountText);
+        
+        // Set up tip options
+        setupTipOptions();
         
         // Payment section
         paymentMethodGroup = findViewById(R.id.paymentMethodGroup);
@@ -134,6 +141,39 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         
         // Place order button
         placeOrderButton = findViewById(R.id.placeOrderButton);
+    }
+
+    private void setupTipOptions() {
+        // Clear any existing chips
+        tipOptions.removeAllViews();
+        
+        // Define tip percentages
+        int[] tipPercentages = {0, 10, 15, 20, 25};
+        
+        for (int percentage : tipPercentages) {
+            Chip chip = new Chip(this);
+            chip.setText(percentage + "%");
+            chip.setCheckable(true);
+            chip.setClickable(true);
+            
+            // Set 15% as default selected
+            if (percentage == 15) {
+                chip.setChecked(true);
+            }
+            
+            tipOptions.addView(chip);
+        }
+        
+        // Set up listener for tip selection
+        tipOptions.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId != View.NO_ID) {
+                Chip selectedChip = findViewById(checkedId);
+                String tipText = selectedChip.getText().toString();
+                tipPercentage = Double.parseDouble(tipText.replace("%", ""));
+                Log.d(TAG, "Selected tip percentage: " + tipPercentage + "%");
+                updateTotals();
+            }
+        });
     }
 
     private void setupAddressAutocomplete() {
@@ -297,23 +337,38 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
             isDelivery = checkedId == R.id.deliveryOption;
             deliveryAddressSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
             deliveryFeeRow.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            
+            // Show/hide tip sections based on delivery option
+            tipSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            tipRow.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            tipOptions.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            
             if (!isDelivery) {
                 selectedPlace = null;
                 if (addressInput != null) {
                     addressInput.setText("");
                 }
+                // Reset tip to 0% for pickup
+                tipPercentage = 0.0;
+                for (int i = 0; i < tipOptions.getChildCount(); i++) {
+                    Chip chip = (Chip) tipOptions.getChildAt(i);
+                    if (chip.getText().toString().equals("0%")) {
+                        chip.setChecked(true);
+                        break;
+                    }
+                }
+            } else {
+                // Set default 15% tip for delivery
+                tipPercentage = 15.0;
+                for (int i = 0; i < tipOptions.getChildCount(); i++) {
+                    Chip chip = (Chip) tipOptions.getChildAt(i);
+                    if (chip.getText().toString().equals("15%")) {
+                        chip.setChecked(true);
+                        break;
+                    }
+                }
             }
             updateTotals();
-        });
-
-        // Tip options listener
-        tipOptions.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId != View.NO_ID) {
-                Chip selectedChip = findViewById(checkedId);
-                String tipText = selectedChip.getText().toString();
-                tipPercentage = Double.parseDouble(tipText.replace("%", ""));
-                updateTotals();
-            }
         });
 
         // Place order button listener
@@ -349,13 +404,25 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         
         // Update UI
         subtotalText.setText(String.format("$%.2f", subtotal));
-        tipAmountText.setText(String.format("$%.2f", tipAmount));
+        
+        // Show/hide and update tip amount
+        if (isDelivery) {
+            tipRow.setVisibility(View.VISIBLE);
+            tipAmountText.setText(String.format("$%.2f", tipAmount));
+        } else {
+            tipRow.setVisibility(View.GONE);
+            tipAmountText.setText("$0.00");
+        }
         
         // Calculate total
-        double total = subtotal + tipAmount;
+        double total = subtotal + (isDelivery ? tipAmount : 0);
         if (isDelivery) {
             total += DELIVERY_FEE;
+            deliveryFeeAmount.setText(String.format("$%.2f", DELIVERY_FEE));
+            deliveryFeeRow.setVisibility(View.VISIBLE);
             Log.d(TAG, "Added delivery fee. New total: " + total);
+        } else {
+            deliveryFeeRow.setVisibility(View.GONE);
         }
         
         totalText.setText(String.format("$%.2f", total));
