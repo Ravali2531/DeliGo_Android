@@ -153,17 +153,39 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
         subtotalText.setText(String.format("Subtotal: $%.2f", subtotal));
         cartAdapter.setItems(cartItems);
-        Log.d(TAG, "UI updated with " + cartItems.size() + " items");
+        Log.d(TAG, "UI updated with " + cartItems.size() + " items and subtotal: $" + subtotal);
     }
 
     @Override
     public void onUpdateQuantity(String itemId, int newQuantity) {
         Log.d(TAG, "Updating quantity for item: " + itemId + " to " + newQuantity);
         if (itemId != null) {
-            cartRef.child(itemId).child("quantity").setValue(newQuantity)
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Quantity updated successfully"))
+            // Update local list and UI first
+            for (CartItem item : cartItems) {
+                if (item.getId().equals(itemId)) {
+                    item.setQuantity(newQuantity);
+                    item.setTotalPrice(item.getPrice() * newQuantity); // Update total price
+                    break;
+                }
+            }
+            
+            // Recalculate subtotal
+            calculateSubtotal();
+            
+            // Update UI immediately
+            subtotalText.setText(String.format("Subtotal: $%.2f", subtotal));
+            cartAdapter.notifyDataSetChanged();
+
+            // Then update Firebase
+            cartRef.child(itemId).setValue(cartItems.stream()
+                    .filter(item -> item.getId().equals(itemId))
+                    .findFirst()
+                    .orElse(null))
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Item updated successfully in Firebase");
+                })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error updating quantity: " + e.getMessage());
+                    Log.e(TAG, "Error updating item: " + e.getMessage());
                     Toast.makeText(getContext(), "Error updating quantity", Toast.LENGTH_SHORT).show();
                 });
         }
@@ -173,12 +195,32 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
     public void onRemoveItem(String itemId) {
         Log.d(TAG, "Removing item: " + itemId);
         if (itemId != null) {
+            // Remove from local list first
+            cartItems.removeIf(item -> item.getId().equals(itemId));
+            calculateSubtotal(); // Recalculate subtotal
+            updateUI(); // Update the UI with new totals
+
+            // Then remove from Firebase
             cartRef.child(itemId).removeValue()
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Item removed successfully"))
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Item removed successfully from Firebase");
+                })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error removing item: " + e.getMessage());
                     Toast.makeText(getContext(), "Error removing item", Toast.LENGTH_SHORT).show();
                 });
         }
+    }
+
+    private void calculateSubtotal() {
+        subtotal = 0.0;
+        for (CartItem item : cartItems) {
+            double itemTotal = item.getPrice() * item.getQuantity();
+            Log.d(TAG, "Item: " + item.getName() + ", Price: " + item.getPrice() + 
+                  ", Quantity: " + item.getQuantity() + ", Total: " + itemTotal);
+            item.setTotalPrice(itemTotal); // Update item's total price
+            subtotal += itemTotal;
+        }
+        Log.d(TAG, "New subtotal: " + subtotal);
     }
 } 
