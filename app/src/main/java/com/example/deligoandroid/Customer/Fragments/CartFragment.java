@@ -58,10 +58,27 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
         checkoutButton.setOnClickListener(v -> {
             if (cartItems != null && !cartItems.isEmpty()) {
-                Intent intent = new Intent(getActivity(), CheckoutActivity.class);
-                intent.putExtra("subtotal", subtotal);
-                intent.putExtra("cartItems", new ArrayList<>(cartItems));
-                startActivity(intent);
+                // Check if all items are from the same restaurant
+                String firstRestaurantId = cartItems.get(0).getRestaurantId();
+                boolean allSameRestaurant = true;
+                
+                for (CartItem item : cartItems) {
+                    if (!firstRestaurantId.equals(item.getRestaurantId())) {
+                        allSameRestaurant = false;
+                        break;
+                    }
+                }
+                
+                if (allSameRestaurant) {
+                    Intent intent = new Intent(getActivity(), CheckoutActivity.class);
+                    intent.putExtra("subtotal", subtotal);
+                    intent.putExtra("cartItems", new ArrayList<>(cartItems));
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(getContext(), 
+                        "Please select items from the same restaurant", 
+                        Toast.LENGTH_LONG).show();
+                }
             }
         });
     }
