@@ -18,6 +18,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.Customer.Adapters.CartAdapter;
 import com.example.deligoandroid.Customer.CheckoutActivity;
 import com.example.deligoandroid.Customer.Models.CartItem;
+import com.example.deligoandroid.Customer.Models.CustomizationSelection;
+import com.example.deligoandroid.Customer.Models.SelectedItem;
 import com.example.deligoandroid.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -29,6 +31,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class CartFragment extends Fragment implements CartAdapter.CartItemListener {
     private static final String TAG = "CartFragment";
@@ -210,22 +213,64 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
     @Override
     public void onRemoveItem(String itemId) {
-        Log.d(TAG, "Removing item: " + itemId);
+        Log.d(TAG, "Starting to remove item with ID: " + itemId);
         if (itemId != null) {
+            // Find the item to be removed
+            CartItem itemToRemove = null;
+            for (CartItem item : cartItems) {
+                if (item.getId().equals(itemId)) {
+                    itemToRemove = item;
+                    break;
+                }
+            }
+
+            if (itemToRemove == null) {
+                Log.e(TAG, "Could not find item with ID: " + itemId);
+                return;
+            }
+
+            // Generate Firebase key based on menu item ID and customizations
+            String firebaseKey = itemToRemove.getMenuItemId();
+            if (itemToRemove.getCustomizations() != null && !itemToRemove.getCustomizations().isEmpty()) {
+                StringBuilder keyBuilder = new StringBuilder(firebaseKey);
+                for (Map.Entry<String, List<CustomizationSelection>> entry : itemToRemove.getCustomizations().entrySet()) {
+                    keyBuilder.append("_").append(entry.getKey());
+                    List<CustomizationSelection> selections = entry.getValue();
+                    if (selections != null) {
+                        for (CustomizationSelection selection : selections) {
+                            if (selection.getSelectedItems() != null) {
+                                for (SelectedItem item : selection.getSelectedItems()) {
+                                    keyBuilder.append("_").append(item.getName());
+                                }
+                            }
+                        }
+                    }
+                }
+                firebaseKey = keyBuilder.toString();
+            }
+            
+            Log.d(TAG, "Generated Firebase key for removal: " + firebaseKey);
+            
             // Remove from local list first
-            cartItems.removeIf(item -> item.getId().equals(itemId));
+            boolean removed = cartItems.removeIf(item -> item.getId().equals(itemId));
+            Log.d(TAG, "Item removed from local list: " + removed);
+            
             calculateSubtotal(); // Recalculate subtotal
             updateUI(); // Update the UI with new totals
 
-            // Then remove from Firebase
-            cartRef.child(itemId).removeValue()
+            // Then remove from Firebase using the generated key
+            Log.d(TAG, "Attempting to remove item from Firebase, path: " + cartRef.child(firebaseKey).toString());
+            cartRef.child(firebaseKey).removeValue()
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Item removed successfully from Firebase");
+                    Log.d(TAG, "Item successfully removed from Firebase");
+                    Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error removing item: " + e.getMessage());
+                    Log.e(TAG, "Error removing item from Firebase: " + e.getMessage());
                     Toast.makeText(getContext(), "Error removing item", Toast.LENGTH_SHORT).show();
                 });
+        } else {
+            Log.e(TAG, "Attempted to remove item with null ID");
         }
     }
 
