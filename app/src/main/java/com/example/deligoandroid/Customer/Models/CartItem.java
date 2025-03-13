@@ -34,7 +34,6 @@ public class CartItem implements Serializable {
     }
 
     public CartItem(MenuItem menuItem) {
-        this.id = menuItem.getId();
         this.menuItemId = menuItem.getId();
         this.name = menuItem.getName();
         this.description = menuItem.getDescription();
@@ -45,6 +44,7 @@ public class CartItem implements Serializable {
         this.timestamp = System.currentTimeMillis();
         this.totalPrice = menuItem.getPrice();
         this.restaurantId = ""; // Will be set when adding to cart
+        // ID will be set when customizations are added
     }
 
     // Getters and Setters with null checks
@@ -117,7 +117,8 @@ public class CartItem implements Serializable {
     }
 
     public void setCustomizations(Map<String, List<CustomizationSelection>> customizations) {
-        this.customizations = customizations != null ? customizations : new HashMap<>();
+        this.customizations = customizations;
+        generateUniqueId(); // Generate new ID when customizations change
     }
 
     public double getTotalPrice() {
@@ -150,6 +151,29 @@ public class CartItem implements Serializable {
             }
         }
         this.totalPrice = total;
+    }
+
+    // Generate a unique ID based on menu item and customizations
+    public void generateUniqueId() {
+        StringBuilder idBuilder = new StringBuilder(menuItemId);
+        
+        if (customizations != null && !customizations.isEmpty()) {
+            for (Map.Entry<String, List<CustomizationSelection>> entry : customizations.entrySet()) {
+                idBuilder.append("_").append(entry.getKey());
+                List<CustomizationSelection> selections = entry.getValue();
+                if (selections != null) {
+                    for (CustomizationSelection selection : selections) {
+                        if (selection.getSelectedItems() != null) {
+                            for (SelectedItem item : selection.getSelectedItems()) {
+                                idBuilder.append("_").append(item.getName());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        this.id = idBuilder.toString();
     }
 
     @Override
