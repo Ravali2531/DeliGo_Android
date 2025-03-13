@@ -21,6 +21,7 @@ import com.example.deligoandroid.Customer.Models.*;
 import com.example.deligoandroid.R;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.Serializable;
 import java.util.*;
@@ -32,6 +33,7 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
     private Map<String, List<CustomizationSelection>> selectedCustomizations = new HashMap<>();
     private TextView quantityText;
     private TextView totalPriceText;
+    private TextInputEditText specialInstructionsInput;
     private OnAddToCartListener onAddToCartListener;
 
     public static ItemCustomizationDialog newInstance(MenuItem menuItem) {
@@ -90,6 +92,7 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
         ImageButton increaseQuantity = view.findViewById(R.id.increaseQuantity);
         quantityText = view.findViewById(R.id.quantityText);
         totalPriceText = view.findViewById(R.id.totalPrice);
+        specialInstructionsInput = view.findViewById(R.id.specialInstructionsInput);
         Button addToCartButton = view.findViewById(R.id.addToCartButton);
         View cancelButton = view.findViewById(R.id.cancelButton);
 
@@ -122,6 +125,10 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
         addToCartButton.setOnClickListener(v -> {
             if (validateRequiredCustomizations()) {
                 CartItem cartItem = createCartItem();
+                // Get and set special instructions
+                String specialInstructions = specialInstructionsInput.getText().toString().trim();
+                cartItem.setSpecialInstructions(specialInstructions);
+                
                 if (onAddToCartListener != null) {
                     onAddToCartListener.onAddToCart(cartItem);
                 }

@@ -18,6 +18,8 @@ public class CartItem implements Serializable {
     private Map<String, List<CustomizationSelection>> customizations;
     private double totalPrice;
     private double timestamp;
+    private String specialInstructions;
+    private List<Map<String, Object>> customizationsList;
 
     public CartItem() {
         this.customizations = new HashMap<>();
@@ -31,6 +33,8 @@ public class CartItem implements Serializable {
         this.restaurantId = "";
         this.totalPrice = 0.0;
         this.timestamp = System.currentTimeMillis();
+        this.specialInstructions = "";
+        this.customizationsList = new ArrayList<>();
     }
 
     public CartItem(MenuItem menuItem) {
@@ -45,6 +49,8 @@ public class CartItem implements Serializable {
         this.totalPrice = menuItem.getPrice();
         this.restaurantId = ""; // Will be set when adding to cart
         // ID will be set when customizations are added
+        this.specialInstructions = "";
+        this.customizationsList = new ArrayList<>();
     }
 
     // Getters and Setters with null checks
@@ -137,6 +143,22 @@ public class CartItem implements Serializable {
         this.timestamp = timestamp;
     }
 
+    public String getSpecialInstructions() {
+        return specialInstructions;
+    }
+
+    public void setSpecialInstructions(String specialInstructions) {
+        this.specialInstructions = specialInstructions;
+    }
+
+    public List<Map<String, Object>> getCustomizationsList() {
+        return customizationsList;
+    }
+
+    public void setCustomizationsList(List<Map<String, Object>> customizationsList) {
+        this.customizationsList = customizationsList;
+    }
+
     private void updateTotalPrice() {
         double total = price * quantity;
         if (customizations != null) {
@@ -174,6 +196,33 @@ public class CartItem implements Serializable {
         }
         
         this.id = idBuilder.toString();
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("menuItemId", menuItemId);
+        map.put("name", name);
+        map.put("price", price);
+        map.put("quantity", quantity);
+        map.put("totalPrice", totalPrice);
+        map.put("specialInstructions", specialInstructions);
+        map.put("customizations", customizationsList);
+        return map;
+    }
+
+    public static CartItem fromMap(Map<String, Object> map) {
+        CartItem item = new CartItem();
+        item.setMenuItemId((String) map.get("menuItemId"));
+        item.setName((String) map.get("name"));
+        item.setPrice(((Number) map.get("price")).doubleValue());
+        item.setQuantity(((Number) map.get("quantity")).intValue());
+        item.setTotalPrice(((Number) map.get("totalPrice")).doubleValue());
+        item.setSpecialInstructions((String) map.get("specialInstructions"));
+        
+        List<Map<String, Object>> customizations = (List<Map<String, Object>>) map.get("customizations");
+        item.setCustomizationsList(customizations);
+        
+        return item;
     }
 
     @Override
