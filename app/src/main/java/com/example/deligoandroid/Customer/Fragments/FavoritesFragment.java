@@ -80,10 +80,13 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
                         Double price = itemSnapshot.child("price").getValue(Double.class);
                         String imageURL = itemSnapshot.child("imageURL").getValue(String.class);
                         Double timestamp = itemSnapshot.child("timestamp").getValue(Double.class);
+                        String restaurantId = itemSnapshot.child("restaurantId").getValue(String.class);
 
                         if (name == null || price == null || category == null) {
                             continue;
                         }
+
+                        Log.d("FavoritesFragment", "Loading favorite item: " + name + ", restaurantId: " + restaurantId);
 
                         MenuItem menuItem = new MenuItem();
                         menuItem.setId(itemId);
@@ -93,6 +96,7 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
                         menuItem.setPrice(price);
                         menuItem.setImageURL(imageURL);
                         menuItem.setAvailable(true);
+                        menuItem.setRestaurantId(restaurantId);
 
                         // Load customization options
                         if (itemSnapshot.hasChild("customizationOptions")) {
@@ -209,6 +213,23 @@ public class FavoritesFragment extends Fragment implements MenuAdapter.OnAddToCa
             .child("customers")
             .child(userId)
             .child("cart");
+
+        // Set the restaurant ID from the menu item
+        MenuItem menuItem = favoriteItems.stream()
+            .filter(item -> item.getId().equals(cartItem.getMenuItemId()))
+            .findFirst()
+            .orElse(null);
+
+        Log.d("FavoritesFragment", "Found menuItem for cart: " + (menuItem != null ? menuItem.getName() : "null"));
+        Log.d("FavoritesFragment", "MenuItem restaurantId: " + (menuItem != null ? menuItem.getRestaurantId() : "null"));
+
+        if (menuItem != null && menuItem.getRestaurantId() != null) {
+            cartItem.setRestaurantId(menuItem.getRestaurantId());
+            Log.d("FavoritesFragment", "Set cartItem restaurantId to: " + cartItem.getRestaurantId());
+        } else {
+            Toast.makeText(getContext(), "Error: Could not find restaurant for this item", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         cartRef.child(cartItem.getId()).setValue(cartItem)
             .addOnSuccessListener(aVoid -> {

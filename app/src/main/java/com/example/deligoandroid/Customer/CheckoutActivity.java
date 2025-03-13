@@ -43,8 +43,20 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.stripe.android.PaymentConfiguration;
+import com.stripe.android.paymentsheet.PaymentSheet;
+import com.stripe.android.paymentsheet.PaymentSheetResult;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import org.json.JSONObject;
 
 import java.io.Serializable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -54,6 +66,8 @@ import java.util.Map;
 public class CheckoutActivity extends AppCompatActivity implements CartAdapter.CartItemListener {
     private static final String TAG = "CheckoutActivity";
     private static final double DELIVERY_FEE = 4.99;
+    private static final String BACKEND_URL = "https://c8a9-70-26-192-244.ngrok-free.app"; // Replace with your backend URL
+    private static final String STRIPE_PUBLISHABLE_KEY = "pk_test_51QLXl2L0kLdfcs5yhjcDuc0WAnDoZgIu1Ts88JhU7ZpGDDmkZ8X6mkhAnRuFuhYQLePpmWrcKXJby0qtvMiw6FVc00DTOLaHK5"; // Replace with your Stripe publishable key
 
     private RecyclerView cartItemsRecyclerView;
     private CartAdapter cartAdapter;
@@ -81,6 +95,11 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private double tipPercentage = 15.0;
     private boolean isDelivery = true;
 
+    private PaymentSheet paymentSheet;
+    private String paymentIntentClientSecret;
+    private String customerId;
+    private String ephemeralKey;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,6 +112,10 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         }
         placesClient = Places.createClient(this);
         sessionToken = AutocompleteSessionToken.newInstance();
+        
+        // Initialize Stripe
+        PaymentConfiguration.init(getApplicationContext(), STRIPE_PUBLISHABLE_KEY);
+        paymentSheet = new PaymentSheet(this, this::onPaymentSheetResult);
         
         setContentView(R.layout.activity_checkout);
 
@@ -371,8 +394,28 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
             updateTotals();
         });
 
+        // Payment method listener
+        paymentMethodGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.cardPayment) {
+                // Create payment intent when credit card is selected
+                createPaymentIntent();
+            }
+        });
+
         // Place order button listener
-        placeOrderButton.setOnClickListener(v -> placeOrder());
+        placeOrderButton.setOnClickListener(v -> {
+            if (!validateOrder()) {
+                return;
+            }
+            
+            if (paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment) {
+                // For card payment, create payment intent first
+                createPaymentIntent();
+            } else {
+                // For cash on delivery, place order directly
+                placeOrder();
+            }
+        });
     }
 
     private void loadCartItems() {
@@ -447,8 +490,162 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         return true;
     }
 
+    private void createPaymentIntent() {
+        double total = calculateTotal();
+        long amount = Math.round(total * 100); // Convert to cents
+
+        // Get user info
+        String userEmail = FirebaseAuth.getInstance().getCurrentUser().getEmail();
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (userEmail == null) {
+            Toast.makeText(this, "Error: User email not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Create JSON for the request
+        JSONObject paymentData = new JSONObject();
+        try {
+            paymentData.put("amount", amount);
+            paymentData.put("currency", "cad");
+            paymentData.put("email", userEmail);
+            paymentData.put("userId", userId);
+            
+            Log.d(TAG, "Creating payment intent request");
+            Log.d(TAG, "Amount: " + amount + " cents");
+            Log.d(TAG, "Email: " + userEmail);
+            Log.d(TAG, "User ID: " + userId);
+            Log.d(TAG, "Backend URL: " + BACKEND_URL);
+        } catch (Exception e) {
+            Log.e(TAG, "Error creating payment data", e);
+            Toast.makeText(this, "Error preparing payment: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Create the request
+        MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+        RequestBody body = RequestBody.create(mediaType, paymentData.toString());
+        Request request = new Request.Builder()
+                .url(BACKEND_URL + "/create-payment-intent")
+                .post(body)
+                .build();
+
+        Log.d(TAG, "Sending request to: " + request.url());
+        Log.d(TAG, "Request body: " + paymentData.toString());
+
+        // Make the request
+        new OkHttpClient().newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(CheckoutActivity.this, 
+                        "Error creating payment intent", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Error creating payment intent", e);
+                });
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                if (!response.isSuccessful()) {
+                    runOnUiThread(() -> {
+                        try {
+                            JSONObject errorJson = new JSONObject(responseBody);
+                            String errorMessage = errorJson.optString("error", "Unknown error occurred");
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Payment Error: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Payment Error: " + errorMessage);
+                            Log.e(TAG, "Response Code: " + response.code());
+                            Log.e(TAG, "Response Body: " + responseBody);
+                        } catch (Exception e) {
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Payment Error: " + response.code() + " - " + response.message(), 
+                                Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Error parsing error response", e);
+                            Log.e(TAG, "Response Code: " + response.code());
+                            Log.e(TAG, "Response Body: " + responseBody);
+                        }
+                    });
+                    return;
+                }
+
+                try {
+                    JSONObject responseData = new JSONObject(responseBody);
+                    
+                    // Check if we have all required fields
+                    if (!responseData.has("clientSecret")) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Error: Missing client secret in response", Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "Missing client secret in response: " + responseBody);
+                        });
+                        return;
+                    }
+                    
+                    paymentIntentClientSecret = responseData.getString("clientSecret");
+                    customerId = responseData.optString("customer");
+                    ephemeralKey = responseData.optString("ephemeralKey");
+                    
+                    Log.d(TAG, "Successfully created payment intent");
+                    Log.d(TAG, "Client Secret: " + (paymentIntentClientSecret != null ? "Present" : "Missing"));
+                    Log.d(TAG, "Customer ID: " + (customerId != null ? "Present" : "Missing"));
+                    Log.d(TAG, "Ephemeral Key: " + (ephemeralKey != null ? "Present" : "Missing"));
+                    
+                    runOnUiThread(() -> presentPaymentSheet());
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(CheckoutActivity.this, 
+                            "Error parsing payment response: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Error parsing payment response", e);
+                        Log.e(TAG, "Response Body: " + responseBody);
+                    });
+                }
+            }
+        });
+    }
+
+    private void presentPaymentSheet() {
+        PaymentSheet.Configuration configuration = new PaymentSheet.Configuration.Builder("DeliGo")
+                .defaultBillingDetails(new PaymentSheet.BillingDetails())
+                .allowsDelayedPaymentMethods(true)
+                .build();
+                
+        paymentSheet.presentWithPaymentIntent(
+                paymentIntentClientSecret,
+                configuration
+        );
+    }
+
+    private void onPaymentSheetResult(PaymentSheetResult paymentSheetResult) {
+        if (paymentSheetResult instanceof PaymentSheetResult.Completed) {
+            // Payment successful, proceed with order placement
+            placeOrder();
+        } else if (paymentSheetResult instanceof PaymentSheetResult.Canceled) {
+            Toast.makeText(this, "Payment canceled", Toast.LENGTH_SHORT).show();
+        } else if (paymentSheetResult instanceof PaymentSheetResult.Failed) {
+            Toast.makeText(this, 
+                "Payment failed: " + ((PaymentSheetResult.Failed) paymentSheetResult).getError(),
+                Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private double calculateTotal() {
+        double total = subtotal;
+        if (isDelivery) {
+            total += (subtotal * tipPercentage) / 100.0;
+            total += DELIVERY_FEE;
+        }
+        return total;
+    }
+
     private void placeOrder() {
         if (!validateOrder()) {
+            return;
+        }
+
+        // For card payments, ensure payment is completed
+        if (paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment && 
+            paymentIntentClientSecret == null) {
+            Toast.makeText(this, "Please complete the payment first", Toast.LENGTH_SHORT).show();
             return;
         }
 

@@ -502,6 +502,9 @@ public class CustomerHomeActivity extends AppCompatActivity
             .child("favorites")
             .child(menuItem.getId());
 
+        Log.d("CustomerHomeActivity", "Toggling favorite for item: " + menuItem.getName());
+        Log.d("CustomerHomeActivity", "Item restaurantId: " + menuItem.getRestaurantId());
+
         if (isFavorite) {
             // Add to favorites
             Map<String, Object> favoriteData = new HashMap<>();
@@ -512,6 +515,9 @@ public class CustomerHomeActivity extends AppCompatActivity
             favoriteData.put("imageURL", menuItem.getImageURL());
             favoriteData.put("category", menuItem.getCategory());
             favoriteData.put("timestamp", ServerValue.TIMESTAMP);
+            favoriteData.put("restaurantId", menuItem.getRestaurantId());
+
+            Log.d("CustomerHomeActivity", "Adding to favorites with restaurantId: " + menuItem.getRestaurantId());
 
             favoritesRef.setValue(favoriteData)
                 .addOnSuccessListener(aVoid -> {

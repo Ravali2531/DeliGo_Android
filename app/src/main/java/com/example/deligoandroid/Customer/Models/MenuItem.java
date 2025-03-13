@@ -14,6 +14,7 @@ public class MenuItem implements Serializable {
     private boolean isAvailable;
     private boolean hasCustomizations;
     private List<CustomizationOption> customizationOptions;
+    private String restaurantId;
 
     public MenuItem() {
         // Required empty constructor for Firebase
@@ -26,6 +27,7 @@ public class MenuItem implements Serializable {
         this.isAvailable = true;
         this.hasCustomizations = false;
         this.customizationOptions = new ArrayList<>();
+        this.restaurantId = "";
     }
 
     // Getters and Setters with null checks
@@ -46,6 +48,9 @@ public class MenuItem implements Serializable {
 
     public String getCategory() { return category != null ? category : ""; }
     public void setCategory(String category) { this.category = category != null ? category : ""; }
+
+    public String getRestaurantId() { return restaurantId != null ? restaurantId : ""; }
+    public void setRestaurantId(String restaurantId) { this.restaurantId = restaurantId != null ? restaurantId : ""; }
 
     public boolean isAvailable() { return isAvailable; }
     public void setAvailable(boolean available) { isAvailable = available; }
