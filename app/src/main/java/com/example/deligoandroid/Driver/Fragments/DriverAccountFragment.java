@@ -43,7 +43,7 @@ public class DriverAccountFragment extends Fragment {
         // Initialize views
         initializeViews(view);
         setupClickListeners(view);
-        
+
         // Load driver name
         loadDriverName();
 
@@ -61,7 +61,7 @@ public class DriverAccountFragment extends Fragment {
         darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             sharedPreferences.edit().putBoolean("dark_mode", isChecked).apply();
             AppCompatDelegate.setDefaultNightMode(
-                isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
+                    isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
             );
         });
     }
@@ -86,6 +86,16 @@ public class DriverAccountFragment extends Fragment {
             // TODO: Navigate to help
             Toast.makeText(getContext(), "Help clicked", Toast.LENGTH_SHORT).show();
         });
+
+        view.findViewById(R.id.signOutButton).setOnClickListener(v -> logout());
+    }
+
+    private void logout() {
+        FirebaseAuth.getInstance().signOut();
+        Intent intent = new Intent(getActivity(), LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        getActivity().finish();
     }
 
     private void loadDriverName() {

@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.deligoandroid.Admin.AdminActivity;
 import com.example.deligoandroid.Customer.Activities.CustomerHomeActivity;
+import com.example.deligoandroid.Driver.DocumentsUnderReviewActivity;
 import com.example.deligoandroid.Driver.DriverDocumentsActivity;
 import com.example.deligoandroid.Driver.DriverHomeActivity;
 import com.example.deligoandroid.MainActivity;
@@ -23,6 +24,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.example.deligoandroid.Restaurant.RestaurantDocumentsActivity;
 import com.example.deligoandroid.Restaurant.RestaurantHomeActivity;
+
+import org.w3c.dom.Document;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -136,14 +139,19 @@ public class LoginActivity extends AppCompatActivity {
                 if (dataSnapshot.exists()) {
                     // Check if documents are submitted
                     Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
+                    String status = String.valueOf(dataSnapshot.child("documents/status").getValue());
                     if (documentsSubmitted == null || !documentsSubmitted) {
                         // Documents not submitted, redirect to upload page
                         Intent intent = new Intent(LoginActivity.this, DriverDocumentsActivity.class);
                         startActivity(intent);
                         finish();
-                    } else {
+                    } else if(status.equals("approved")) {
                         // Documents submitted, go to driver home
                         Intent intent = new Intent(LoginActivity.this, DriverHomeActivity.class);
+                        startActivity(intent);
+                        finish();
+                    } else {
+                        Intent intent = new Intent(LoginActivity.this, DocumentsUnderReviewActivity.class);
                         startActivity(intent);
                         finish();
                     }

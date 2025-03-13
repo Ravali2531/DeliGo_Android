@@ -167,6 +167,12 @@ public class SignupActivity extends AppCompatActivity {
     private void saveUserData(String userId, String role, String fullName, String email, String phone) {
         // Create user data map for store_info if the role is 'restaurant'
         Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("fullName", fullName);
+        userInfo.put("email", email);
+        userInfo.put("phone", phone);
+        userInfo.put("role", role);
+
+        Map<String, Object> restuserInfo = new HashMap<>();
         userInfo.put("name", fullName);
         userInfo.put("email", email);
         userInfo.put("phone", phone);
@@ -180,7 +186,7 @@ public class SignupActivity extends AppCompatActivity {
                         // For restaurants, save store info under restaurants/userId/store_info
                         if (role.equalsIgnoreCase("restaurant")) {
                             mDatabase.child("restaurants").child(userId).child("store_info")
-                                    .setValue(userInfo)
+                                    .setValue(restuserInfo)
                                     .addOnCompleteListener(storeTask -> {
                                         if (storeTask.isSuccessful()) {
                                             Toast.makeText(SignupActivity.this, "Signup successful!",
