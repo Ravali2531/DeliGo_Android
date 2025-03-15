@@ -173,10 +173,11 @@ public class SignupActivity extends AppCompatActivity {
         userInfo.put("role", role);
 
         Map<String, Object> restuserInfo = new HashMap<>();
-        userInfo.put("name", fullName);
-        userInfo.put("email", email);
-        userInfo.put("phone", phone);
-        userInfo.put("role", role);
+        restuserInfo.put("name", fullName);
+        restuserInfo.put("email", email);
+        restuserInfo.put("phone", phone);
+        restuserInfo.remove("role");
+
 
         // Save role separately under roles/userId
         mDatabase.child(role.toLowerCase() + "s").child(userId).child("role")

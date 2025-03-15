@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_marginBottom="8dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
 
@@ -14,6 +14,7 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Order Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -32,11 +33,16 @@
                 android:id="@+id/orderStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@color/orange"
-                android:padding="4dp"
-                android:textColor="@android:color/white"/>
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:textColor="@android:color/white"
+                android:background="@android:color/darker_gray"
+                android:textSize="14sp"/>
         </LinearLayout>
 
+        <!-- Restaurant and Customer Info -->
         <TextView
             android:id="@+id/restaurantName"
             android:layout_width="match_parent"
@@ -51,62 +57,41 @@
             android:layout_marginTop="4dp"
             android:textSize="14sp"/>
 
+        <!-- Order Items -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/orderItemsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:nestedScrollingEnabled="false"/>
+
+        <!-- Total Amount -->
         <TextView
             android:id="@+id/totalAmount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:gravity="end"
             android:textSize="16sp"
             android:textStyle="bold"/>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/orderItemsRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"/>
-
+        <!-- Action Buttons -->
         <LinearLayout
             android:id="@+id/actionButtons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/rejectButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:text="Reject"
-                android:backgroundTint="@android:color/holo_red_light"/>
+            android:gravity="end">
 
             <Button
                 android:id="@+id/acceptButton"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
                 android:text="Accept"
-                android:backgroundTint="@android:color/holo_green_light"/>
+                android:backgroundTint="@android:color/holo_green_dark"
+                android:textColor="@android:color/white"/>
 
-            <Button
-                android:id="@+id/startDeliveryButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Start Delivery"
-                android:visibility="gone"
-                android:backgroundTint="@android:color/holo_blue_light"/>
-
-            <Button
-                android:id="@+id/deliveredButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Delivered"
-                android:visibility="gone"
-                android:backgroundTint="@android:color/holo_green_dark"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView> 

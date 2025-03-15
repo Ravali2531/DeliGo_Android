@@ -60,28 +60,11 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
         holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + displayStatus.substring(1));
 
-        // Show/hide action buttons based on status
-        holder.acceptButton.setVisibility(View.GONE);
-        holder.rejectButton.setVisibility(View.GONE);
-        holder.startDeliveryButton.setVisibility(View.GONE);
-        holder.deliveredButton.setVisibility(View.GONE);
-
-        if (orderStatus.equalsIgnoreCase("assigned_driver") && !order.isDriverAccepted()) {
-            // Show accept/reject buttons if driver hasn't accepted yet
+        // Show/hide accept button based on status
+        if (status.equalsIgnoreCase("in_progress") && orderStatus.equalsIgnoreCase("assigned_driver")) {
             holder.actionButtons.setVisibility(View.VISIBLE);
             holder.acceptButton.setVisibility(View.VISIBLE);
-            holder.rejectButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
-        } else if (orderStatus.equalsIgnoreCase("assigned_driver") && order.isDriverAccepted()) {
-            // Show start delivery button if driver has accepted
-            holder.actionButtons.setVisibility(View.VISIBLE);
-            holder.startDeliveryButton.setVisibility(View.VISIBLE);
-            holder.orderStatus.setBackgroundResource(R.color.green);
-        } else if (orderStatus.equalsIgnoreCase("out_for_delivery")) {
-            // Show delivered button when out for delivery
-            holder.actionButtons.setVisibility(View.VISIBLE);
-            holder.deliveredButton.setVisibility(View.VISIBLE);
-            holder.orderStatus.setBackgroundResource(R.color.green);
         } else {
             holder.actionButtons.setVisibility(View.GONE);
             holder.orderStatus.setBackgroundResource(
@@ -117,21 +100,9 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             holder.orderItemsRecyclerView.setVisibility(View.GONE);
         }
 
-        // Setup button click listeners
+        // Setup accept button click listener
         holder.acceptButton.setOnClickListener(v -> {
             updateOrderStatus(order.getId(), "driver_accepted");
-        });
-
-        holder.rejectButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "driver_rejected");
-        });
-
-        holder.startDeliveryButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "out_for_delivery");
-        });
-
-        holder.deliveredButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "delivered");
         });
     }
 
@@ -141,58 +112,16 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             .child(orderId);
 
         Map<String, Object> updates = new HashMap<>();
-        String message = "";
-
-        switch (newStatus) {
-            case "driver_accepted":
-                updates.put("driverAccepted", true);
-                updates.put("order_status", "assigned_driver");
-                message = "Order accepted";
-                break;
-            case "driver_rejected":
-                updates.put("driverId", null);
-                updates.put("driverName", null);
-                updates.put("order_status", "in_progress");
-                message = "Order rejected";
-                // Make driver available again
-                updateDriverAvailability(true, null);
-                break;
-            case "out_for_delivery":
-                updates.put("order_status", "out_for_delivery");
-                message = "Started delivery";
-                break;
-            case "delivered":
-                updates.put("status", "delivered");
-                updates.put("order_status", "delivered");
-                message = "Order delivered";
-                // Make driver available again
-                updateDriverAvailability(true, null);
-                break;
-        }
+        updates.put("driverAccepted", true);
+        updates.put("order_status", "driver_accepted");
 
         orderRef.updateChildren(updates)
             .addOnSuccessListener(aVoid -> {
-//                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Order accepted", Toast.LENGTH_SHORT).show();
                 notifyDataSetChanged();
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(context, "Failed to update order: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-            });
-    }
-
-    private void updateDriverAvailability(boolean isAvailable, String currentOrderId) {
-        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference()
-            .child("drivers")
-            .child(driverId);
-
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("isAvailable", isAvailable);
-        updates.put("currentOrderId", currentOrderId);
-
-        driverRef.updateChildren(updates)
-            .addOnFailureListener(e -> {
-                Toast.makeText(context, "Failed to update driver status: " + e.getMessage(),
+                Toast.makeText(context, "Failed to accept order: " + e.getMessage(),
                     Toast.LENGTH_SHORT).show();
             });
     }
@@ -210,7 +139,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, restaurantName, customerName, totalAmount;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, rejectButton, startDeliveryButton, deliveredButton;
+        Button acceptButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -222,9 +151,6 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             totalAmount = itemView.findViewById(R.id.totalAmount);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
             acceptButton = itemView.findViewById(R.id.acceptButton);
-            rejectButton = itemView.findViewById(R.id.rejectButton);
-            startDeliveryButton = itemView.findViewById(R.id.startDeliveryButton);
-            deliveredButton = itemView.findViewById(R.id.deliveredButton);
             actionButtons = itemView.findViewById(R.id.actionButtons);
         }
     }

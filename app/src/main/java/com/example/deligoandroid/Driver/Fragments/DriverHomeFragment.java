@@ -73,11 +73,13 @@ public class DriverHomeFragment extends Fragment {
 
     private void setupAvailabilitySwitch() {
         // Get initial availability state
-        driversRef.child("available").addListenerForSingleValueEvent(new ValueEventListener() {
+        driversRef.child("isAvailable").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 Boolean isAvailable = dataSnapshot.getValue(Boolean.class);
-                availabilitySwitch.setChecked(isAvailable != null ? isAvailable : false);
+                if (isAvailable != null) {
+                    availabilitySwitch.setChecked(isAvailable);
+                }
             }
 
             @Override
@@ -88,12 +90,13 @@ public class DriverHomeFragment extends Fragment {
 
         // Setup switch listener
         availabilitySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            driversRef.child("available").setValue(isChecked)
+            driversRef.child("isAvailable").setValue(isChecked)
                 .addOnSuccessListener(aVoid -> {
                     String message = isChecked ? "You are now available for deliveries" : "You are now offline";
                     Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
+                    // Revert switch state if update fails
                     availabilitySwitch.setChecked(!isChecked);
                     Toast.makeText(getContext(), "Failed to update availability", Toast.LENGTH_SHORT).show();
                 });
