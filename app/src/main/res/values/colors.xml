@@ -44,8 +44,10 @@
     <color name="white">#FFFFFFFF</color>
     <color name="unreviewed_background">#FFE0E0</color>
     <color name="reviewed_background">#FFFFFF</color>
-    <color name="orange">#FFA500</color>
+    <color name="orange">#FF9800</color>
     <color name="green">#4CAF50</color>
+    <color name="blue">#2196F3</color>
+    <color name="red">#FF5252</color>
 
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
@@ -61,5 +63,7 @@
     <color name="colorPrimary">#F4A261</color>
     <color name="colorPrimaryDark">#E76F51</color>
     <color name="colorAccent">#F4A261</color>
+
+    <color name="purple">#673AB7</color>
 
 </resources>

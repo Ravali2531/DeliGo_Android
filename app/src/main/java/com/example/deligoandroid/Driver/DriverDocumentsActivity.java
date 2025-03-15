@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -25,6 +26,7 @@ public class DriverDocumentsActivity extends AppCompatActivity {
 
     private ImageView govtIdPreview, licensePreview;
     private Button uploadGovtIdButton, uploadLicenseButton, submitButton;
+    private TimePicker openingTimePicker, closingTimePicker;
     private Uri govtIdUri, licenseUri;
     private FirebaseStorage storage;
     private DatabaseReference databaseRef;
@@ -75,20 +77,20 @@ public class DriverDocumentsActivity extends AppCompatActivity {
     private void createInitialStructure() {
         // First check if structure already exists
         databaseRef.child("drivers").child(userId).get()
-            .addOnSuccessListener(dataSnapshot -> {
-                if (!dataSnapshot.exists()) {
-                    Map<String, Object> initialData = new HashMap<>();
-                    initialData.put("documentsSubmitted", false);
-                    initialData.put("documents/status", "not_submitted");
-                    initialData.put("documents/files", new HashMap<>());
+                .addOnSuccessListener(dataSnapshot -> {
+                    if (!dataSnapshot.exists()) {
+                        Map<String, Object> initialData = new HashMap<>();
+                        initialData.put("documentsSubmitted", false);
+                        initialData.put("documents/status", "not_submitted");
+                        initialData.put("documents/files", new HashMap<>());
 
-                    databaseRef.child("drivers")
-                            .child(userId)
-                            .setValue(initialData)
-                            .addOnFailureListener(e -> handleError("Failed to create initial structure: " + e.getMessage()));
-                }
-            })
-            .addOnFailureListener(e -> handleError("Failed to check initial structure: " + e.getMessage()));
+                        databaseRef.child("drivers")
+                                .child(userId)
+                                .setValue(initialData)
+                                .addOnFailureListener(e -> handleError("Failed to create initial structure: " + e.getMessage()));
+                    }
+                })
+                .addOnFailureListener(e -> handleError("Failed to check initial structure: " + e.getMessage()));
     }
 
     private void openDocumentPicker(ActivityResultLauncher<String> picker) {
@@ -124,6 +126,13 @@ public class DriverDocumentsActivity extends AppCompatActivity {
         uploadGovtIdButton = findViewById(R.id.uploadGovtIdButton);
         uploadLicenseButton = findViewById(R.id.uploadLicenseButton);
         submitButton = findViewById(R.id.submitButton);
+        openingTimePicker = findViewById(R.id.openingTimePicker);
+        closingTimePicker = findViewById(R.id.closingTimePicker);
+
+
+        // Set 24-hour format for time pickers
+        openingTimePicker.setIs24HourView(true);
+        closingTimePicker.setIs24HourView(true);
 
         // Set initial placeholder images
         govtIdPreview.setImageResource(R.drawable.id_placeholder);
@@ -174,7 +183,7 @@ public class DriverDocumentsActivity extends AppCompatActivity {
                     ref.getDownloadUrl()
                             .addOnSuccessListener(uri -> {
                                 fileData.put("url", uri.toString());
-                                
+
                                 // Update the database with file information
                                 databaseRef.child("drivers")
                                         .child(userId)
@@ -191,6 +200,8 @@ public class DriverDocumentsActivity extends AppCompatActivity {
 
     private void finalizeUpload() {
         Map<String, Object> updates = new HashMap<>();
+        updates.put("hours/start", String.format("%02d:%02d", openingTimePicker.getHour(), openingTimePicker.getMinute()));
+        updates.put("hours/end", String.format("%02d:%02d", closingTimePicker.getHour(), closingTimePicker.getMinute()));
         updates.put("documentsSubmitted", true);
         updates.put("documents/status", "pending_review");
 
@@ -198,10 +209,14 @@ public class DriverDocumentsActivity extends AppCompatActivity {
                 .child(userId)
                 .updateChildren(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, 
-                        "Documents uploaded successfully! They will be reviewed shortly.", 
-                        Toast.LENGTH_LONG).show();
-                    startActivity(new Intent(this, DriverHomeActivity.class));
+                    Toast.makeText(this,
+                            "Documents uploaded successfully! They will be reviewed shortly.",
+                            Toast.LENGTH_LONG).show();
+                    
+                    // Create and start DocumentsUnderReviewActivity
+                    Intent intent = new Intent(DriverDocumentsActivity.this, DocumentsUnderReviewActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
                     finish();
                 })
                 .addOnFailureListener(e -> handleError("Failed to finalize upload: " + e.getMessage()));

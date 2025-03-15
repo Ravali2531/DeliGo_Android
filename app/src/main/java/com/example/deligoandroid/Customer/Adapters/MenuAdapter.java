@@ -218,7 +218,9 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                         ItemCustomizationDialog dialog = ItemCustomizationDialog.newInstance(menuItem);
                         dialog.setOnAddToCartListener(cartItem -> {
                             if (onAddToCartListener != null) {
-                                cartItem.setRestaurantId(restaurantId);
+                                Log.d("MenuAdapter", "Adding item to cart. MenuItem restaurantId: " + menuItem.getRestaurantId());
+                                cartItem.setRestaurantId(menuItem.getRestaurantId());
+                                Log.d("MenuAdapter", "CartItem restaurantId after setting: " + cartItem.getRestaurantId());
                                 onAddToCartListener.onAddToCart(cartItem);
                             }
                         });
@@ -289,6 +291,7 @@ public class MenuAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             favoriteData.put("category", menuItem.getCategory());
             favoriteData.put("timestamp", ServerValue.TIMESTAMP);
             favoriteData.put("hasCustomizations", menuItem.hasCustomizations());
+            favoriteData.put("restaurantId", restaurantId);
             
             // Add customization options
             if (menuItem.hasCustomizations() && menuItem.getCustomizationOptions() != null) {

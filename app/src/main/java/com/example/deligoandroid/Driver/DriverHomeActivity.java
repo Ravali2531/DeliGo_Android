@@ -1,27 +1,23 @@
 package com.example.deligoandroid.Driver;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.LinearLayout;
+import android.view.MenuItem;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
-import com.example.deligoandroid.Authentication.LoginActivity;
+import androidx.fragment.app.Fragment;
+import com.example.deligoandroid.Driver.Fragments.DriverHomeFragment;
+import com.example.deligoandroid.Driver.Fragments.DriverOrdersFragment;
+import com.example.deligoandroid.Driver.Fragments.DriverAccountFragment;
 import com.example.deligoandroid.R;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 public class DriverHomeActivity extends AppCompatActivity {
-
-    private LinearLayout pendingReviewLayout;
-    private LinearLayout normalHomeLayout;
-    private Button logoutButton;
+    private BottomNavigationView bottomNavigationView;
     private DatabaseReference databaseRef;
     private String userId;
 
@@ -30,76 +26,57 @@ public class DriverHomeActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_driver_home);
 
-        // Initialize views
-        pendingReviewLayout = findViewById(R.id.pendingReviewLayout);
-        normalHomeLayout = findViewById(R.id.normalHomeLayout);
-        logoutButton = findViewById(R.id.logoutButton);
-
-        // Set initial visibility
-        pendingReviewLayout.setVisibility(View.GONE);
-        normalHomeLayout.setVisibility(View.GONE);
-
-        // Setup logout button
-        logoutButton.setOnClickListener(v -> handleLogout());
-
         // Initialize Firebase
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseRef = FirebaseDatabase.getInstance().getReference();
-
-        // Check document status
-        checkDocumentStatus();
-    }
-
-    private void checkDocumentStatus() {
-        databaseRef.child("drivers")
-                .child(userId)
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        if (dataSnapshot.exists()) {
-                            // Check if documents are submitted
-                            Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
-                            if (documentsSubmitted != null && documentsSubmitted) {
-                                // Documents are submitted, check status
-                                DataSnapshot statusSnapshot = dataSnapshot.child("documents").child("status");
-                                String status = statusSnapshot.getValue(String.class);
-                                updateUI(status);
-                            } else {
-                                // Documents not submitted
-                                updateUI("not_submitted");
-                            }
-                        } else {
-                            // Driver data doesn't exist
-                            Toast.makeText(DriverHomeActivity.this, 
-                                "Error: Driver data not found", Toast.LENGTH_LONG).show();
-                            finish();
-                        }
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                        Toast.makeText(DriverHomeActivity.this, 
-                            "Error: " + databaseError.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                });
-    }
-
-    private void updateUI(String status) {
-        if (status == null || status.equals("pending_review")) {
-            pendingReviewLayout.setVisibility(View.VISIBLE);
-            normalHomeLayout.setVisibility(View.GONE);
-        } else if (status.equals("approved")) {
-            pendingReviewLayout.setVisibility(View.GONE);
-            normalHomeLayout.setVisibility(View.VISIBLE);
-        } else if (status.equals("not_submitted")) {
-            // Redirect to document upload
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Authentication error", Toast.LENGTH_SHORT).show();
             finish();
+            return;
+        }
+
+        userId = currentUser.getUid();
+        databaseRef = FirebaseDatabase.getInstance().getReference()
+                .child("drivers").child(userId);
+
+        // Initialize views
+        bottomNavigationView = findViewById(R.id.bottomNavigationView);
+        if (bottomNavigationView != null) {
+            bottomNavigationView.setOnItemSelectedListener(item -> {
+                Fragment fragment = null;
+                int itemId = item.getItemId();
+
+                if (itemId == R.id.navigation_home) {
+                    fragment = new DriverHomeFragment();
+                } else if (itemId == R.id.navigation_orders) {
+                    fragment = new DriverOrdersFragment();
+                } else if (itemId == R.id.navigation_account) {
+                    fragment = new DriverAccountFragment();
+                }
+
+                return loadFragment(fragment);
+            });
+        }
+
+        // Load default fragment
+        if (savedInstanceState == null) {
+            loadFragment(new DriverHomeFragment());
         }
     }
 
-    private void handleLogout() {
-        FirebaseAuth.getInstance().signOut();
-        startActivity(new Intent(this, LoginActivity.class));
-        finish();
+    private boolean loadFragment(Fragment fragment) {
+        if (fragment != null) {
+            try {
+                getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragmentContainer, fragment)
+                    .commit();
+                return true;
+            } catch (Exception e) {
+                Toast.makeText(this, "Error loading screen", Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false;
     }
 } 

@@ -108,8 +108,28 @@
             android:id="@+id/customizationsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp"/>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/specialInstructionsLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="16dp"
-            android:orientation="vertical" />
+            android:hint="Special Instructions">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/specialInstructionsInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:maxLines="4"
+                android:gravity="top"
+                android:hint="Add any special instructions here"/>
+
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Total and Add to Cart -->
         <LinearLayout

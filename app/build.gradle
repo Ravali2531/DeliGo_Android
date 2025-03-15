@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    implementation libs.swiperefreshlayout
     def nav_version = "2.7.7"
     
     implementation 'androidx.appcompat:appcompat:1.6.1'
@@ -53,7 +54,14 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore'
     implementation 'com.google.firebase:firebase-storage'
     implementation 'com.google.firebase:firebase-database'
-    
+
+    implementation 'com.stripe:stripe-android:20.35.0'
+    implementation 'com.stripe:stripe-core:20.35.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.1'
+
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+
+
     // Glide for image loading
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
@@ -62,6 +70,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.android.libraries.places:places:3.3.0'
     implementation 'com.google.android.gms:play-services-location:21.2.0'
+    
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

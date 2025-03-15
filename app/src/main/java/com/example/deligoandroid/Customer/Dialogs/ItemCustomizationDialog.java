@@ -12,6 +12,7 @@ import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
@@ -20,6 +21,7 @@ import com.example.deligoandroid.Customer.Models.*;
 import com.example.deligoandroid.R;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.io.Serializable;
 import java.util.*;
@@ -31,6 +33,7 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
     private Map<String, List<CustomizationSelection>> selectedCustomizations = new HashMap<>();
     private TextView quantityText;
     private TextView totalPriceText;
+    private TextInputEditText specialInstructionsInput;
     private OnAddToCartListener onAddToCartListener;
 
     public static ItemCustomizationDialog newInstance(MenuItem menuItem) {
@@ -89,6 +92,7 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
         ImageButton increaseQuantity = view.findViewById(R.id.increaseQuantity);
         quantityText = view.findViewById(R.id.quantityText);
         totalPriceText = view.findViewById(R.id.totalPrice);
+        specialInstructionsInput = view.findViewById(R.id.specialInstructionsInput);
         Button addToCartButton = view.findViewById(R.id.addToCartButton);
         View cancelButton = view.findViewById(R.id.cancelButton);
 
@@ -119,11 +123,19 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
 
         // Setup buttons
         addToCartButton.setOnClickListener(v -> {
-            CartItem cartItem = createCartItem();
-            if (onAddToCartListener != null) {
-                onAddToCartListener.onAddToCart(cartItem);
+            if (validateRequiredCustomizations()) {
+                CartItem cartItem = createCartItem();
+                // Get and set special instructions
+                String specialInstructions = specialInstructionsInput.getText().toString().trim();
+                cartItem.setSpecialInstructions(specialInstructions);
+                
+                if (onAddToCartListener != null) {
+                    onAddToCartListener.onAddToCart(cartItem);
+                }
+                dismiss();
+            } else {
+                Toast.makeText(getContext(), "Please select all required customizations", Toast.LENGTH_SHORT).show();
             }
-            dismiss();
         });
 
         cancelButton.setOnClickListener(v -> dismiss());
@@ -279,6 +291,37 @@ public class ItemCustomizationDialog extends BottomSheetDialogFragment {
         cartItem.setCustomizations(selectedCustomizations);
         cartItem.setTotalPrice(totalPrice);
         return cartItem;
+    }
+
+    private boolean validateRequiredCustomizations() {
+        if (menuItem.getCustomizationOptions() == null) {
+            return true;
+        }
+
+        for (CustomizationOption option : menuItem.getCustomizationOptions()) {
+            if (option.isRequired()) {
+                List<CustomizationSelection> selections = selectedCustomizations.get(option.getId());
+                
+                // Check if there are any selections for this required option
+                if (selections == null || selections.isEmpty()) {
+                    return false;
+                }
+                
+                // For required options, check if any items are selected
+                CustomizationSelection selection = selections.get(0);
+                if (selection.getSelectedItems() == null || selection.getSelectedItems().isEmpty()) {
+                    return false;
+                }
+                
+                // For multiple selection type, check if minimum selection requirement is met
+                if (option.getType().equals("multiple") && option.getMaxSelections() > 0) {
+                    if (selection.getSelectedItems().size() < 1) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     public interface OnAddToCartListener {
