@@ -667,6 +667,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
         orderData.put("deliveryOption", isDelivery ? "delivery" : "pickup");
         orderData.put("status", "pending");
+        orderData.put("order_status", "pending");
         orderData.put("subtotal", subtotal);
         orderData.put("tipAmount", tipAmount);
         orderData.put("tipPercentage", tipPercentage);

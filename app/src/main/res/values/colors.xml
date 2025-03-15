@@ -64,4 +64,6 @@
     <color name="colorPrimaryDark">#E76F51</color>
     <color name="colorAccent">#F4A261</color>
 
+    <color name="purple">#673AB7</color>
+
 </resources>

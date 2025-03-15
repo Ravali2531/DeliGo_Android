@@ -33,6 +33,15 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     private List<Order> orders = new ArrayList<>();
     private Context context;
     private String restaurantId;
+    private OnAssignDriverClickListener onAssignDriverClickListener;
+
+    public interface OnAssignDriverClickListener {
+        void onAssignDriverClick(Order order);
+    }
+
+    public void setOnAssignDriverClickListener(OnAssignDriverClickListener listener) {
+        this.onAssignDriverClickListener = listener;
+    }
 
     public OrdersAdapter(String restaurantId) {
         this.restaurantId = restaurantId;
@@ -41,7 +50,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         context = parent.getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.item_order, parent, false);
+        View view = LayoutInflater.from(context).inflate(R.layout.item_restaurant_order, parent, false);
         return new ViewHolder(view);
     }
 
@@ -60,85 +69,68 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
         String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
         
-        // If status is ready_for_pickup, treat it as in_progress
-        if (status.equalsIgnoreCase("ready_for_pickup")) {
-            status = "in_progress";
-        }
-        
-        // If orderStatus is empty but status is in_progress, set orderStatus to in_progress
-        if (orderStatus.isEmpty() && status.equalsIgnoreCase("in_progress")) {
-            orderStatus = "in_progress";
-            // Update the order_status in Firebase
-            DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
-                .child("orders")
-                .child(order.getId());
-            orderRef.child("order_status").setValue("in_progress");
-        }
-        
-        // Set the displayed status text based on orderStatus if it exists, otherwise use status
+        // Set the displayed status text
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
         holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + displayStatus.substring(1));
         
-        // Show/hide action buttons based on status and delivery option
-        String deliveryOption = order.getDeliveryOption();
-        boolean isDelivery = "delivery".equalsIgnoreCase(deliveryOption);
-        
-        // Debug logging
-        System.out.println("Order ID: " + order.getId());
-        System.out.println("Status: " + status);
-        System.out.println("Order Status: " + orderStatus);
-        System.out.println("Delivery Option: " + deliveryOption);
-        
-        // Hide all buttons first
+        // Hide all buttons initially
         holder.acceptButton.setVisibility(View.GONE);
-        holder.rejectButton.setVisibility(View.GONE);
+        holder.readyForPickupButton.setVisibility(View.GONE);
         holder.assignDriverButton.setVisibility(View.GONE);
         holder.markDeliveredButton.setVisibility(View.GONE);
-        holder.readyForPickupButton.setVisibility(View.GONE);
         
-        if (status.equalsIgnoreCase("pending")) {
-            // Show accept/reject for pending orders
-            holder.actionButtons.setVisibility(View.VISIBLE);
+        // Show appropriate buttons based on status
+        if (status.equals("new") || status.equals("pending")) {
+            // New or pending order - show accept button
             holder.acceptButton.setVisibility(View.VISIBLE);
-            holder.rejectButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
-        } else if (status.equalsIgnoreCase("in_progress") || status.equalsIgnoreCase("ready_for_pickup")) {
-            // Show appropriate button based on delivery option and order status
-            holder.actionButtons.setVisibility(View.VISIBLE);
-            if (isDelivery) {
-                if (orderStatus.equalsIgnoreCase("assigned_driver")) {
-                    holder.markDeliveredButton.setVisibility(View.VISIBLE);
-                } else {
+        } else if (status.equals("in_progress")) {
+            if (orderStatus.equals("accepted")) {
+                // Order accepted - show ready for pickup button
+                holder.readyForPickupButton.setVisibility(View.VISIBLE);
+                holder.orderStatus.setBackgroundResource(R.color.green);
+            } else if (orderStatus.equals("ready_for_pickup")) {
+                // Ready for pickup - show appropriate button based on delivery option
+                String deliveryOption = order.getDeliveryOption();
+                if ("delivery".equalsIgnoreCase(deliveryOption)) {
+                    // For delivery orders, show assign driver button
                     holder.assignDriverButton.setVisibility(View.VISIBLE);
-                }
-            } else {
-                // For pickup orders
-                System.out.println("Pickup order in progress - Order Status: " + orderStatus);
-                if (orderStatus.equalsIgnoreCase("ready_for_pickup") || status.equalsIgnoreCase("ready_for_pickup")) {
-                    System.out.println("Should show Mark Delivered button");
-                    holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                    holder.orderStatus.setBackgroundResource(R.color.blue);
                 } else {
-                    System.out.println("Should show Ready for Pickup button");
-                    holder.readyForPickupButton.setVisibility(View.VISIBLE);
+                    // For pickup orders, show mark as delivered button
+                    holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                    holder.orderStatus.setBackgroundResource(R.color.purple);
                 }
+            } else if (orderStatus.equals("assigned_driver") || 
+                      orderStatus.equals("driver_accepted") || 
+                      orderStatus.equals("out_for_delivery")) {
+                // Driver assigned/accepted or out for delivery - show mark as delivered button
+                holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                holder.orderStatus.setBackgroundResource(R.color.purple);
             }
+        } else if (status.equals("delivered")) {
             holder.orderStatus.setBackgroundResource(R.color.green);
-        } else {
-            holder.actionButtons.setVisibility(View.GONE);
-            holder.orderStatus.setBackgroundResource(
-                status.equalsIgnoreCase("delivered") ? R.color.blue : android.R.color.darker_gray
-            );
         }
 
-        // Set customer details
-        String customerName = order.getCustomerName() != null ? order.getCustomerName() : "Unknown";
-        holder.customerName.setText("Customer: " + customerName);
+        // Set customer name and delivery option
+        String customerName = order.getCustomerName() != null ? order.getCustomerName() : "Unknown Customer";
+        String deliveryOption = order.getDeliveryOption() != null ? order.getDeliveryOption() : "Unknown";
+        holder.customerName.setText(customerName);
+        holder.deliveryOption.setText(deliveryOption);
 
-        // Set total amount
+        // Set total amount with proper formatting
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.US);
-        holder.totalAmount.setText(format.format(order.getTotalAmount()));
+        double totalAmount = order.getTotalAmount();
+        if (totalAmount <= 0 && order.getItems() != null) {
+            // Calculate total from items if total amount is not set
+            totalAmount = 0;
+            for (OrderItem item : order.getItems()) {
+                totalAmount += item.getPrice() * item.getQuantity();
+            }
+        }
+        holder.totalAmount.setText(format.format(totalAmount));
 
-        // Setup order items recycler view if items exist
+        // Setup order items recycler view
         if (order.getItems() != null && !order.getItems().isEmpty()) {
             holder.orderItemsRecyclerView.setVisibility(View.VISIBLE);
             OrderItemsAdapter itemsAdapter = new OrderItemsAdapter(order.getItems());
@@ -148,235 +140,61 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             holder.orderItemsRecyclerView.setVisibility(View.GONE);
         }
 
-        // Setup action buttons
+        // Setup button click listeners
         holder.acceptButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "in_progress");
-            notifyItemChanged(position);
-        });
-        
-        holder.rejectButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "cancelled");
-            notifyItemChanged(position);
+            updateOrderStatus(order.getId(), "accepted");
         });
 
         holder.readyForPickupButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "ready");
-            notifyItemChanged(position);
+            updateOrderStatus(order.getId(), "ready_for_pickup");
+        });
+
+        holder.assignDriverButton.setOnClickListener(v -> {
+            if (onAssignDriverClickListener != null) {
+                onAssignDriverClickListener.onAssignDriverClick(order);
+            }
         });
 
         holder.markDeliveredButton.setOnClickListener(v -> {
             updateOrderStatus(order.getId(), "delivered");
-            notifyItemChanged(position);
-        });
-
-        holder.assignDriverButton.setOnClickListener(v -> {
-            // Show dialog to assign driver
-            showAssignDriverDialog(order);
         });
     }
 
-    private void showAssignDriverDialog(Order order) {
-        // Get available drivers from Firebase
-        DatabaseReference driversRef = FirebaseDatabase.getInstance().getReference()
-            .child("drivers");
-            
-        Query availableDriversQuery = driversRef.orderByChild("isAvailable").equalTo(true);
-
-        availableDriversQuery.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                List<String> driverNames = new ArrayList<>();
-                List<String> driverIds = new ArrayList<>();
-                
-                for (DataSnapshot driverSnapshot : dataSnapshot.getChildren()) {
-                    String driverId = driverSnapshot.getKey();
-                    String driverName = driverSnapshot.child("fullName").getValue(String.class);
-                    Boolean isAvailable = driverSnapshot.child("isAvailable").getValue(Boolean.class);
-                    
-                    if (driverName != null && isAvailable != null && isAvailable) {
-                        driverNames.add(driverName);
-                        driverIds.add(driverId);
-                    }
-                }
-
-                if (driverNames.isEmpty()) {
-                    Toast.makeText(context, "No available drivers found", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // Create and show dialog
-                AlertDialog.Builder builder = new AlertDialog.Builder(context);
-                builder.setTitle("Select Available Driver");
-                
-                String[] driverNamesArray = driverNames.toArray(new String[0]);
-                builder.setItems(driverNamesArray, (dialog, which) -> {
-                    String selectedDriverId = driverIds.get(which);
-                    String selectedDriverName = driverNames.get(which);
-                    assignDriver(order.getId(), selectedDriverId, selectedDriverName);
-                });
-
-                builder.show();
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(context, "Error loading drivers: " + databaseError.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void updateOrderStatus(String orderId, String status) {
-        if (orderId == null || status == null) return;
-        
+    private void updateOrderStatus(String orderId, String newStatus) {
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
             .child("orders")
             .child(orderId);
-            
+
         Map<String, Object> updates = new HashMap<>();
-        
-        // Add order_status based on the status and delivery option
-        DatabaseReference ref = FirebaseDatabase.getInstance().getReference()
-            .child("orders")
-            .child(orderId);
-            
-        ref.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                String deliveryOption = dataSnapshot.child("deliveryOption").getValue(String.class);
-                String orderStatus = "";
-                String message = "";
-                
-                if ("delivery".equalsIgnoreCase(deliveryOption)) {
-                    switch (status) {
-                        case "pending":
-                            orderStatus = "pending";
-                            message = "Order is pending";
-                            updates.put("status", "pending");
-                            break;
-                        case "in_progress":
-                            orderStatus = "in_progress";
-                            message = "Order accepted";
-                            updates.put("status", "in_progress");
-                            break;
-                        case "assigned_to_driver":
-                            orderStatus = "assigned_driver";
-                            message = "Driver assigned to order";
-                            updates.put("status", "in_progress");
-                            break;
-                        case "delivered":
-                            orderStatus = "delivered";
-                            message = "Order marked as delivered";
-                            updates.put("status", "delivered");
-                            break;
-                    }
-                } else {
-                    // For pickup option
-                    switch (status) {
-                        case "pending":
-                            orderStatus = "pending";
-                            message = "Order is pending";
-                            updates.put("status", "pending");
-                            break;
-                        case "in_progress":
-                            orderStatus = "in_progress";
-                            message = "Order accepted";
-                            updates.put("status", "in_progress");
-                            break;
-                        case "ready":
-                            orderStatus = "ready_for_pickup";
-                            message = "Order is ready for pickup";
-                            updates.put("status", "ready_for_pickup");
-                            break;
-                        case "delivered":
-                            orderStatus = "delivered";
-                            message = "Order marked as delivered";
-                            updates.put("status", "delivered");
-                            break;
-                        case "cancelled":
-                            orderStatus = "cancelled";
-                            message = "Order rejected";
-                            updates.put("status", "cancelled");
-                            break;
-                    }
-                }
-                
-                // Always ensure order_status is set
-                updates.put("order_status", orderStatus);
+        final String message;
 
-                // Debug logging for updates
-                System.out.println("Updating order: " + orderId);
-                System.out.println("Updates to be applied: " + updates.toString());
+        switch (newStatus) {
+            case "accepted":
+                updates.put("status", "in_progress");
+                updates.put("order_status", "accepted");
+                message = "Order accepted";
+                break;
+            case "ready_for_pickup":
+                updates.put("order_status", "ready_for_pickup");
+                message = "Order marked as ready for pickup";
+                break;
+            case "delivered":
+                updates.put("status", "delivered");
+                updates.put("order_status", "delivered");
+                message = "Order marked as delivered";
+                break;
+            default:
+                message = "Status updated";
+                break;
+        }
 
-                final String finalMessage = message;
-                final String finalOrderStatus = orderStatus;
-
-                orderRef.updateChildren(updates)
-                    .addOnSuccessListener(aVoid -> {
-                        if (context != null) {
-                            System.out.println("Order update successful");
-                            System.out.println("New status: " + status);
-                            System.out.println("New order_status: " + finalOrderStatus);
-                            Toast.makeText(context, finalMessage, Toast.LENGTH_SHORT).show();
-                            notifyDataSetChanged();  // Refresh the entire list to ensure UI is updated
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        if (context != null) {
-                            Toast.makeText(context, 
-                                "Failed to update order status: " + e.getMessage(), 
-                                Toast.LENGTH_SHORT).show();
-                        }
-                    });
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(context, "Error updating order status: " + databaseError.getMessage(),
-                    Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void assignDriver(String orderId, String driverId, String driverName) {
-        // First update the driver details
-        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
-            .child("orders")
-            .child(orderId);
-
-        // Update driver details only
-        Map<String, Object> driverDetails = new HashMap<>();
-        driverDetails.put("driverId", driverId);
-        driverDetails.put("driverName", driverName);
-
-        // Update driver availability
-        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference()
-            .child("drivers")
-            .child(driverId);
-            
-        Map<String, Object> driverUpdates = new HashMap<>();
-        driverUpdates.put("isAvailable", false);
-        driverUpdates.put("currentOrderId", orderId);
-
-        // First update driver details, then update status
-        orderRef.updateChildren(driverDetails)
+        orderRef.updateChildren(updates)
             .addOnSuccessListener(aVoid -> {
-                // After driver details are updated, update the status
-                updateOrderStatus(orderId, "assigned_to_driver");
-                
-                // Update driver availability
-                driverRef.updateChildren(driverUpdates)
-                    .addOnSuccessListener(aVoid2 -> {
-                        Toast.makeText(context, "Driver assigned successfully", Toast.LENGTH_SHORT).show();
-                        notifyDataSetChanged();
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(context, "Failed to update driver status: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
-                    });
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                notifyDataSetChanged();
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(context, "Failed to assign driver: " + e.getMessage(),
+                Toast.makeText(context, "Failed to update order: " + e.getMessage(),
                     Toast.LENGTH_SHORT).show();
             });
     }
@@ -392,7 +210,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView orderNumber, orderStatus, customerName, totalAmount;
+        TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
         Button acceptButton, rejectButton, assignDriverButton, markDeliveredButton, readyForPickupButton;
         LinearLayout actionButtons;
@@ -410,6 +228,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
             readyForPickupButton = itemView.findViewById(R.id.readyForPickupButton);
             actionButtons = itemView.findViewById(R.id.actionButtons);
+            deliveryOption = itemView.findViewById(R.id.deliveryOption);
         }
     }
 } 

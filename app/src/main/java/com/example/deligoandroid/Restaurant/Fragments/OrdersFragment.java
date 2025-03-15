@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,7 +23,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class OrdersFragment extends Fragment {
     private RecyclerView ordersRecyclerView;
@@ -59,49 +62,43 @@ public class OrdersFragment extends Fragment {
 
         ordersRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         ordersAdapter = new OrdersAdapter(userId);
+        ordersAdapter.setOnAssignDriverClickListener(this::showDriverAssignmentDialog);
         ordersRecyclerView.setAdapter(ordersAdapter);
+
+        // Set initial tab colors
+        updateTabColors("new");
     }
 
     private void setupClickListeners() {
-        newOrdersTab.setOnClickListener(v -> showNewOrders());
-        inProgressTab.setOnClickListener(v -> showInProgressOrders());
-        deliveredTab.setOnClickListener(v -> showDeliveredOrders());
+        newOrdersTab.setOnClickListener(v -> {
+            currentOrderStatus = "pending";
+            updateTabColors("new");
+            loadOrders();
+        });
+        
+        inProgressTab.setOnClickListener(v -> {
+            currentOrderStatus = "in_progress";
+            updateTabColors("in_progress");
+            loadOrders();
+        });
+        
+        deliveredTab.setOnClickListener(v -> {
+            currentOrderStatus = "delivered";
+            updateTabColors("delivered");
+            loadOrders();
+        });
     }
 
-    private void showNewOrders() {
-        currentOrderStatus = "pending";
-        updateOrderStatusTabs();
-        loadOrders();
-    }
+    private void updateTabColors(String activeTab) {
+        int activeColor = getResources().getColor(R.color.accent_orange);
+        int inactiveColor = getResources().getColor(android.R.color.darker_gray);
 
-    private void showInProgressOrders() {
-        currentOrderStatus = "in_progress";
-        updateOrderStatusTabs();
-        loadOrders();
-    }
-
-    private void showDeliveredOrders() {
-        currentOrderStatus = "delivered";
-        updateOrderStatusTabs();
-        loadOrders();
-    }
-
-    private void updateOrderStatusTabs() {
-        newOrdersTab.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCCCCC")));
-        inProgressTab.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCCCCC")));
-        deliveredTab.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#CCCCCC")));
-
-        switch (currentOrderStatus.toLowerCase()) {
-            case "pending":
-                newOrdersTab.setBackgroundTintList(ColorStateList.valueOf(requireContext().getColor(R.color.orange)));
-                break;
-            case "in_progress":
-                inProgressTab.setBackgroundTintList(ColorStateList.valueOf(requireContext().getColor(R.color.orange)));
-                break;
-            case "delivered":
-                deliveredTab.setBackgroundTintList(ColorStateList.valueOf(requireContext().getColor(R.color.orange)));
-                break;
-        }
+        newOrdersTab.setBackgroundTintList(ColorStateList.valueOf(
+            activeTab.equals("new") ? activeColor : inactiveColor));
+        inProgressTab.setBackgroundTintList(ColorStateList.valueOf(
+            activeTab.equals("in_progress") ? activeColor : inactiveColor));
+        deliveredTab.setBackgroundTintList(ColorStateList.valueOf(
+            activeTab.equals("delivered") ? activeColor : inactiveColor));
     }
 
     private void updateEmptyState(boolean isEmpty) {
@@ -109,180 +106,196 @@ public class OrdersFragment extends Fragment {
         
         ordersRecyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
         
-        // Update the visibility of empty state layouts based on current tab
-        noNewOrdersLayout.setVisibility(currentOrderStatus.equalsIgnoreCase("pending") && isEmpty ? View.VISIBLE : View.GONE);
-        noInProgressOrdersLayout.setVisibility(currentOrderStatus.equalsIgnoreCase("in_progress") && isEmpty ? View.VISIBLE : View.GONE);
-        noDeliveredOrdersLayout.setVisibility(currentOrderStatus.equalsIgnoreCase("delivered") && isEmpty ? View.VISIBLE : View.GONE);
+        noNewOrdersLayout.setVisibility(
+            currentOrderStatus.equals("new") && isEmpty ? View.VISIBLE : View.GONE);
+        noInProgressOrdersLayout.setVisibility(
+            currentOrderStatus.equals("in_progress") && isEmpty ? View.VISIBLE : View.GONE);
+        noDeliveredOrdersLayout.setVisibility(
+            currentOrderStatus.equals("delivered") && isEmpty ? View.VISIBLE : View.GONE);
     }
 
     private void loadOrders() {
         if (userId == null) {
-            userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            Log.e(TAG, "User ID is null");
+            return;
         }
+
         Log.d(TAG, "Loading orders for restaurant ID: " + userId + ", status filter: " + currentOrderStatus);
 
-        // Get all orders and filter by restaurantId
         databaseRef.child("orders")
             .addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
-                    Log.d(TAG, "Orders snapshot received. Total orders in Firebase: " + dataSnapshot.getChildrenCount());
-                    
-                    List<Order> orders = new ArrayList<>();
-                    for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
-                        String orderId = orderSnapshot.getKey();
-                        Log.d(TAG, "Processing order ID: " + orderId);
-                        
-                        // Get restaurantId for this order
-                        String restaurantId = orderSnapshot.child("restaurantId").getValue(String.class);
-                        Log.d(TAG, "Order " + orderId + " - Restaurant ID: " + restaurantId + 
-                              " (Current restaurant: " + userId + ")");
-                        
-                        // Check if this order belongs to the current restaurant
-                        if (restaurantId != null && restaurantId.equals(userId)) {
-                            String status = orderSnapshot.child("status").getValue(String.class);
-                            Log.d(TAG, "Order " + orderId + " - Status: " + status + 
-                                  " (Current filter: " + currentOrderStatus + ")");
-                            
-                            // Only process orders with matching status (case-insensitive)
-                            if (status != null && status.equalsIgnoreCase(currentOrderStatus)) {
-                                try {
-                                    Order order = new Order();
-                                    order.setId(orderId);
-                                    order.setRestaurantId(restaurantId);
-                                    order.setStatus(status);
-                                    
-                                    // Get customer details
-                                    String customerId = orderSnapshot.child("userId").getValue(String.class);
-                                    order.setCustomerId(customerId);
-                                    
-                                    // Fetch customer name from customers node
-                                    if (customerId != null) {
-                                        DatabaseReference customerRef = FirebaseDatabase.getInstance().getReference()
-                                            .child("customers")
-                                            .child(customerId)
-                                            .child("fullName");
-                                            
-                                        customerRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                                            @Override
-                                            public void onDataChange(DataSnapshot customerSnapshot) {
-                                                String customerName = customerSnapshot.getValue(String.class);
-                                                if (customerName != null) {
-                                                    order.setCustomerName(customerName);
-                                                    Log.d(TAG, "Order " + orderId + " - Customer name fetched: " + customerName);
-                                                    ordersAdapter.notifyDataSetChanged();
-                                                }
-                                            }
+                    try {
+                        Log.d(TAG, "Orders snapshot received. Total orders: " + dataSnapshot.getChildrenCount());
+                        List<Order> orders = new ArrayList<>();
 
-                                            @Override
-                                            public void onCancelled(DatabaseError databaseError) {
-                                                Log.e(TAG, "Error fetching customer name: " + databaseError.getMessage());
-                                            }
-                                        });
-                                    }
-                                    
-                                    String deliveryAddress = orderSnapshot.child("deliveryAddress").getValue(String.class);
-                                    Log.d(TAG, "Order " + orderId + " - Address: " + deliveryAddress);
-                                    
-                                    order.setDeliveryAddress(deliveryAddress);
-                                    
-                                    // Get order details
-                                    Double totalAmount = orderSnapshot.child("total").getValue(Double.class);
-                                    Double deliveryFee = orderSnapshot.child("deliveryFee").getValue(Double.class);
-                                    String deliveryOption = orderSnapshot.child("deliveryOption").getValue(String.class);
-                                    Log.d(TAG, "Order " + orderId + " - Total: " + totalAmount + 
-                                          ", Delivery Fee: " + deliveryFee + 
-                                          ", Option: " + deliveryOption);
-                                    
-                                    if (totalAmount != null) order.setTotalAmount(totalAmount);
-                                    if (deliveryFee != null) order.setDeliveryFee(deliveryFee);
-                                    order.setDeliveryOption(deliveryOption);
-                                    
-                                    // Get timestamp
-                                    Long timestamp = orderSnapshot.child("timestamp").getValue(Long.class);
-                                    if (timestamp != null) {
-                                        order.setTimestamp(timestamp);
-                                        Log.d(TAG, "Order " + orderId + " - Timestamp: " + timestamp);
-                                    }
-                                    
-                                    // Get items
+                        for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
+                            try {
+                                String restaurantId = orderSnapshot.child("restaurantId").getValue(String.class);
+                                String status = orderSnapshot.child("status").getValue(String.class);
+
+                                if (restaurantId == null || status == null) {
+                                    Log.w(TAG, "Skipping order with null restaurantId or status");
+                                    continue;
+                                }
+
+                                if (!restaurantId.equals(userId)) {
+                                    continue;
+                                }
+
+                                if (currentOrderStatus.equals("pending") && !status.equals("pending") && !status.equals("new")) {
+                                    continue;
+                                } else if (!currentOrderStatus.equals("pending") && !status.equalsIgnoreCase(currentOrderStatus)) {
+                                    continue;
+                                }
+
+                                Order order = new Order();
+                                order.setId(orderSnapshot.getKey());
+                                order.setRestaurantId(restaurantId);
+                                order.setStatus(status);
+                                order.setOrderStatus(orderSnapshot.child("order_status").getValue(String.class));
+                                order.setTimestamp(orderSnapshot.child("timestamp").getValue(Long.class));
+                                order.setTotalAmount(orderSnapshot.child("total").getValue(Double.class));
+                                order.setDeliveryOption(orderSnapshot.child("deliveryOption").getValue(String.class));
+
+                                // Get items
+                                DataSnapshot itemsSnapshot = orderSnapshot.child("items");
+                                if (itemsSnapshot.exists()) {
                                     List<OrderItem> items = new ArrayList<>();
-                                    DataSnapshot itemsSnapshot = orderSnapshot.child("items");
-                                    Log.d(TAG, "Order " + orderId + " - Number of items: " + 
-                                          itemsSnapshot.getChildrenCount());
-                                    
                                     for (DataSnapshot itemSnapshot : itemsSnapshot.getChildren()) {
-                                        try {
-                                            OrderItem item = new OrderItem();
-                                            String itemName = itemSnapshot.child("name").getValue(String.class);
-                                            String description = itemSnapshot.child("description").getValue(String.class);
-                                            Double price = itemSnapshot.child("price").getValue(Double.class);
-                                            Integer quantity = itemSnapshot.child("quantity").getValue(Integer.class);
-                                            
-                                            Log.d(TAG, "Order " + orderId + " - Item: " + itemName + 
-                                                  ", Qty: " + quantity + ", Price: " + price);
-                                            
-                                            item.setName(itemName);
-                                            item.setDescription(description);
-                                            if (price != null) item.setPrice(price);
-                                            if (quantity != null) item.setQuantity(quantity);
-                                            
-                                            // Get customizations
-                                            List<OrderItem.Customization> customizations = new ArrayList<>();
-                                            DataSnapshot customizationsSnapshot = itemSnapshot.child("customizations");
-                                            Log.d(TAG, "Order " + orderId + " - Item " + itemName + 
-                                                  " - Number of customizations: " + 
-                                                  customizationsSnapshot.getChildrenCount());
-                                            
-                                            for (DataSnapshot customizationSnapshot : customizationsSnapshot.getChildren()) {
-                                                try {
-                                                    OrderItem.Customization customization = new OrderItem.Customization();
-                                                    String choice = customizationSnapshot.child("choice").getValue(String.class);
-                                                    String name = customizationSnapshot.child("name").getValue(String.class);
-                                                    Double customPrice = customizationSnapshot.child("price").getValue(Double.class);
-                                                    
-                                                    Log.d(TAG, "Order " + orderId + " - Item " + itemName + 
-                                                          " - Customization: " + choice + 
-                                                          " (" + name + "), Price: " + customPrice);
-                                                    
-                                                    customization.setChoice(choice);
-                                                    customization.setName(name);
-                                                    if (customPrice != null) customization.setPrice(customPrice);
-                                                    customizations.add(customization);
-                                                } catch (Exception e) {
-                                                    Log.e(TAG, "Error processing customization for order " + 
-                                                          orderId + ", item " + itemName, e);
-                                                }
-                                            }
-                                            item.setCustomizations(customizations);
-                                            items.add(item);
-                                        } catch (Exception e) {
-                                            Log.e(TAG, "Error processing item for order " + orderId, e);
-                                        }
+                                        OrderItem item = new OrderItem();
+                                        item.setName(itemSnapshot.child("name").getValue(String.class));
+                                        item.setQuantity(itemSnapshot.child("quantity").getValue(Integer.class));
+                                        item.setPrice(itemSnapshot.child("price").getValue(Double.class));
+                                        items.add(item);
                                     }
                                     order.setItems(items);
-                                    orders.add(order);
-                                    Log.d(TAG, "Successfully added order " + orderId + " to list");
-                                } catch (Exception e) {
-                                    Log.e(TAG, "Error processing order " + orderId, e);
                                 }
+
+                                orders.add(order);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing order: " + e.getMessage());
                             }
                         }
-                    }
 
-                    Log.d(TAG, "Final filtered orders count: " + orders.size());
-                    updateEmptyState(orders.isEmpty());
-                    ordersAdapter.setOrders(orders);
-                    ordersAdapter.notifyDataSetChanged();
+                        ordersAdapter.setOrders(orders);
+                        updateEmptyState(orders.isEmpty());
+
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error in onDataChange: " + e.getMessage(), e);
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), "Error loading orders", Toast.LENGTH_SHORT).show();
+                        }
+                    }
                 }
 
                 @Override
                 public void onCancelled(DatabaseError databaseError) {
                     Log.e(TAG, "Error loading orders: " + databaseError.getMessage());
-                    Toast.makeText(getContext(),
-                        "Error loading orders: " + databaseError.getMessage(),
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Error loading orders: " + databaseError.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+    }
+
+    private void fetchCustomerName(Order order, String customerId) {
+        databaseRef.child("customers").child(customerId).child("fullName")
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    String customerName = dataSnapshot.getValue(String.class);
+                    if (customerName != null) {
+                        order.setCustomerName(customerName);
+                        ordersAdapter.notifyDataSetChanged();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Log.e(TAG, "Error fetching customer name: " + databaseError.getMessage());
+                }
+            });
+    }
+
+    private void showDriverAssignmentDialog(Order order) {
+        if (getContext() == null) return;
+
+        // Query for available drivers
+        DatabaseReference driversRef = FirebaseDatabase.getInstance().getReference("drivers");
+        driversRef.orderByChild("isAvailable").equalTo(true)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (!dataSnapshot.exists()) {
+                        Toast.makeText(getContext(), "No available drivers found", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Create list of driver names and IDs
+                    List<String> driverNames = new ArrayList<>();
+                    List<String> driverIds = new ArrayList<>();
+                    
+                    for (DataSnapshot driverSnapshot : dataSnapshot.getChildren()) {
+                        String driverId = driverSnapshot.getKey();
+                        String driverName = driverSnapshot.child("fullName").getValue(String.class);
+                        if (driverName != null) {
+                            driverNames.add(driverName);
+                            driverIds.add(driverId);
+                        }
+                    }
+
+                    if (driverNames.isEmpty()) {
+                        Toast.makeText(getContext(), "No available drivers found", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Create and show dialog
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                    builder.setTitle("Select Driver");
+                    
+                    String[] driverNamesArray = driverNames.toArray(new String[0]);
+                    builder.setItems(driverNamesArray, (dialog, which) -> {
+                        String selectedDriverId = driverIds.get(which);
+                        String selectedDriverName = driverNames.get(which);
+                        assignDriverToOrder(order, selectedDriverId, selectedDriverName);
+                    });
+
+                    builder.setNegativeButton("Cancel", null);
+                    builder.show();
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Toast.makeText(getContext(), 
+                        "Error loading drivers: " + databaseError.getMessage(), 
                         Toast.LENGTH_SHORT).show();
                 }
+            });
+    }
+
+    private void assignDriverToOrder(Order order, String driverId, String driverName) {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance()
+            .getReference("orders")
+            .child(order.getId());
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("driverId", driverId);
+        updates.put("driverName", driverName);
+        updates.put("order_status", "assigned_driver");
+
+        orderRef.updateChildren(updates)
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(getContext(), 
+                    "Order assigned to " + driverName, 
+                    Toast.LENGTH_SHORT).show();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(getContext(), 
+                    "Failed to assign driver: " + e.getMessage(), 
+                    Toast.LENGTH_SHORT).show();
             });
     }
 } 
