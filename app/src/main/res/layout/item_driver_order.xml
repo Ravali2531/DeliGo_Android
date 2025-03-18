@@ -4,7 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
+    android:layout_margin="8dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
 
@@ -33,12 +33,10 @@
                 android:id="@+id/orderStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
+                android:background="@color/orange"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
                 android:textColor="@android:color/white"
-                android:background="@android:color/darker_gray"
                 android:textSize="14sp"/>
         </LinearLayout>
 
@@ -80,18 +78,39 @@
             android:id="@+id/actionButtons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="16dp"
-            android:gravity="end">
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/acceptButton"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/green"
                 android:text="Accept"
-                android:backgroundTint="@android:color/holo_green_dark"
-                android:textColor="@android:color/white"/>
+                android:textColor="@android:color/white"
+                android:visibility="gone"/>
 
+            <Button
+                android:id="@+id/rejectButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/red"
+                android:text="Reject"
+                android:textColor="@android:color/white"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/markDeliveredButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/purple"
+                android:text="Mark as Delivered"
+                android:textColor="@android:color/white"
+                android:visibility="gone"/>
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView> 

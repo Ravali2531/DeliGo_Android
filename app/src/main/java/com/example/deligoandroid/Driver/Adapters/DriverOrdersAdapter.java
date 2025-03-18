@@ -24,6 +24,10 @@ import java.util.Locale;
 import android.widget.Toast;
 import java.util.HashMap;
 import java.util.Map;
+import com.google.firebase.database.Transaction;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.MutableData;
 
 public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -60,16 +64,27 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
         holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + displayStatus.substring(1));
 
-        // Show/hide accept button based on status
-        if (status.equalsIgnoreCase("in_progress") && orderStatus.equalsIgnoreCase("assigned_driver")) {
-            holder.actionButtons.setVisibility(View.VISIBLE);
-            holder.acceptButton.setVisibility(View.VISIBLE);
-            holder.orderStatus.setBackgroundResource(R.color.orange);
-        } else {
-            holder.actionButtons.setVisibility(View.GONE);
-            holder.orderStatus.setBackgroundResource(
-                status.equalsIgnoreCase("delivered") ? R.color.blue : android.R.color.darker_gray
-            );
+        // Hide all buttons initially
+        holder.acceptButton.setVisibility(View.GONE);
+        holder.rejectButton.setVisibility(View.GONE);
+        holder.markDeliveredButton.setVisibility(View.GONE);
+
+        // Show appropriate buttons based on status
+        if (status.equals("in_progress")) {
+            if (orderStatus.equals("assigned_driver") && order.getDriverId().equals(driverId)) {
+                // Show accept/reject buttons when order is first assigned
+                holder.acceptButton.setVisibility(View.VISIBLE);
+                holder.rejectButton.setVisibility(View.VISIBLE);
+                holder.orderStatus.setBackgroundResource(R.color.orange);
+            } else if ((orderStatus.equals("driver_accepted") || orderStatus.equals("picked_up") || 
+                      orderStatus.equalsIgnoreCase("Picked_up")) && 
+                      order.getDriverId().equals(driverId)) {
+                // Show mark as delivered button after driver accepts or picks up
+                holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                holder.orderStatus.setBackgroundResource(R.color.blue);
+            }
+        } else if (status.equals("delivered")) {
+            holder.orderStatus.setBackgroundResource(R.color.green);
         }
 
         // Set restaurant and customer details
@@ -100,19 +115,26 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             holder.orderItemsRecyclerView.setVisibility(View.GONE);
         }
 
-        // Setup accept button click listener
+        // Setup button click listeners
         holder.acceptButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "driver_accepted");
+            acceptOrder(order.getId());
+        });
+
+        holder.rejectButton.setOnClickListener(v -> {
+            rejectOrder(order.getId());
+        });
+
+        holder.markDeliveredButton.setOnClickListener(v -> {
+            markOrderAsDelivered(order.getId());
         });
     }
 
-    private void updateOrderStatus(String orderId, String newStatus) {
+    private void acceptOrder(String orderId) {
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
             .child("orders")
             .child(orderId);
 
         Map<String, Object> updates = new HashMap<>();
-        updates.put("driverAccepted", true);
         updates.put("order_status", "driver_accepted");
 
         orderRef.updateChildren(updates)
@@ -122,6 +144,72 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             })
             .addOnFailureListener(e -> {
                 Toast.makeText(context, "Failed to accept order: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void rejectOrder(String orderId) {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
+            .child("orders")
+            .child(orderId);
+
+        // First, update the order status back to ready_for_pickup
+        Map<String, Object> orderUpdates = new HashMap<>();
+        orderUpdates.put("order_status", "ready_for_pickup");
+        orderUpdates.put("driverId", null);
+        orderUpdates.put("driverName", null);
+
+        orderRef.updateChildren(orderUpdates)
+            .addOnSuccessListener(aVoid -> {
+                // Then, increment the driver's cancellation count
+                DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference()
+                    .child("drivers")
+                    .child(driverId);
+
+                driverRef.child("cancellations").runTransaction(new Transaction.Handler() {
+                    @Override
+                    public Transaction.Result doTransaction(MutableData mutableData) {
+                        Integer currentValue = mutableData.getValue(Integer.class);
+                        if (currentValue == null) {
+                            mutableData.setValue(1);
+                        } else {
+                            mutableData.setValue(currentValue + 1);
+                        }
+                        return Transaction.success(mutableData);
+                    }
+
+                    @Override
+                    public void onComplete(DatabaseError databaseError, boolean committed, DataSnapshot dataSnapshot) {
+                        if (committed) {
+                            Toast.makeText(context, "Order rejected", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(context, "Failed to update cancellation count", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to reject order: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void markOrderAsDelivered(String orderId) {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
+            .child("orders")
+            .child(orderId);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", "delivered");
+        updates.put("order_status", "delivered");
+
+        orderRef.updateChildren(updates)
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(context, "Order marked as delivered", Toast.LENGTH_SHORT).show();
+                notifyDataSetChanged();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to mark order as delivered: " + e.getMessage(),
                     Toast.LENGTH_SHORT).show();
             });
     }
@@ -139,7 +227,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, restaurantName, customerName, totalAmount;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton;
+        Button acceptButton, rejectButton, markDeliveredButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -151,6 +239,8 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             totalAmount = itemView.findViewById(R.id.totalAmount);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
             acceptButton = itemView.findViewById(R.id.acceptButton);
+            rejectButton = itemView.findViewById(R.id.rejectButton);
+            markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
             actionButtons = itemView.findViewById(R.id.actionButtons);
         }
     }
