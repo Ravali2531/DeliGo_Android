@@ -147,6 +147,10 @@
             android:name=".Driver.DriverSupportActivity"
             android:exported="false"/>
 
+        <activity
+            android:name=".Restaurant.RestaurantSupportActivity"
+            android:exported="false"/>
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
