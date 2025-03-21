@@ -92,9 +92,9 @@
                 android:textSize="16sp"/>
         </LinearLayout>
 
-        <!-- Help -->
+        <!-- Support -->
         <LinearLayout
-            android:id="@+id/helpSection"
+            android:id="@+id/supportSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -113,7 +113,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Help"
+                android:text="Support"
                 android:textSize="16sp"/>
         </LinearLayout>
 

@@ -8,10 +8,10 @@ public class Chat {
     private String senderId;
     private String senderName;
     private String senderType;
+    private String userId;
     @PropertyName("isRead")
     private boolean read;
     private long timestamp;
-    private String userId;
 
     public Chat() {
         // Required empty constructor for Firebase
@@ -57,6 +57,14 @@ public class Chat {
         this.senderType = senderType;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     @PropertyName("isRead")
     public boolean isRead() {
         return read;
@@ -73,13 +81,5 @@ public class Chat {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
     }
 } 

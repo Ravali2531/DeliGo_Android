@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Authentication.LoginActivity;
+import com.example.deligoandroid.Driver.DriverSupportActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -82,9 +83,9 @@ public class DriverAccountFragment extends Fragment {
             Toast.makeText(getContext(), "Earnings clicked", Toast.LENGTH_SHORT).show();
         });
 
-        view.findViewById(R.id.helpSection).setOnClickListener(v -> {
-            // TODO: Navigate to help
-            Toast.makeText(getContext(), "Help clicked", Toast.LENGTH_SHORT).show();
+        view.findViewById(R.id.supportSection).setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), DriverSupportActivity.class);
+            startActivity(intent);
         });
 
         view.findViewById(R.id.signOutButton).setOnClickListener(v -> logout());

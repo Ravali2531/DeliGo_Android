@@ -5,15 +5,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Customer.CustomerSupportActivity;
-import com.example.deligoandroid.Authentication.LoginActivity;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -21,12 +18,11 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-public class AccountFragment extends Fragment {
+public class CustomerAccountFragment extends Fragment {
     private TextView customerName;
     private TextView customerEmail;
     private TextView customerPhone;
     private CardView supportCard;
-    private MaterialButton logoutButton;
     private FirebaseAuth mAuth;
     private DatabaseReference customerRef;
 
@@ -44,7 +40,6 @@ public class AccountFragment extends Fragment {
         customerEmail = view.findViewById(R.id.customerEmail);
         customerPhone = view.findViewById(R.id.customerPhone);
         supportCard = view.findViewById(R.id.supportCard);
-        logoutButton = view.findViewById(R.id.logoutButton);
 
         // Set up Firebase reference
         String customerId = mAuth.getCurrentUser().getUid();
@@ -60,9 +55,6 @@ public class AccountFragment extends Fragment {
             Intent intent = new Intent(getActivity(), CustomerSupportActivity.class);
             startActivity(intent);
         });
-
-        // Set up logout button click
-        logoutButton.setOnClickListener(v -> logout());
 
         return view;
     }
@@ -87,15 +79,5 @@ public class AccountFragment extends Fragment {
                 // Handle error
             }
         });
-    }
-
-    private void logout() {
-        mAuth.signOut();
-        Intent intent = new Intent(requireContext(), LoginActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        if (getActivity() != null) {
-            getActivity().finish();
-        }
     }
 } 

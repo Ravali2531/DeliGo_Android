@@ -19,6 +19,15 @@ public class ChatDetailAdapter extends RecyclerView.Adapter<ChatDetailAdapter.Me
     private static final int VIEW_TYPE_RECEIVED = 2;
     private List<Chat> messages = new ArrayList<>();
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+    private final boolean isCustomerView;
+
+    public ChatDetailAdapter(boolean isCustomerView) {
+        this.isCustomerView = isCustomerView;
+    }
+
+    public ChatDetailAdapter() {
+        this(false); // Default to admin view
+    }
 
     @NonNull
     @Override
@@ -55,7 +64,15 @@ public class ChatDetailAdapter extends RecyclerView.Adapter<ChatDetailAdapter.Me
     @Override
     public int getItemViewType(int position) {
         Chat message = messages.get(position);
-        return "admin".equals(message.getSenderType()) ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+        boolean isAdmin = "admin".equals(message.getSenderType());
+        
+        if (isCustomerView) {
+            // In customer view, customer messages are sent (right), admin messages are received (left)
+            return isAdmin ? VIEW_TYPE_RECEIVED : VIEW_TYPE_SENT;
+        } else {
+            // In admin view, admin messages are sent (right), customer messages are received (left)
+            return isAdmin ? VIEW_TYPE_SENT : VIEW_TYPE_RECEIVED;
+        }
     }
 
     public void setMessages(List<Chat> messages) {
