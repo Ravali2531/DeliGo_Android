@@ -53,6 +53,16 @@
         <activity android:name=".Admin.ManageUsersActivity" />
 
         <activity
+            android:name=".Admin.ChatManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
+            android:name=".Admin.ChatDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
             android:name=".Driver.DriverDocumentsActivity"
             android:exported="false" />
 
