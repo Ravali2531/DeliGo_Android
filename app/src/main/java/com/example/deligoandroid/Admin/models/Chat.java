@@ -1,12 +1,15 @@
 package com.example.deligoandroid.Admin.models;
 
+import com.google.firebase.database.PropertyName;
+
 public class Chat {
     private String messageId;
     private String message;
     private String senderId;
     private String senderName;
     private String senderType;
-    private boolean isRead;
+    @PropertyName("isRead")
+    private boolean read;
     private long timestamp;
     private String userId;
 
@@ -54,12 +57,14 @@ public class Chat {
         this.senderType = senderType;
     }
 
+    @PropertyName("isRead")
     public boolean isRead() {
-        return isRead;
+        return read;
     }
 
+    @PropertyName("isRead")
     public void setRead(boolean read) {
-        isRead = read;
+        this.read = read;
     }
 
     public long getTimestamp() {
