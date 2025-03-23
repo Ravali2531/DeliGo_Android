@@ -96,7 +96,6 @@
                 android:id="@+id/rejectButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:backgroundTint="@color/red"
                 android:text="Reject"
@@ -104,10 +103,21 @@
                 android:visibility="gone"/>
 
             <Button
-                android:id="@+id/markDeliveredButton"
-                android:layout_width="match_parent"
+                android:id="@+id/markPickedUpButton"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:backgroundTint="@color/purple"
+                android:layout_weight="1"
+                android:backgroundTint="@color/blue"
+                android:text="Mark as Picked Up"
+                android:textColor="@android:color/white"
+                android:visibility="gone"/>
+
+            <Button
+                android:id="@+id/markDeliveredButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="@color/green"
                 android:text="Mark as Delivered"
                 android:textColor="@android:color/white"
                 android:visibility="gone"/>

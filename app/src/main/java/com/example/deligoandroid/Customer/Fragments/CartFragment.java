@@ -21,6 +21,7 @@ import com.example.deligoandroid.Customer.Models.CartItem;
 import com.example.deligoandroid.Customer.Models.CustomizationSelection;
 import com.example.deligoandroid.Customer.Models.SelectedItem;
 import com.example.deligoandroid.R;
+import com.example.deligoandroid.databinding.FragmentCartBinding;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -35,33 +36,38 @@ import java.util.Map;
 
 public class CartFragment extends Fragment implements CartAdapter.CartItemListener {
     private static final String TAG = "CartFragment";
-    private RecyclerView cartRecyclerView;
-    private TextView emptyCartText;
-    private TextView subtotalText;
-    private MaterialButton checkoutButton;
+    private FragmentCartBinding binding;
     private CartAdapter cartAdapter;
     private List<CartItem> cartItems;
     private DatabaseReference cartRef;
+    private ValueEventListener cartListener;
     private double subtotal = 0.0;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_cart, container, false);
-        initializeViews(view);
-        setupRecyclerView();
-        loadCartItems();
-        return view;
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = FragmentCartBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
-    private void initializeViews(View view) {
-        cartRecyclerView = view.findViewById(R.id.cartRecyclerView);
-        emptyCartText = view.findViewById(R.id.emptyCartText);
-        subtotalText = view.findViewById(R.id.subtotalText);
-        checkoutButton = view.findViewById(R.id.checkoutButton);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        setupRecyclerView();
+        setupCheckoutButton();
+        loadCartItems();
+    }
 
-        checkoutButton.setOnClickListener(v -> {
+    private void setupRecyclerView() {
+        cartItems = new ArrayList<>();
+        cartAdapter = new CartAdapter(requireContext(), this);
+        binding.cartRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.cartRecyclerView.setAdapter(cartAdapter);
+        Log.d(TAG, "RecyclerView setup complete");
+    }
+
+    private void setupCheckoutButton() {
+        binding.checkoutButton.setOnClickListener(v -> {
             if (cartItems != null && !cartItems.isEmpty()) {
-                // Check if all items are from the same restaurant
                 String firstRestaurantId = cartItems.get(0).getRestaurantId();
                 boolean allSameRestaurant = true;
                 
@@ -86,18 +92,11 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
         });
     }
 
-    private void setupRecyclerView() {
-        cartItems = new ArrayList<>();
-        cartAdapter = new CartAdapter(requireContext(), this);
-        cartRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        cartRecyclerView.setAdapter(cartAdapter);
-        Log.d(TAG, "RecyclerView setup complete");
-    }
-
     private void loadCartItems() {
         FirebaseAuth auth = FirebaseAuth.getInstance();
         if (auth.getCurrentUser() == null) {
             Log.e(TAG, "No user logged in");
+            updateUI();
             return;
         }
 
@@ -111,9 +110,11 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
         Log.d(TAG, "Database reference path: " + cartRef.toString());
 
-        cartRef.addValueEventListener(new ValueEventListener() {
+        cartListener = new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isAdded()) return;
+
                 Log.d(TAG, "Cart data changed. Number of items: " + snapshot.getChildrenCount());
                 Log.d(TAG, "Snapshot exists: " + snapshot.exists());
                 Log.d(TAG, "Snapshot value: " + snapshot.getValue());
@@ -150,71 +151,82 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                if (!isAdded()) return;
+                
                 Log.e(TAG, "Error loading cart items: " + error.getMessage());
                 Log.e(TAG, "Error details: " + error.getDetails());
                 Log.e(TAG, "Error code: " + error.getCode());
                 Toast.makeText(getContext(), "Error loading cart items", Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+        cartRef.addValueEventListener(cartListener);
     }
 
     private void updateUI() {
+        if (!isAdded()) return;
+
         if (cartItems.isEmpty()) {
             Log.d(TAG, "Cart is empty, showing empty state");
-            emptyCartText.setVisibility(View.VISIBLE);
-            cartRecyclerView.setVisibility(View.GONE);
-            checkoutButton.setEnabled(false);
+            binding.emptyCartText.setVisibility(View.VISIBLE);
+            binding.cartRecyclerView.setVisibility(View.GONE);
+            binding.checkoutButton.setEnabled(false);
         } else {
             Log.d(TAG, "Cart has items (" + cartItems.size() + "), showing cart content");
-            emptyCartText.setVisibility(View.GONE);
-            cartRecyclerView.setVisibility(View.VISIBLE);
-            checkoutButton.setEnabled(true);
+            binding.emptyCartText.setVisibility(View.GONE);
+            binding.cartRecyclerView.setVisibility(View.VISIBLE);
+            binding.checkoutButton.setEnabled(true);
         }
 
-        subtotalText.setText(String.format("Subtotal: $%.2f", subtotal));
+        binding.subtotalText.setText(String.format("Subtotal: $%.2f", subtotal));
         cartAdapter.setItems(cartItems);
         Log.d(TAG, "UI updated with " + cartItems.size() + " items and subtotal: $" + subtotal);
     }
 
     @Override
     public void onUpdateQuantity(String itemId, int newQuantity) {
+        if (!isAdded()) return;
+
         Log.d(TAG, "Updating quantity for item: " + itemId + " to " + newQuantity);
         if (itemId != null) {
             // Update local list and UI first
             for (CartItem item : cartItems) {
                 if (item.getId().equals(itemId)) {
                     item.setQuantity(newQuantity);
-                    item.setTotalPrice(item.getPrice() * newQuantity); // Update total price
+                    item.setTotalPrice(item.getPrice() * newQuantity);
                     break;
                 }
             }
             
-            // Recalculate subtotal
             calculateSubtotal();
-            
-            // Update UI immediately
-            subtotalText.setText(String.format("Subtotal: $%.2f", subtotal));
-            cartAdapter.notifyDataSetChanged();
+            updateUI();
 
             // Then update Firebase
-            cartRef.child(itemId).setValue(cartItems.stream()
-                    .filter(item -> item.getId().equals(itemId))
-                    .findFirst()
-                    .orElse(null))
-                .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Item updated successfully in Firebase");
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error updating item: " + e.getMessage());
-                    Toast.makeText(getContext(), "Error updating quantity", Toast.LENGTH_SHORT).show();
-                });
+            if (cartRef != null) {
+                cartRef.child(itemId).setValue(cartItems.stream()
+                        .filter(item -> item.getId().equals(itemId))
+                        .findFirst()
+                        .orElse(null))
+                    .addOnSuccessListener(aVoid -> {
+                        if (isAdded()) {
+                            Log.d(TAG, "Item updated successfully in Firebase");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (isAdded()) {
+                            Log.e(TAG, "Error updating item: " + e.getMessage());
+                            Toast.makeText(getContext(), "Error updating quantity", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+            }
         }
     }
 
     @Override
     public void onRemoveItem(String itemId) {
+        if (!isAdded()) return;
+
         Log.d(TAG, "Starting to remove item with ID: " + itemId);
-        if (itemId != null) {
+        if (itemId != null && cartRef != null) {
             // Find the item to be removed
             CartItem itemToRemove = null;
             for (CartItem item : cartItems) {
@@ -252,25 +264,25 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
             Log.d(TAG, "Generated Firebase key for removal: " + firebaseKey);
             
             // Remove from local list first
-            boolean removed = cartItems.removeIf(item -> item.getId().equals(itemId));
-            Log.d(TAG, "Item removed from local list: " + removed);
-            
-            calculateSubtotal(); // Recalculate subtotal
-            updateUI(); // Update the UI with new totals
+            cartItems.removeIf(item -> item.getId().equals(itemId));
+            calculateSubtotal();
+            updateUI();
 
-            // Then remove from Firebase using the generated key
+            // Then remove from Firebase
             Log.d(TAG, "Attempting to remove item from Firebase, path: " + cartRef.child(firebaseKey).toString());
             cartRef.child(firebaseKey).removeValue()
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Item successfully removed from Firebase");
-                    Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
+                    if (isAdded()) {
+                        Log.d(TAG, "Item successfully removed from Firebase");
+                        Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error removing item from Firebase: " + e.getMessage());
-                    Toast.makeText(getContext(), "Error removing item", Toast.LENGTH_SHORT).show();
+                    if (isAdded()) {
+                        Log.e(TAG, "Error removing item from Firebase: " + e.getMessage());
+                        Toast.makeText(getContext(), "Error removing item", Toast.LENGTH_SHORT).show();
+                    }
                 });
-        } else {
-            Log.e(TAG, "Attempted to remove item with null ID");
         }
     }
 
@@ -280,9 +292,18 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
             double itemTotal = item.getPrice() * item.getQuantity();
             Log.d(TAG, "Item: " + item.getName() + ", Price: " + item.getPrice() + 
                   ", Quantity: " + item.getQuantity() + ", Total: " + itemTotal);
-            item.setTotalPrice(itemTotal); // Update item's total price
+            item.setTotalPrice(itemTotal);
             subtotal += itemTotal;
         }
         Log.d(TAG, "New subtotal: " + subtotal);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (cartRef != null && cartListener != null) {
+            cartRef.removeEventListener(cartListener);
+        }
+        binding = null;
     }
 } 

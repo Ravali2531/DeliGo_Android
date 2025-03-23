@@ -5,12 +5,16 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import com.example.deligoandroid.R;
+
+import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.Customer.CustomerSupportActivity;
+import com.example.deligoandroid.Customer.EditProfileActivity;
+import com.example.deligoandroid.databinding.FragmentCustomerAccountBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -19,65 +23,89 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 public class CustomerAccountFragment extends Fragment {
-    private TextView customerName;
-    private TextView customerEmail;
-    private TextView customerPhone;
-    private CardView supportCard;
-    private FirebaseAuth mAuth;
-    private DatabaseReference customerRef;
+    private FragmentCustomerAccountBinding binding;
+    private FirebaseAuth auth;
+    private DatabaseReference userRef;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_customer_account, container, false);
-
-        mAuth = FirebaseAuth.getInstance();
-        if (mAuth.getCurrentUser() == null) {
-            return view;
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() != null) {
+            String userId = auth.getCurrentUser().getUid();
+            userRef = FirebaseDatabase.getInstance().getReference().child("customers").child(userId);
         }
+    }
 
-        // Initialize views
-        customerName = view.findViewById(R.id.customerName);
-        customerEmail = view.findViewById(R.id.customerEmail);
-        customerPhone = view.findViewById(R.id.customerPhone);
-        supportCard = view.findViewById(R.id.supportCard);
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        binding = FragmentCustomerAccountBinding.inflate(inflater, container, false);
+        return binding.getRoot();
+    }
 
-        // Set up Firebase reference
-        String customerId = mAuth.getCurrentUser().getUid();
-        customerRef = FirebaseDatabase.getInstance().getReference()
-                .child("customers")
-                .child(customerId);
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        setupUI();
+        loadUserData();
+    }
 
-        // Load customer data
-        loadCustomerData();
+    private void setupUI() {
+        // Edit Profile Button
+        binding.editProfileButton.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+            startActivity(intent);
+        });
 
-        // Set up support card click
-        supportCard.setOnClickListener(v -> {
+        // Support Section
+        binding.supportSection.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), CustomerSupportActivity.class);
             startActivity(intent);
         });
 
-        return view;
+        // Sign Out Button
+        binding.signOutButton.setOnClickListener(v -> signOut());
     }
 
-    private void loadCustomerData() {
-        customerRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String name = snapshot.child("fullName").getValue(String.class);
-                    String email = snapshot.child("email").getValue(String.class);
-                    String phone = snapshot.child("phone").getValue(String.class);
+    private void loadUserData() {
+        if (auth.getCurrentUser() != null) {
+            // Set email
+            binding.emailText.setText(auth.getCurrentUser().getEmail());
 
-                    if (name != null) customerName.setText(name);
-                    if (email != null) customerEmail.setText(email);
-                    if (phone != null) customerPhone.setText(phone);
+            // Load other user data from Firebase
+            userRef.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        String fullName = snapshot.child("fullName").getValue(String.class);
+                        String phone = snapshot.child("phone").getValue(String.class);
+                        String address = snapshot.child("address").getValue(String.class);
+
+                        binding.nameText.setText(fullName);
+                        binding.phoneText.setText(phone);
+                        binding.addressText.setText(address);
+                    }
                 }
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                // Handle error
-            }
-        });
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Toast.makeText(getContext(), "Failed to load profile", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private void signOut() {
+        auth.signOut();
+        Intent intent = new Intent(requireContext(), LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 } 

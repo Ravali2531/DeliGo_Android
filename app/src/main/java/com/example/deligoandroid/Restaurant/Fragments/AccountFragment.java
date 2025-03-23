@@ -23,6 +23,7 @@ import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Restaurant.RestaurantSupportActivity;
 import com.example.deligoandroid.Restaurant.StoreInformationActivity;
+import com.example.deligoandroid.Restaurant.StoreHoursActivity;
 import com.example.deligoandroid.Utils.PreferencesManager;
 import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -83,7 +84,8 @@ public class AccountFragment extends Fragment {
     private void setupClickListeners() {
         // Store Hours
         binding.storeHoursLayout.setOnClickListener(v -> {
-            Toast.makeText(requireContext(), getString(R.string.store_hours_coming_soon), Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(getActivity(), StoreHoursActivity.class);
+            startActivity(intent);
         });
 
         // Store Information
