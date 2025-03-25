@@ -1,5 +1,6 @@
 package com.example.deligoandroid.Restaurant.Adapters;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,8 +10,10 @@ import com.example.deligoandroid.R;
 import com.example.deligoandroid.Restaurant.Models.OrderItem;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.ViewHolder> {
     private List<OrderItem> items;
@@ -38,18 +41,44 @@ public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.Vi
         int quantity = Math.max(1, item.getQuantity()); // Ensure quantity is at least 1
         String itemText = quantity + "x " + name;
         
+        Log.d("OrderItemsAdapter", "Binding item: " + name + ", quantity: " + quantity);
+        
         // Add customizations to the item text
-        if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
+        List<OrderItem.CustomizationOption> customizations = item.getCustomizations();
+        if (customizations != null && !customizations.isEmpty()) {
+            Log.d("OrderItemsAdapter", "Item has " + customizations.size() + " customization options");
             StringBuilder customizationsText = new StringBuilder();
-            for (OrderItem.Customization customization : item.getCustomizations()) {
-                if (customization != null && customization.getChoice() != null) {
-                    customizationsText.append("\n  • ").append(customization.getChoice());
-                    if (customization.getPrice() > 0) {
-                        customizationsText.append(" (+").append(NumberFormat.getCurrencyInstance().format(customization.getPrice())).append(")");
+            
+            // Process each customization option
+            for (OrderItem.CustomizationOption option : customizations) {
+                String optionName = option.getOptionName();
+                List<OrderItem.SelectedItem> selectedItems = option.getSelectedItems();
+                
+                Log.d("OrderItemsAdapter", "Processing option: " + optionName + 
+                    " with " + (selectedItems != null ? selectedItems.size() : 0) + " selected items");
+                
+                if (selectedItems != null && !selectedItems.isEmpty()) {
+                    customizationsText.append("\n  ").append(optionName).append(":");
+                    
+                    for (OrderItem.SelectedItem selectedItem : selectedItems) {
+                        String selectedItemName = selectedItem.getName();
+                        double selectedItemPrice = selectedItem.getPrice();
+                        Log.d("OrderItemsAdapter", "Selected item: " + selectedItemName + 
+                            ", price: " + selectedItemPrice);
+                        
+                        customizationsText.append("\n    • ").append(selectedItemName);
+                        if (selectedItemPrice > 0) {
+                            customizationsText.append(" (+")
+                                .append(NumberFormat.getCurrencyInstance().format(selectedItemPrice))
+                                .append(")");
+                        }
                     }
                 }
             }
             itemText += customizationsText.toString();
+            Log.d("OrderItemsAdapter", "Final item text with customizations: " + itemText);
+        } else {
+            Log.d("OrderItemsAdapter", "Item has no customizations");
         }
         holder.itemName.setText(itemText);
         
@@ -58,6 +87,7 @@ public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.Vi
         if (instructions != null && !instructions.trim().isEmpty()) {
             holder.specialInstructions.setVisibility(View.VISIBLE);
             holder.specialInstructions.setText("Note: " + instructions);
+            Log.d("OrderItemsAdapter", "Special instructions: " + instructions);
         } else {
             holder.specialInstructions.setVisibility(View.GONE);
         }
@@ -68,14 +98,17 @@ public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.Vi
         double totalPrice = price * quantity;
         
         // Add customization prices
-        if (item.getCustomizations() != null) {
-            for (OrderItem.Customization customization : item.getCustomizations()) {
-                if (customization != null) {
-                    totalPrice += customization.getPrice() * quantity;
+        if (customizations != null) {
+            for (OrderItem.CustomizationOption option : customizations) {
+                if (option.getSelectedItems() != null) {
+                    for (OrderItem.SelectedItem selectedItem : option.getSelectedItems()) {
+                        totalPrice += selectedItem.getPrice() * quantity;
+                    }
                 }
             }
         }
         holder.itemPrice.setText(format.format(totalPrice));
+        Log.d("OrderItemsAdapter", "Total price: " + format.format(totalPrice));
     }
 
     @Override
