@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_marginBottom="8dp">
 
             <TextView
                 android:id="@+id/orderNumber"
@@ -33,9 +33,11 @@
                 android:id="@+id/orderStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@color/orange"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
+                android:background="@drawable/status_background"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
                 android:textColor="@android:color/white"
                 android:textSize="14sp"/>
         </LinearLayout>
@@ -46,14 +48,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:textSize="14sp"/>
+            android:layout_marginBottom="4dp"
+            android:textSize="16sp"/>
 
         <TextView
             android:id="@+id/customerName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textSize="14sp"/>
+            android:layout_marginBottom="12dp"
+            android:textSize="16sp"/>
 
         <!-- Order Items -->
         <androidx.recyclerview.widget.RecyclerView
@@ -61,66 +65,73 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
             android:nestedScrollingEnabled="false"/>
 
         <!-- Total Amount -->
-        <TextView
-            android:id="@+id/totalAmount"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="end"
-            android:textSize="16sp"
-            android:textStyle="bold"/>
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/deliveryFee"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/green" />
+
+            <TextView
+                android:id="@+id/totalAmount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <!-- Action Buttons -->
         <LinearLayout
-            android:id="@+id/actionButtons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/acceptButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:backgroundTint="@color/green"
-                android:text="Accept"
-                android:textColor="@android:color/white"
-                android:visibility="gone"/>
+            android:orientation="horizontal"
+            android:gravity="end">
 
             <Button
                 android:id="@+id/rejectButton"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:backgroundTint="@color/red"
                 android:text="Reject"
-                android:textColor="@android:color/white"
-                android:visibility="gone"/>
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"
+                android:backgroundTint="@android:color/holo_red_light" />
+
+            <Button
+                android:id="@+id/acceptButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Accept"
+                android:visibility="gone"
+                android:backgroundTint="@color/green" />
 
             <Button
                 android:id="@+id/markPickedUpButton"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:backgroundTint="@color/blue"
-                android:text="Mark as Picked Up"
-                android:textColor="@android:color/white"
-                android:visibility="gone"/>
+                android:text="Mark Picked Up"
+                android:visibility="gone"
+                android:backgroundTint="@color/blue" />
 
             <Button
                 android:id="@+id/markDeliveredButton"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:backgroundTint="@color/green"
-                android:text="Mark as Delivered"
-                android:textColor="@android:color/white"
-                android:visibility="gone"/>
+                android:text="Mark Delivered"
+                android:visibility="gone"
+                android:backgroundTint="@color/green" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView> 

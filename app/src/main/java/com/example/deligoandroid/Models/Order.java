@@ -21,6 +21,8 @@ public class Order {
     private double deliveryLatitude;
     private double deliveryLongitude;
     private long timestamp;
+    private String id;
+    private Double deliveryFee;
 
     public Order() {
         // Required empty constructor for Firebase
@@ -78,5 +80,9 @@ public class Order {
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
-    public String getId() { return orderId; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public Double getDeliveryFee() { return deliveryFee; }
+    public void setDeliveryFee(Double deliveryFee) { this.deliveryFee = deliveryFee; }
 } 

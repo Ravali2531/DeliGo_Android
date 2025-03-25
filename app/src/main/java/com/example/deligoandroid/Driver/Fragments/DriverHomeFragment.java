@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Switch;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,6 +21,7 @@ import com.google.firebase.database.*;
 import java.util.*;
 import java.text.NumberFormat;
 import java.util.Locale;
+import android.util.Log;
 
 public class DriverHomeFragment extends Fragment {
     private RecyclerView recyclerView;
@@ -162,40 +165,108 @@ public class DriverHomeFragment extends Fragment {
                         order.setCustomerId(orderSnapshot.child("customerId").getValue(String.class));
                         order.setCustomerName(orderSnapshot.child("customerName").getValue(String.class));
                         order.setRestaurantId(orderSnapshot.child("restaurantId").getValue(String.class));
-                        order.setRestaurantName(orderSnapshot.child("restaurantName").getValue(String.class));
                         
-                        // Safely handle numeric values with null checks
-                        Double totalAmount = orderSnapshot.child("total").getValue(Double.class);
-                        order.setTotalAmount(totalAmount != null ? totalAmount : 0.0);
+                        // Fetch restaurant name if not present
+                        String restaurantName = orderSnapshot.child("restaurantName").getValue(String.class);
+                        if (restaurantName == null || restaurantName.isEmpty()) {
+                            String restaurantId = order.getRestaurantId();
+                            if (restaurantId != null) {
+                                DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                                    .getReference("restaurants")
+                                    .child(restaurantId);
+                                restaurantRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(@NonNull DataSnapshot restaurantSnapshot) {
+                                        if (restaurantSnapshot.exists()) {
+                                            String name = restaurantSnapshot.child("name").getValue(String.class);
+                                            if (name != null) {
+                                                order.setRestaurantName(name);
+                                                adapter.notifyDataSetChanged();
+                                            }
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onCancelled(@NonNull DatabaseError error) {
+                                        Log.e("DriverHomeFragment", "Error fetching restaurant name: " + error.getMessage());
+                                    }
+                                });
+                            }
+                        } else {
+                            order.setRestaurantName(restaurantName);
+                        }
+                        
+                        // Handle total amount
+                        Object totalAmountObj = orderSnapshot.child("totalAmount").getValue();
+                        if (totalAmountObj != null) {
+                            if (totalAmountObj instanceof Long) {
+                                order.setTotalAmount(((Long) totalAmountObj).doubleValue());
+                            } else if (totalAmountObj instanceof Double) {
+                                order.setTotalAmount((Double) totalAmountObj);
+                            }
+                        }
                         
                         order.setStatus(orderSnapshot.child("status").getValue(String.class));
                         order.setOrderStatus(orderSnapshot.child("order_status").getValue(String.class));
                         order.setDriverId(driverId);
                         order.setDriverName(orderSnapshot.child("driverName").getValue(String.class));
                         
-                        // Safely handle boolean with null check
                         Boolean driverAccepted = orderSnapshot.child("driverAccepted").getValue(Boolean.class);
                         order.setDriverAccepted(driverAccepted != null ? driverAccepted : false);
                         
                         order.setDeliveryOption(orderSnapshot.child("deliveryOption").getValue(String.class));
                         order.setDeliveryAddress(orderSnapshot.child("deliveryAddress").getValue(String.class));
                         
-                        // Handle location data with null checks
                         Double lat = orderSnapshot.child("deliveryLatitude").getValue(Double.class);
                         Double lng = orderSnapshot.child("deliveryLongitude").getValue(Double.class);
                         order.setDeliveryLatitude(lat != null ? lat : 0.0);
                         order.setDeliveryLongitude(lng != null ? lng : 0.0);
                         
-                        // Handle timestamp with null check
                         Long timestamp = orderSnapshot.child("timestamp").getValue(Long.class);
                         order.setTimestamp(timestamp != null ? timestamp : System.currentTimeMillis());
                         
-                        // Handle items
+                        // Handle items with customizations
                         DataSnapshot itemsSnapshot = orderSnapshot.child("items");
                         if (itemsSnapshot.exists()) {
                             List<Map<String, Object>> items = new ArrayList<>();
                             for (DataSnapshot itemSnapshot : itemsSnapshot.getChildren()) {
-                                items.add((Map<String, Object>) itemSnapshot.getValue());
+                                Map<String, Object> item = new HashMap<>();
+                                item.put("name", itemSnapshot.child("name").getValue(String.class));
+                                item.put("quantity", itemSnapshot.child("quantity").getValue(Integer.class));
+                                item.put("price", itemSnapshot.child("price").getValue(Double.class));
+                                
+                                // Handle customizations
+                                DataSnapshot customizationsSnapshot = itemSnapshot.child("customizations");
+                                if (customizationsSnapshot.exists()) {
+                                    Map<String, Object> customizations = new HashMap<>();
+                                    for (DataSnapshot customizationIdSnapshot : customizationsSnapshot.getChildren()) {
+                                        String customizationId = customizationIdSnapshot.getKey();
+                                        List<Map<String, Object>> options = new ArrayList<>();
+                                        
+                                        for (DataSnapshot indexSnapshot : customizationIdSnapshot.getChildren()) {
+                                            Map<String, Object> option = new HashMap<>();
+                                            option.put("optionId", indexSnapshot.child("optionId").getValue(String.class));
+                                            option.put("optionName", indexSnapshot.child("optionName").getValue(String.class));
+                                            
+                                            List<Map<String, Object>> selectedItems = new ArrayList<>();
+                                            DataSnapshot selectedItemsSnapshot = indexSnapshot.child("selectedItems");
+                                            if (selectedItemsSnapshot.exists()) {
+                                                for (DataSnapshot selectedItemSnapshot : selectedItemsSnapshot.getChildren()) {
+                                                    Map<String, Object> selectedItem = new HashMap<>();
+                                                    selectedItem.put("id", selectedItemSnapshot.child("id").getValue(String.class));
+                                                    selectedItem.put("name", selectedItemSnapshot.child("name").getValue(String.class));
+                                                    selectedItem.put("price", selectedItemSnapshot.child("price").getValue(Double.class));
+                                                    selectedItems.add(selectedItem);
+                                                }
+                                            }
+                                            option.put("selectedItems", selectedItems);
+                                            options.add(option);
+                                        }
+                                        customizations.put(customizationId, options);
+                                    }
+                                    item.put("customizations", customizations);
+                                }
+                                items.add(item);
                             }
                             order.setItems(items);
                         }
