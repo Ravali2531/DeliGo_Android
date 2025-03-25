@@ -138,11 +138,7 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                 holder.rateOrderButton.setOnClickListener(v -> showRatingDialog(order));
                 
                 // Handle reorder button click
-                holder.reorderButton.setOnClickListener(v -> {
-                    if (reorderClickListener != null) {
-                        reorderClickListener.onReorderClick(order);
-                    }
-                });
+                holder.reorderButton.setOnClickListener(v -> showReorderConfirmationDialog(order));
             } else {
                 holder.deliveredOrderActions.setVisibility(View.GONE);
             }
@@ -326,6 +322,55 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         if (window != null) {
             window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
+    }
+
+    private void showReorderConfirmationDialog(Order order) {
+        Dialog dialog = new Dialog(context);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_reorder_confirmation);
+
+        TextView cancelButton = dialog.findViewById(R.id.cancelButton);
+        TextView addToCartButton = dialog.findViewById(R.id.addToCartButton);
+
+        // Handle cancel button click
+        cancelButton.setOnClickListener(v -> dialog.dismiss());
+
+        // Handle add to cart button click
+        addToCartButton.setOnClickListener(v -> {
+            addOrderToCart(order);
+            dialog.dismiss();
+        });
+
+        // Show dialog
+        dialog.show();
+        
+        // Set dialog width to match parent
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    private void addOrderToCart(Order order) {
+        String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference cartRef = FirebaseDatabase.getInstance()
+            .getReference("carts")
+            .child(customerId);
+
+        // Create a new cart item with the same specifications
+        Map<String, Object> cartData = new HashMap<>();
+        cartData.put("restaurantId", order.getRestaurantId());
+        cartData.put("items", order.getItems());
+        cartData.put("customizations", order.getCustomizations());
+        cartData.put("timestamp", System.currentTimeMillis());
+
+        cartRef.setValue(cartData)
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
+            });
     }
 
     @Override
