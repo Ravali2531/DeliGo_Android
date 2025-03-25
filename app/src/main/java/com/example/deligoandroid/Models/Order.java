@@ -23,6 +23,8 @@ public class Order {
     private long timestamp;
     private String id;
     private Double deliveryFee;
+    private Object total;  // Added for Firebase total field
+    private Map<String, Object> customizations;  // Updated type to match Firebase structure
 
     public Order() {
         // Required empty constructor for Firebase
@@ -82,6 +84,12 @@ public class Order {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public Map<String, Object> getCustomizations() { return customizations; }
+    public void setCustomizations(Map<String, Object> customizations) { this.customizations = customizations; }
+
+    public Object getTotal() { return total; }
+    public void setTotal(Object total) { this.total = total; }
 
     public Double getDeliveryFee() { return deliveryFee; }
     public void setDeliveryFee(Double deliveryFee) { this.deliveryFee = deliveryFee; }
