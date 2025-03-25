@@ -120,6 +120,40 @@
                 android:textColor="@android:color/black" />
         </LinearLayout>
 
+        <!-- Action Buttons for Delivered Orders -->
+        <LinearLayout
+            android:id="@+id/deliveredOrderActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:gravity="end"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/rateOrderButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Rate Order"
+                android:textColor="@android:color/white"
+                style="@style/Widget.MaterialComponents.Button"
+                app:icon="@drawable/ic_star"
+                app:iconTint="@android:color/white"
+                android:backgroundTint="@color/accent_orange" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/reorderButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reorder"
+                android:textColor="@android:color/white"
+                style="@style/Widget.MaterialComponents.Button"
+                app:icon="@drawable/ic_refresh"
+                app:iconTint="@android:color/white"
+                android:backgroundTint="@color/accent_orange" />
+        </LinearLayout>
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView> 

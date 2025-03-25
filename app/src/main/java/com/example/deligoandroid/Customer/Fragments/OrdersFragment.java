@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
@@ -25,6 +26,7 @@ import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class OrdersFragment extends Fragment {
     private static final String TAG = "OrdersFragment";
@@ -35,6 +37,8 @@ public class OrdersFragment extends Fragment {
     private List<Order> currentOrders;
     private List<Order> pastOrders;
     private String customerId;
+    private RecyclerView currentOrdersRecyclerView;
+    private RecyclerView pastOrdersRecyclerView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -43,12 +47,14 @@ public class OrdersFragment extends Fragment {
         // Initialize views
         tabLayout = view.findViewById(R.id.tabLayout);
         viewPager = view.findViewById(R.id.viewPager);
+        currentOrdersRecyclerView = view.findViewById(R.id.currentOrdersRecyclerView);
+        pastOrdersRecyclerView = view.findViewById(R.id.pastOrdersRecyclerView);
         
         // Initialize lists and adapters
         currentOrders = new ArrayList<>();
         pastOrders = new ArrayList<>();
-        currentOrdersAdapter = new CustomerOrdersAdapter(currentOrders);
-        pastOrdersAdapter = new CustomerOrdersAdapter(pastOrders);
+        currentOrdersAdapter = new CustomerOrdersAdapter(currentOrders, null);
+        pastOrdersAdapter = new CustomerOrdersAdapter(pastOrders, this::handleReorder);
         
         // Get current user ID
         customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
@@ -108,6 +114,59 @@ public class OrdersFragment extends Fragment {
                         Log.e(TAG, "Error loading orders", databaseError.toException());
                     }
                 });
+    }
+
+    private void setupRecyclerViews() {
+        // Set up current orders
+        currentOrdersRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        currentOrdersAdapter = new CustomerOrdersAdapter(currentOrders, null);
+        currentOrdersRecyclerView.setAdapter(currentOrdersAdapter);
+
+        // Set up past orders with reorder functionality
+        pastOrdersRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        pastOrdersAdapter = new CustomerOrdersAdapter(pastOrders, this::handleReorder);
+        pastOrdersRecyclerView.setAdapter(pastOrdersAdapter);
+    }
+
+    private void handleReorder(Order order) {
+        // Create a new order with the same items
+        Order newOrder = new Order();
+        newOrder.setCustomerId(customerId);
+        newOrder.setRestaurantId(order.getRestaurantId());
+        newOrder.setItems(order.getItems());
+        newOrder.setCustomizations(order.getCustomizations());
+        newOrder.setDeliveryFee(order.getDeliveryFee());
+        newOrder.setStatus("pending");
+        newOrder.setTimestamp(System.currentTimeMillis());
+        
+        // Calculate total
+        double total = 0.0;
+        if (order.getItems() != null) {
+            for (Map<String, Object> item : order.getItems()) {
+                Number price = (Number) item.get("price");
+                Number quantity = (Number) item.get("quantity");
+                if (price != null && quantity != null) {
+                    total += price.doubleValue() * quantity.doubleValue();
+                }
+            }
+        }
+        if (order.getDeliveryFee() != null) {
+            total += order.getDeliveryFee();
+        }
+        newOrder.setTotal(total);
+
+        // Save the new order to Firebase
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
+        String newOrderId = ordersRef.push().getKey();
+        if (newOrderId != null) {
+            ordersRef.child(newOrderId).setValue(newOrder)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(getContext(), "Order placed successfully!", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(getContext(), "Failed to place order. Please try again.", Toast.LENGTH_SHORT).show();
+                    });
+        }
     }
 
     private class OrdersPagerAdapter extends RecyclerView.Adapter<OrdersPagerAdapter.OrdersViewHolder> {
