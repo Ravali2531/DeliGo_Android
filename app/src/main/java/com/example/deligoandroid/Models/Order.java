@@ -25,6 +25,7 @@ public class Order {
     private Double deliveryFee;
     private Object total;  // Added for Firebase total field
     private Map<String, Object> customizations;  // Updated type to match Firebase structure
+    private Address address;
 
     public Order() {
         // Required empty constructor for Firebase
@@ -93,4 +94,12 @@ public class Order {
 
     public Double getDeliveryFee() { return deliveryFee; }
     public void setDeliveryFee(Double deliveryFee) { this.deliveryFee = deliveryFee; }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
 } 

@@ -768,6 +768,10 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                     if (!TextUtils.isEmpty(unitInput.getText())) {
                         addressData.put("unit", unitInput.getText().toString().trim());
                     }
+                    // Add delivery instructions if provided
+                    if (!TextUtils.isEmpty(instructionsInput.getText())) {
+                        addressData.put("instructions", instructionsInput.getText().toString().trim());
+                    }
                     orderData.put("address", addressData);
                 }
 

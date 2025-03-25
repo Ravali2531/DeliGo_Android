@@ -364,6 +364,64 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         cartData.put("customizations", order.getCustomizations());
         cartData.put("timestamp", System.currentTimeMillis());
 
+        // Add address information
+        Map<String, Object> addressData = new HashMap<>();
+        if (order.getAddress() != null) {
+            addressData.put("street", order.getAddress().getStreet());
+            addressData.put("unit", order.getAddress().getUnit());
+            // Add instructions if present
+            if (order.getAddress().getInstructions() != null && !order.getAddress().getInstructions().isEmpty()) {
+                addressData.put("instructions", order.getAddress().getInstructions());
+            }
+        } else {
+            // If no address in order, check if there's address data directly in the order
+            DatabaseReference orderRef = FirebaseDatabase.getInstance()
+                .getReference("orders")
+                .child(order.getId())
+                .child("address");
+            
+            orderRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        String street = snapshot.child("street").getValue(String.class);
+                        String unit = snapshot.child("unit").getValue(String.class);
+                        String instructions = snapshot.child("instructions").getValue(String.class);
+                        
+                        if (street != null) addressData.put("street", street);
+                        if (unit != null) addressData.put("unit", unit);
+                        if (instructions != null && !instructions.isEmpty()) {
+                            addressData.put("instructions", instructions);
+                        }
+                        
+                        cartData.put("address", addressData);
+                        cartRef.setValue(cartData)
+                            .addOnSuccessListener(aVoid -> {
+                                Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
+                            });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error fetching address data", error.toException());
+                    // Still save the cart data even if address fetch fails
+                    cartRef.setValue(cartData)
+                        .addOnSuccessListener(aVoid -> {
+                            Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
+                        });
+                }
+            });
+            return; // Return here as we're handling the cart save in the callback
+        }
+
+        cartData.put("address", addressData);
         cartRef.setValue(cartData)
             .addOnSuccessListener(aVoid -> {
                 Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
@@ -371,6 +429,19 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             .addOnFailureListener(e -> {
                 Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
             });
+    }
+
+    // Add a method to handle saving the order with delivery instructions
+    private void saveOrderWithInstructions(Order order, String instructions) {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance()
+            .getReference("orders")
+            .child(order.getId())
+            .child("address");
+
+        // Update or add instructions
+        if (instructions != null && !instructions.isEmpty()) {
+            orderRef.child("instructions").setValue(instructions);
+        }
     }
 
     @Override
