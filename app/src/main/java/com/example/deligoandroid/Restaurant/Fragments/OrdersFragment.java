@@ -127,16 +127,16 @@ public class OrdersFragment extends Fragment {
 
         DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
         ordersRef.addValueEventListener(new ValueEventListener() {
-            @Override
+                @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 ordersAdapter.clearOrders();
                 Log.d(TAG, "Loading orders...");
-                List<Order> orders = new ArrayList<>();
-                for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
+                        List<Order> orders = new ArrayList<>();
+                        for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                     String orderId = orderSnapshot.getKey();
                     String status = orderSnapshot.child("status").getValue(String.class);
                     String orderStatus = orderSnapshot.child("order_status").getValue(String.class);
-                    String restaurantId = orderSnapshot.child("restaurantId").getValue(String.class);
+                                String restaurantId = orderSnapshot.child("restaurantId").getValue(String.class);
                     String customerId = orderSnapshot.child("customerId").getValue(String.class);
                     String customerName = orderSnapshot.child("customerName").getValue(String.class);
                     String deliveryOption = orderSnapshot.child("deliveryOption").getValue(String.class);
@@ -149,35 +149,35 @@ public class OrdersFragment extends Fragment {
                     // Skip if restaurantId is null or doesn't match
                     if (restaurantId == null || !restaurantId.equals(userId)) {
                         Log.d(TAG, "Skipping order - restaurant ID mismatch or null");
-                        continue;
-                    }
+                                    continue;
+                                }
 
                     // Filter orders based on status field
                     if (currentOrderStatus.equals("pending")) {
                         // For pending tab, show orders with status "pending"
                         if (!status.equals("pending")) {
                             Log.d(TAG, "Skipping order - not pending");
-                            continue;
-                        }
+                                    continue;
+                                }
                     } else if (currentOrderStatus.equals("in_progress")) {
                         // For in progress tab, show orders with status "in_progress"
                         if (!status.equals("in_progress")) {
                             Log.d(TAG, "Skipping order - not in progress");
-                            continue;
+                                    continue;
                         }
                     } else if (currentOrderStatus.equals("delivered")) {
                         // For delivered tab, show orders with status "delivered"
                         if (!status.equals("delivered")) {
                             Log.d(TAG, "Skipping order - not delivered");
-                            continue;
+                                    continue;
                         }
-                    }
+                                }
 
-                    Order order = new Order();
+                                Order order = new Order();
                     order.setId(orderId);
                     order.setStatus(status);
                     order.setOrderStatus(orderStatus);
-                    order.setRestaurantId(restaurantId);
+                                order.setRestaurantId(restaurantId);
                     order.setCustomerId(customerId);
                     order.setCustomerName(customerName);
                     order.setDeliveryOption(deliveryOption);
@@ -318,17 +318,17 @@ public class OrdersFragment extends Fragment {
                 ordersAdapter.setOrders(orders);
                 updateEmptyState(orders.isEmpty());
                 Log.d(TAG, "Total orders loaded: " + orders.size());
-            }
+                }
 
-            @Override
+                @Override
             public void onCancelled(@NonNull DatabaseError error) {
                 Log.e(TAG, "Error loading orders: " + error.getMessage());
-                if (getContext() != null) {
+                    if (getContext() != null) {
                     Toast.makeText(getContext(), "Error loading orders: " + error.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_SHORT).show();
+                    }
                 }
-            }
-        });
+            });
     }
 
     private void fetchCustomerName(Order order, String customerId) {

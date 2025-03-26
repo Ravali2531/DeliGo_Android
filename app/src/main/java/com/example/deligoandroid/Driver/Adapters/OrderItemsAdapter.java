@@ -26,85 +26,64 @@ public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.Vi
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_order_detail, parent, false);
+                .inflate(R.layout.item_order_item, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        if (position < 0 || position >= items.size()) {
-            Log.e(TAG, "Invalid position: " + position);
-            return;
-        }
-        
         OrderItem item = items.get(position);
-        if (item == null) {
-            Log.e(TAG, "Null item at position: " + position);
-            return;
-        }
-        
-        try {
-            // Set item name and quantity
-            String name = item.getName() != null ? item.getName() : "";
-            int quantity = Math.max(1, item.getQuantity()); // Ensure quantity is at least 1
-            String itemText = quantity + "x " + name;
-            
-            Log.d(TAG, "Binding item: " + name + ", quantity: " + quantity);
-            holder.itemName.setText(itemText);
-            
-            // Calculate item total price
-            double price = Math.max(0, item.getPrice()); // Ensure price is not negative
-            double itemTotal = price * quantity;
-            double customizationsTotal = 0.0;
-            
-            // Handle customizations
-            StringBuilder customizationsText = new StringBuilder();
-            List<OrderItem.CustomizationOption> customizations = item.getCustomizations();
-            
-            if (customizations != null && !customizations.isEmpty()) {
-                Log.d(TAG, "Processing " + customizations.size() + " customization options for item: " + name);
-                
-                for (OrderItem.CustomizationOption option : customizations) {
-                    if (option == null) continue;
-                    
-                    List<OrderItem.SelectedItem> selectedItems = option.getSelectedItems();
-                    if (selectedItems != null && !selectedItems.isEmpty()) {
-                        for (OrderItem.SelectedItem selectedItem : selectedItems) {
-                            if (selectedItem == null || selectedItem.getName() == null) continue;
-                            
-                            double selectedItemPrice = selectedItem.getPrice();
-                            customizationsText.append("\n  + ").append(selectedItem.getName());
-                            if (selectedItemPrice > 0) {
-                                customizationsText.append(" (+").append(currencyFormat.format(selectedItemPrice)).append(")");
-                                customizationsTotal += selectedItemPrice * quantity;
-                            }
-                            Log.d(TAG, "Added customization: " + selectedItem.getName() + 
-                                  " with price: " + selectedItemPrice);
-                        }
+        Log.d("DriverOrderItemsAdapter", "Binding item: " + item.getName() + ", quantity: " + item.getQuantity());
+
+        // Set item name and base price
+        holder.itemName.setText(item.getQuantity() + "x " + item.getName());
+        double basePrice = item.getPrice();
+        holder.itemPrice.setText(NumberFormat.getCurrencyInstance(Locale.US).format(basePrice));
+
+        // Handle customizations
+        StringBuilder customizationsText = new StringBuilder();
+        double customizationTotal = 0.0;
+
+        if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
+            for (OrderItem.CustomizationOption option : item.getCustomizations()) {
+                if (option.getSelectedItems() != null && !option.getSelectedItems().isEmpty()) {
+                    for (OrderItem.SelectedItem selectedItem : option.getSelectedItems()) {
+                        customizationsText.append("\n+ ").append(selectedItem.getName())
+                            .append(" (+$").append(String.format("%.2f", selectedItem.getPrice())).append(")");
+                        customizationTotal += selectedItem.getPrice();
                     }
                 }
             }
-            
-            // Show customizations if any exist
-            if (customizationsText.length() > 0) {
-                holder.itemCustomizations.setVisibility(View.VISIBLE);
-                holder.itemCustomizations.setText(customizationsText.toString());
-                Log.d(TAG, "Set customizations text: " + customizationsText.toString());
-            } else {
-                holder.itemCustomizations.setVisibility(View.GONE);
-                Log.d(TAG, "No customizations to display");
-            }
-            
-            // Set final item price including customizations
-            double totalPrice = itemTotal + customizationsTotal;
-            holder.itemPrice.setText(currencyFormat.format(totalPrice));
-            Log.d(TAG, "Set total price: " + currencyFormat.format(totalPrice) + 
-                  " (base: " + itemTotal + ", customizations: " + customizationsTotal + ")");
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Error binding item at position " + position, e);
-            e.printStackTrace();
+            Log.d("DriverOrderItemsAdapter", "Added customizations: " + customizationsText.toString());
+        } else {
+            Log.d("DriverOrderItemsAdapter", "No customizations to display");
         }
+
+        // Set customizations text if any
+        if (customizationsText.length() > 0) {
+            holder.itemCustomizations.setVisibility(View.VISIBLE);
+            holder.itemCustomizations.setText(customizationsText.toString());
+            
+            // Show subtotal when there are customizations
+            double subtotal = (basePrice + customizationTotal) * item.getQuantity();
+            holder.itemSubtotal.setVisibility(View.VISIBLE);
+            holder.itemSubtotal.setText("Subtotal: " + NumberFormat.getCurrencyInstance(Locale.US).format(subtotal));
+        } else {
+            holder.itemCustomizations.setVisibility(View.GONE);
+            // Only show subtotal if quantity > 1
+            if (item.getQuantity() > 1) {
+                double subtotal = basePrice * item.getQuantity();
+                holder.itemSubtotal.setVisibility(View.VISIBLE);
+                holder.itemSubtotal.setText("Subtotal: " + NumberFormat.getCurrencyInstance(Locale.US).format(subtotal));
+            } else {
+                holder.itemSubtotal.setVisibility(View.GONE);
+            }
+        }
+        
+        Log.d("DriverOrderItemsAdapter", "Item: " + item.getName() + 
+            ", Base price: $" + String.format("%.2f", basePrice) + 
+            ", Customizations: $" + String.format("%.2f", customizationTotal) + 
+            ", Quantity: " + item.getQuantity());
     }
 
     @Override
@@ -116,12 +95,14 @@ public class OrderItemsAdapter extends RecyclerView.Adapter<OrderItemsAdapter.Vi
         public TextView itemName;
         public TextView itemPrice;
         public TextView itemCustomizations;
+        public TextView itemSubtotal;
 
         public ViewHolder(View view) {
             super(view);
             itemName = view.findViewById(R.id.itemName);
             itemPrice = view.findViewById(R.id.itemPrice);
             itemCustomizations = view.findViewById(R.id.itemCustomizations);
+            itemSubtotal = view.findViewById(R.id.itemSubtotal);
         }
     }
 } 

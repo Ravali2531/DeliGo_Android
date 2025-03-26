@@ -30,6 +30,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.MutableData;
 import com.google.firebase.database.ValueEventListener;
 import android.util.Log;
+import androidx.annotation.NonNull;
 
 public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -55,14 +56,21 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         // Set order number and timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
         String orderTime = sdf.format(new Date(order.getTimestamp()));
-        String orderId = order.getOrderId(); // Try getOrderId() first
-        if (orderId == null || orderId.isEmpty()) {
-            orderId = order.getId(); // Fallback to getId()
+        
+        // Get the correct order ID, trying all possible sources
+        String orderId = null;
+        if (order.getId() != null && !order.getId().isEmpty()) {
+            orderId = order.getId();
+        } else if (order.getOrderId() != null && !order.getOrderId().isEmpty()) {
+            orderId = order.getOrderId();
         }
-        if (orderId == null || orderId.isEmpty()) {
-            orderId = "Unknown";
-        }
-        holder.orderNumber.setText("Order #" + orderId + " • " + orderTime);
+        
+        // Debug logging for ID values
+        Log.d("DriverOrdersAdapter", "Order details - ID: " + order.getId() + ", OrderId: " + order.getOrderId());
+        Log.d("DriverOrdersAdapter", "Final orderId to be used: " + orderId);
+        
+        final String finalOrderId = orderId; // Create final copy for use in click listeners
+        holder.orderNumber.setText("Order #" + (orderId != null ? orderId : "Unknown") + " • " + orderTime);
 
         // Set status with appropriate color
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
@@ -142,57 +150,95 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                     
                     // Calculate item total
                     double itemTotal = price * orderItem.getQuantity();
-                    totalAmount += itemTotal;
                     
                     // Handle customizations
                     Object customizationsObj = itemMap.get("customizations");
+                    Log.d("DriverOrdersAdapter", "Raw customizations object: " + (customizationsObj != null ? customizationsObj.toString() : "null"));
+                    
                     if (customizationsObj instanceof Map) {
                         Map<String, Object> customizationsMap = (Map<String, Object>) customizationsObj;
                         List<OrderItem.CustomizationOption> customizationOptions = new ArrayList<>();
+                        double customizationTotal = 0.0;
                         
                         Log.d("DriverOrdersAdapter", "Found customizations map with " + customizationsMap.size() + " entries");
                         
                         for (Map.Entry<String, Object> entry : customizationsMap.entrySet()) {
-                            if (entry.getValue() instanceof Map) {
-                                Map<String, Object> optionData = (Map<String, Object>) entry.getValue();
-                                
-                                OrderItem.CustomizationOption option = new OrderItem.CustomizationOption();
-                                option.setOptionId(entry.getKey());
-                                
-                                // Get the selected items from the option data
-                                Object selectedItemsObj = optionData.get("selectedItems");
-                                if (selectedItemsObj instanceof List) {
-                                    List<Map<String, Object>> selectedItemsList = (List<Map<String, Object>>) selectedItemsObj;
-                                    List<OrderItem.SelectedItem> selectedItems = new ArrayList<>();
-                                    
-                                    for (Map<String, Object> selectedItemMap : selectedItemsList) {
-                                        OrderItem.SelectedItem selectedItem = new OrderItem.SelectedItem();
-                                        selectedItem.setId((String) selectedItemMap.get("id"));
-                                        selectedItem.setName((String) selectedItemMap.get("name"));
+                            String customId = entry.getKey();
+                            Object customValue = entry.getValue();
+                            
+                            Log.d("DriverOrdersAdapter", "Processing customization: " + customId + ", value type: " + (customValue != null ? customValue.getClass().getSimpleName() : "null"));
+                            Log.d("DriverOrdersAdapter", "Customization value: " + customValue);
+                            
+                            try {
+                                if (customValue instanceof ArrayList) {
+                                    ArrayList<Map<String, Object>> customizationList = (ArrayList<Map<String, Object>>) customValue;
+                                    if (!customizationList.isEmpty()) {
+                                        Map<String, Object> optionData = customizationList.get(0);
+                                        Log.d("DriverOrdersAdapter", "Option data: " + optionData);
                                         
-                                        Object customizationPriceObj = selectedItemMap.get("price");
-                                        double itemPrice = customizationPriceObj instanceof Number ? ((Number) customizationPriceObj).doubleValue() : 0.0;
-                                        selectedItem.setPrice(itemPrice);
+                                        OrderItem.CustomizationOption option = new OrderItem.CustomizationOption();
+                                        option.setOptionId((String) optionData.get("optionId"));
+                                        option.setOptionName((String) optionData.get("optionName"));
                                         
-                                        selectedItems.add(selectedItem);
-                                        Log.d("DriverOrdersAdapter", "Added selected item: " + selectedItem.getName());
-                                    }
-                                    
-                                    option.setSelectedItems(selectedItems);
-                                    if (!selectedItems.isEmpty()) {
-                                        customizationOptions.add(option);
+                                        Log.d("DriverOrdersAdapter", "Found option: " + option.getOptionName() + " with ID: " + option.getOptionId());
+                                        
+                                        // Get selectedItems from the option data
+                                        Object selectedItemsObj = optionData.get("selectedItems");
+                                        if (selectedItemsObj instanceof ArrayList) {
+                                            ArrayList<Map<String, Object>> selectedItemsList = (ArrayList<Map<String, Object>>) selectedItemsObj;
+                                            List<OrderItem.SelectedItem> selectedItems = new ArrayList<>();
+                                            
+                                            Log.d("DriverOrdersAdapter", "Found selectedItems list with " + selectedItemsList.size() + " entries");
+                                            
+                                            for (Map<String, Object> selectedItemMap : selectedItemsList) {
+                                                OrderItem.SelectedItem selectedItem = new OrderItem.SelectedItem();
+                                                
+                                                String itemId = (String) selectedItemMap.get("id");
+                                                String itemName = (String) selectedItemMap.get("name");
+                                                Object customizationPriceObj = selectedItemMap.get("price");
+                                                
+                                                selectedItem.setId(itemId);
+                                                selectedItem.setName(itemName);
+                                                if (customizationPriceObj instanceof Number) {
+                                                    double customizationPrice = ((Number) customizationPriceObj).doubleValue();
+                                                    selectedItem.setPrice(customizationPrice);
+                                                    // Add customization price to the total for this item
+                                                    customizationTotal += customizationPrice * orderItem.getQuantity();
+                                                    Log.d("DriverOrdersAdapter", "Added customization price: " + customizationPrice + " for " + itemName);
+                                                }
+                                                
+                                                selectedItems.add(selectedItem);
+                                                Log.d("DriverOrdersAdapter", "Added selected item: " + itemName + " with ID: " + itemId);
+                                            }
+                                            
+                                            if (!selectedItems.isEmpty()) {
+                                                option.setSelectedItems(selectedItems);
+                                                customizationOptions.add(option);
+                                                Log.d("DriverOrdersAdapter", "Added option " + option.getOptionName() + " with " + selectedItems.size() + " items");
+                                            }
+                                        }
                                     }
                                 }
+                            } catch (Exception e) {
+                                Log.e("DriverOrdersAdapter", "Error processing customization " + customId + ": " + e.getMessage());
+                                e.printStackTrace();
                             }
                         }
                         
                         if (!customizationOptions.isEmpty()) {
                             orderItem.setCustomizations(customizationOptions);
-                            Log.d("DriverOrdersAdapter", "Set " + customizationOptions.size() + " customization options on item");
+                            Log.d("DriverOrdersAdapter", "Successfully set " + customizationOptions.size() + " customization options on item");
+                            Log.d("DriverOrdersAdapter", "Item total before customizations: " + itemTotal);
+                            Log.d("DriverOrdersAdapter", "Customization total: " + customizationTotal);
+                            
+                            // Add customization total to item total
+                            itemTotal += customizationTotal;
+                            Log.d("DriverOrdersAdapter", "Final item total with customizations: " + itemTotal);
                         }
-                    } else {
-                        Log.d("DriverOrdersAdapter", "No customizations found or invalid format");
                     }
+                    
+                    // Add item total to overall total
+                    totalAmount += itemTotal;
                     
                     orderItems.add(orderItem);
                 } catch (Exception e) {
@@ -224,30 +270,92 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         // Set total amount
         holder.totalAmount.setText(NumberFormat.getCurrencyInstance(Locale.US).format(totalAmount));
 
-        // Setup button click listeners
-        holder.acceptButton.setOnClickListener(v -> acceptOrder(order.getId()));
-        holder.rejectButton.setOnClickListener(v -> rejectOrder(order.getId()));
-        holder.markPickedUpButton.setOnClickListener(v -> markOrderAsPickedUp(order.getId()));
-        holder.markDeliveredButton.setOnClickListener(v -> markOrderAsDelivered(order.getId()));
+        // Setup button click listeners with null check
+        if (finalOrderId != null && !finalOrderId.isEmpty()) {
+            holder.acceptButton.setOnClickListener(v -> {
+                Log.d("DriverOrdersAdapter", "Accept button clicked for order: " + finalOrderId);
+                acceptOrder(finalOrderId);
+            });
+            holder.rejectButton.setOnClickListener(v -> rejectOrder(finalOrderId));
+            holder.markPickedUpButton.setOnClickListener(v -> markOrderAsPickedUp(finalOrderId));
+            holder.markDeliveredButton.setOnClickListener(v -> markOrderAsDelivered(finalOrderId));
+        } else {
+            Log.e("DriverOrdersAdapter", "Order ID is null or empty, disabling buttons");
+            holder.acceptButton.setEnabled(false);
+            holder.rejectButton.setEnabled(false);
+            holder.markPickedUpButton.setEnabled(false);
+            holder.markDeliveredButton.setEnabled(false);
+        }
     }
 
     private void acceptOrder(String orderId) {
-        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("order_status", "driver_accepted");
-        updates.put("driverAccepted", true);
+        Log.d("DriverOrdersAdapter", "Attempting to accept order: " + orderId);
+        
+        if (orderId == null || orderId.isEmpty()) {
+            Log.e("DriverOrdersAdapter", "Cannot accept order - invalid order ID");
+            if (context != null) {
+                Toast.makeText(context, "Invalid order ID", Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
 
-        orderRef.updateChildren(updates)
-                .addOnSuccessListener(aVoid -> {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
+        
+        // First check if the order exists and is still available
+        orderRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!snapshot.exists()) {
+                    Log.e("DriverOrdersAdapter", "Order not found: " + orderId);
                     if (context != null) {
-                        Toast.makeText(context, "Order accepted", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Order not found", Toast.LENGTH_SHORT).show();
                     }
-                })
-                .addOnFailureListener(e -> {
+                    return;
+                }
+
+                String currentStatus = snapshot.child("order_status").getValue(String.class);
+                String currentDriverId = snapshot.child("driverId").getValue(String.class);
+                
+                Log.d("DriverOrdersAdapter", "Current order status: " + currentStatus);
+                Log.d("DriverOrdersAdapter", "Current driver ID: " + currentDriverId);
+
+                if (currentStatus == null || !currentStatus.equals("assigned_driver")) {
+                    Log.e("DriverOrdersAdapter", "Order is not in assigned_driver status. Current status: " + currentStatus);
                     if (context != null) {
-                        Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Order is no longer available", Toast.LENGTH_SHORT).show();
                     }
-                });
+                    return;
+                }
+
+                // Proceed with accepting the order
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("order_status", "driver_accepted");
+                updates.put("driverAccepted", true);
+
+                orderRef.updateChildren(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d("DriverOrdersAdapter", "Successfully accepted order: " + orderId);
+                        if (context != null) {
+                            Toast.makeText(context, "Order accepted", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("DriverOrdersAdapter", "Failed to accept order: " + e.getMessage());
+                        e.printStackTrace();
+                        if (context != null) {
+                            Toast.makeText(context, "Failed to accept order: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("DriverOrdersAdapter", "Error checking order status: " + error.getMessage());
+                if (context != null) {
+                    Toast.makeText(context, "Error checking order status", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void rejectOrder(String orderId) {

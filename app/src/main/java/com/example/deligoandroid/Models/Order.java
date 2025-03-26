@@ -2,6 +2,7 @@ package com.example.deligoandroid.Models;
 
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
 
 public class Order {
     private String orderId;
@@ -32,8 +33,18 @@ public class Order {
     }
 
     // Getters and Setters
-    public String getOrderId() { return orderId; }
-    public void setOrderId(String orderId) { this.orderId = orderId; }
+    public String getOrderId() {
+        // If orderId is null, fallback to id
+        return orderId != null ? orderId : id;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+        // Also set id if it's not already set
+        if (this.id == null) {
+            this.id = orderId;
+        }
+    }
 
     public String getCustomerId() { return customerId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
@@ -83,8 +94,19 @@ public class Order {
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public String getId() {
+        // Log the ID value for debugging
+        Log.d("Order", "Getting ID: " + id);
+        return id;
+    }
+
+    public void setId(String id) {
+        // Log the ID being set
+        Log.d("Order", "Setting ID: " + id);
+        this.id = id;
+        // Also set orderId for compatibility
+        this.orderId = id;
+    }
 
     public Map<String, Object> getCustomizations() { return customizations; }
     public void setCustomizations(Map<String, Object> customizations) { this.customizations = customizations; }
