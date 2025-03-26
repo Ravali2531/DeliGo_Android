@@ -167,6 +167,10 @@
             android:theme="@style/Theme.DeliGoAndroid"
             android:exported="false" />
 
+        <activity
+            android:name=".Customer.Activities.RestaurantReviewsActivity"
+            android:exported="false" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

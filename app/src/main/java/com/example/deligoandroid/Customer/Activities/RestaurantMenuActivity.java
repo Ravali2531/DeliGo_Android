@@ -1,5 +1,6 @@
 package com.example.deligoandroid.Customer.Activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,6 +21,7 @@ import com.example.deligoandroid.Customer.Models.CustomizationOption;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
+import com.google.android.material.button.MaterialButton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,6 +97,7 @@ public class RestaurantMenuActivity extends AppCompatActivity implements MenuAda
         TextView restaurantAddress = findViewById(R.id.restaurantAddress);
         TextView restaurantHours = findViewById(R.id.restaurantHours);
         ImageView restaurantImage = findViewById(R.id.restaurantImage);
+        MaterialButton viewReviewsButton = findViewById(R.id.viewReviewsButton);
 
         restaurantName.setText(restaurant.getName());
         restaurantDescription.setText(restaurant.getDescription());
@@ -109,6 +112,13 @@ public class RestaurantMenuActivity extends AppCompatActivity implements MenuAda
                 .error(R.drawable.ic_restaurant_placeholder)
                 .into(restaurantImage);
         }
+
+        // Set up View Reviews button click listener
+        viewReviewsButton.setOnClickListener(v -> {
+            Intent intent = new Intent(this, RestaurantReviewsActivity.class);
+            intent.putExtra("restaurantId", restaurant.getId());
+            startActivity(intent);
+        });
 
         // Setup RecyclerView
         menuRecyclerView.setLayoutManager(new LinearLayoutManager(this));
