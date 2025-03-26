@@ -31,6 +31,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -124,19 +125,125 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
 
                 for (DataSnapshot itemSnapshot : snapshot.getChildren()) {
                     try {
-                        Log.d(TAG, "Processing item with key: " + itemSnapshot.getKey());
-                        Log.d(TAG, "Item raw data: " + itemSnapshot.getValue());
+                        String firebaseKey = itemSnapshot.getKey();
+                        Log.d(TAG, "Processing item with key: " + firebaseKey);
                         
-                        CartItem item = itemSnapshot.getValue(CartItem.class);
-                        if (item != null) {
-                            if (item.getId() == null) {
-                                item.setId(itemSnapshot.getKey());
+                        // Log raw data for debugging
+                        Object rawValue = itemSnapshot.getValue();
+                        Log.d(TAG, "Item raw data: " + rawValue);
+                        
+                        CartItem item = null;
+                        
+                        // Try to parse using CartItem.class first
+                        try {
+                            item = itemSnapshot.getValue(CartItem.class);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to parse directly to CartItem: " + e.getMessage());
+                        }
+                        
+                        // If direct parsing fails, try manual conversion from Map
+                        if (item == null && rawValue instanceof Map) {
+                            try {
+                                Map<String, Object> itemMap = (Map<String, Object>) rawValue;
+                                // Create a new CartItem manually
+                                item = new CartItem();
+                                if (itemMap.containsKey("menuItemId")) item.setMenuItemId((String) itemMap.get("menuItemId"));
+                                if (itemMap.containsKey("name")) item.setName((String) itemMap.get("name"));
+                                if (itemMap.containsKey("description")) item.setDescription((String) itemMap.get("description"));
+                                if (itemMap.containsKey("price")) {
+                                    Object priceObj = itemMap.get("price");
+                                    if (priceObj instanceof Number) {
+                                        item.setPrice(((Number) priceObj).doubleValue());
+                                    }
+                                }
+                                if (itemMap.containsKey("quantity")) {
+                                    Object quantityObj = itemMap.get("quantity");
+                                    if (quantityObj instanceof Number) {
+                                        item.setQuantity(((Number) quantityObj).intValue());
+                                    }
+                                }
+                                if (itemMap.containsKey("imageURL")) item.setImageURL((String) itemMap.get("imageURL"));
+                                if (itemMap.containsKey("restaurantId")) item.setRestaurantId((String) itemMap.get("restaurantId"));
+                                if (itemMap.containsKey("totalPrice")) {
+                                    Object totalPriceObj = itemMap.get("totalPrice");
+                                    if (totalPriceObj instanceof Number) {
+                                        item.setTotalPrice(((Number) totalPriceObj).doubleValue());
+                                    }
+                                }
+                                if (itemMap.containsKey("specialInstructions")) {
+                                    item.setSpecialInstructions((String) itemMap.get("specialInstructions"));
+                                }
+                                
+                                // Handle customizations
+                                if (itemMap.containsKey("customizations") && itemMap.get("customizations") instanceof Map) {
+                                    Map<String, Object> customizationsMap = (Map<String, Object>) itemMap.get("customizations");
+                                    Map<String, List<CustomizationSelection>> parsedCustomizations = new HashMap<>();
+                                    
+                                    for (Map.Entry<String, Object> entry : customizationsMap.entrySet()) {
+                                        String customizationId = entry.getKey();
+                                        if (entry.getValue() instanceof List) {
+                                            List<Object> selections = (List<Object>) entry.getValue();
+                                            List<CustomizationSelection> selectionsList = new ArrayList<>();
+                                            
+                                            for (Object selObj : selections) {
+                                                if (selObj instanceof Map) {
+                                                    Map<String, Object> selMap = (Map<String, Object>) selObj;
+                                                    CustomizationSelection selection = new CustomizationSelection();
+                                                    
+                                                    if (selMap.containsKey("optionId")) selection.setOptionId((String) selMap.get("optionId"));
+                                                    if (selMap.containsKey("optionName")) selection.setOptionName((String) selMap.get("optionName"));
+                                                    
+                                                    if (selMap.containsKey("selectedItems") && selMap.get("selectedItems") instanceof List) {
+                                                        List<Object> itemsList = (List<Object>) selMap.get("selectedItems");
+                                                        List<SelectedItem> selectedItems = new ArrayList<>();
+                                                        
+                                                        for (Object itemObj : itemsList) {
+                                                            if (itemObj instanceof Map) {
+                                                                Map<String, Object> itemMap2 = (Map<String, Object>) itemObj;
+                                                                SelectedItem selectedItem = new SelectedItem();
+                                                                
+                                                                if (itemMap2.containsKey("id")) selectedItem.setId((String) itemMap2.get("id"));
+                                                                if (itemMap2.containsKey("name")) selectedItem.setName((String) itemMap2.get("name"));
+                                                                if (itemMap2.containsKey("price")) {
+                                                                    Object priceObj = itemMap2.get("price");
+                                                                    if (priceObj instanceof Number) {
+                                                                        selectedItem.setPrice(((Number) priceObj).doubleValue());
+                                                                    }
+                                                                }
+                                                                
+                                                                selectedItems.add(selectedItem);
+                                                            }
+                                                        }
+                                                        
+                                                        selection.setSelectedItems(selectedItems);
+                                                    }
+                                                    
+                                                    selectionsList.add(selection);
+                                                }
+                                            }
+                                            
+                                            parsedCustomizations.put(customizationId, selectionsList);
+                                        }
+                                    }
+                                    
+                                    item.setCustomizations(parsedCustomizations);
+                                }
+                                
+                                Log.d(TAG, "Successfully created CartItem manually from Map");
+                            } catch (Exception e) {
+                                Log.e(TAG, "Failed to create CartItem manually: " + e.getMessage());
+                                e.printStackTrace();
                             }
-                            Log.d(TAG, "Loaded cart item: " + item.getName() + ", Price: " + item.getTotalPrice());
+                        }
+                        
+                        if (item != null) {
+                            // Always use the Firebase key as the ID
+                            item.setId(firebaseKey);
+                            Log.d(TAG, "Loaded cart item: " + item.getName() + ", Price: " + item.getTotalPrice() + ", ID: " + item.getId());
                             cartItems.add(item);
                             subtotal += item.getTotalPrice();
                         } else {
-                            Log.e(TAG, "Failed to parse item from snapshot: " + itemSnapshot.getValue());
+                            Log.e(TAG, "Failed to parse item from snapshot with ID: " + firebaseKey);
                         }
                     } catch (Exception e) {
                         Log.e(TAG, "Error parsing cart item: " + e.getMessage());
@@ -225,64 +332,27 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
     public void onRemoveItem(String itemId) {
         if (!isAdded()) return;
 
-        Log.d(TAG, "Starting to remove item with ID: " + itemId);
-        if (itemId != null && cartRef != null) {
-            // Find the item to be removed
-            CartItem itemToRemove = null;
-            for (CartItem item : cartItems) {
-                if (item.getId().equals(itemId)) {
-                    itemToRemove = item;
-                    break;
-                }
-            }
-
-            if (itemToRemove == null) {
-                Log.e(TAG, "Could not find item with ID: " + itemId);
-                return;
-            }
-
-            // Generate Firebase key based on menu item ID and customizations
-            String firebaseKey = itemToRemove.getMenuItemId();
-            if (itemToRemove.getCustomizations() != null && !itemToRemove.getCustomizations().isEmpty()) {
-                StringBuilder keyBuilder = new StringBuilder(firebaseKey);
-                for (Map.Entry<String, List<CustomizationSelection>> entry : itemToRemove.getCustomizations().entrySet()) {
-                    keyBuilder.append("_").append(entry.getKey());
-                    List<CustomizationSelection> selections = entry.getValue();
-                    if (selections != null) {
-                        for (CustomizationSelection selection : selections) {
-                            if (selection.getSelectedItems() != null) {
-                                for (SelectedItem item : selection.getSelectedItems()) {
-                                    keyBuilder.append("_").append(item.getName());
-                                }
-                            }
-                        }
-                    }
-                }
-                firebaseKey = keyBuilder.toString();
-            }
+        Log.d(TAG, "Attempting to remove item with ID: " + itemId);
+        
+        if (itemId != null && !itemId.isEmpty() && cartRef != null) {
+            // Create a direct reference to the item in Firebase
+            DatabaseReference itemRef = cartRef.child(itemId);
             
-            Log.d(TAG, "Generated Firebase key for removal: " + firebaseKey);
-            
-            // Remove from local list first
-            cartItems.removeIf(item -> item.getId().equals(itemId));
-            calculateSubtotal();
-            updateUI();
-
-            // Then remove from Firebase
-            Log.d(TAG, "Attempting to remove item from Firebase, path: " + cartRef.child(firebaseKey).toString());
-            cartRef.child(firebaseKey).removeValue()
+            // Remove the item from Firebase
+            itemRef.removeValue()
                 .addOnSuccessListener(aVoid -> {
-                    if (isAdded()) {
-                        Log.d(TAG, "Item successfully removed from Firebase");
-                        Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
-                    }
+                    Log.d(TAG, "Successfully removed item from Firebase: " + itemId);
+                    Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
+                    
+                    // Note: We don't need to manually update the UI or local list
+                    // because the ValueEventListener will trigger and reload everything
                 })
                 .addOnFailureListener(e -> {
-                    if (isAdded()) {
-                        Log.e(TAG, "Error removing item from Firebase: " + e.getMessage());
-                        Toast.makeText(getContext(), "Error removing item", Toast.LENGTH_SHORT).show();
-                    }
+                    Log.e(TAG, "Failed to remove item from Firebase: " + e.getMessage());
+                    Toast.makeText(getContext(), "Failed to remove item", Toast.LENGTH_SHORT).show();
                 });
+        } else {
+            Log.e(TAG, "Cannot remove item - invalid ID or database reference");
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.deligoandroid.Customer.Adapters;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -51,6 +52,10 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
     public void onBindViewHolder(@NonNull CartViewHolder holder, int position) {
         CartItem item = items.get(position);
         
+        // Debug logging
+        Log.e("CartAdapter", "Binding item at position " + position + ": " + item.getName());
+        Log.e("CartAdapter", "Item ID: '" + item.getId() + "'");
+        
         // Set item details
         holder.nameText.setText(item.getName());
         holder.descriptionText.setText(item.getDescription());
@@ -87,8 +92,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
             listener.onUpdateQuantity(item.getId(), item.getQuantity() + 1);
         });
 
-        // Setup remove button
-        holder.removeButton.setOnClickListener(v -> listener.onRemoveItem(item.getId()));
+        // Setup remove button with extra logging
+        String idForRemoval = item.getId();
+        Log.e("CartAdapter", "Setting up remove button for item: " + item.getName() + ", ID: '" + idForRemoval + "'");
+        
+        holder.removeButton.setOnClickListener(v -> {
+            Log.e("CartAdapter", "Remove button clicked for ID: '" + idForRemoval + "'");
+            listener.onRemoveItem(idForRemoval);
+        });
     }
 
     private void setupCustomizations(ViewGroup container, Map<String, List<CustomizationSelection>> customizations) {
