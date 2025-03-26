@@ -399,21 +399,36 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
 
     private void markOrderAsDelivered(String orderId) {
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", "delivered");
-        updates.put("order_status", "delivered");
+        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference("drivers").child(driverId);
 
-        orderRef.updateChildren(updates)
-                .addOnSuccessListener(aVoid -> {
-                    if (context != null) {
-                        Toast.makeText(context, "Order marked as delivered", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    if (context != null) {
-                        Toast.makeText(context, "Failed to update order status", Toast.LENGTH_SHORT).show();
-                    }
-                });
+        // First update the order status
+        Map<String, Object> orderUpdates = new HashMap<>();
+        orderUpdates.put("status", "delivered");
+        orderUpdates.put("order_status", "delivered");
+
+        orderRef.updateChildren(orderUpdates)
+            .addOnSuccessListener(aVoid -> {
+                // After order is updated, update driver availability
+                driverRef.child("isAvailable").setValue(true)
+                    .addOnSuccessListener(aVoid2 -> {
+                        if (context != null) {
+                            Toast.makeText(context, "Order marked as delivered", Toast.LENGTH_SHORT).show();
+                        }
+                        Log.d("DriverOrdersAdapter", "Successfully marked order as delivered and updated driver availability");
+                    })
+                    .addOnFailureListener(e -> {
+                        if (context != null) {
+                            Toast.makeText(context, "Warning: Order delivered but driver status update failed", Toast.LENGTH_SHORT).show();
+                        }
+                        Log.e("DriverOrdersAdapter", "Failed to update driver availability", e);
+                    });
+            })
+            .addOnFailureListener(e -> {
+                if (context != null) {
+                    Toast.makeText(context, "Failed to update order status", Toast.LENGTH_SHORT).show();
+                }
+                Log.e("DriverOrdersAdapter", "Failed to mark order as delivered", e);
+            });
     }
 
     private void loadRestaurantName(String restaurantId, TextView restaurantNameView) {

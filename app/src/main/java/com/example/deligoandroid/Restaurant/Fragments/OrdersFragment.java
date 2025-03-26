@@ -410,22 +410,46 @@ public class OrdersFragment extends Fragment {
         DatabaseReference orderRef = FirebaseDatabase.getInstance()
             .getReference("orders")
             .child(order.getId());
+        DatabaseReference driverRef = FirebaseDatabase.getInstance()
+            .getReference("drivers")
+            .child(driverId);
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("driverId", driverId);
-        updates.put("driverName", driverName);
-        updates.put("order_status", "assigned_driver");
+        // Update order fields
+        Map<String, Object> orderUpdates = new HashMap<>();
+        orderUpdates.put("driverId", driverId);
+        orderUpdates.put("driverName", driverName);
+        orderUpdates.put("status", "in_progress");
+        orderUpdates.put("order_status", "assigned_driver");
 
-        orderRef.updateChildren(updates)
+        // First update the order
+        orderRef.updateChildren(orderUpdates)
             .addOnSuccessListener(aVoid -> {
-                Toast.makeText(getContext(), 
-                    "Order assigned to " + driverName, 
-                    Toast.LENGTH_SHORT).show();
+                // Then update driver availability
+                driverRef.child("isAvailable").setValue(false)
+                    .addOnSuccessListener(aVoid2 -> {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), 
+                                "Order assigned to " + driverName, 
+                                Toast.LENGTH_SHORT).show();
+                        }
+                        Log.d("OrdersFragment", "Successfully assigned order to driver and updated availability");
+                    })
+                    .addOnFailureListener(e -> {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(), 
+                                "Warning: Driver assigned but availability update failed", 
+                                Toast.LENGTH_SHORT).show();
+                        }
+                        Log.e("OrdersFragment", "Failed to update driver availability", e);
+                    });
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(getContext(), 
-                    "Failed to assign driver: " + e.getMessage(), 
-                    Toast.LENGTH_SHORT).show();
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), 
+                        "Failed to assign driver: " + e.getMessage(), 
+                        Toast.LENGTH_SHORT).show();
+                }
+                Log.e("OrdersFragment", "Failed to assign driver", e);
             });
     }
 } 
