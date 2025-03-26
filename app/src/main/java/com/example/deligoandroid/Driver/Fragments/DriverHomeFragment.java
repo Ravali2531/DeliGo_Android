@@ -75,34 +75,58 @@ public class DriverHomeFragment extends Fragment {
     }
 
     private void setupAvailabilitySwitch() {
+        // Disable switch until we get initial state
+        availabilitySwitch.setEnabled(false);
+
         // Get initial availability state
-        driversRef.child("isAvailable").addValueEventListener(new ValueEventListener() {
+        driversRef.child("isAvailable").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                if (getContext() == null) return;  // Fragment not attached
+                
                 Boolean isAvailable = dataSnapshot.getValue(Boolean.class);
-                if (isAvailable != null) {
-                    availabilitySwitch.setChecked(isAvailable);
-                }
+                availabilitySwitch.setChecked(isAvailable != null ? isAvailable : false);
+                availabilitySwitch.setEnabled(true);
+                
+                // Setup switch listener only after getting initial state
+                availabilitySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (getContext() == null) return;  // Fragment not attached
+                    
+                    // Disable switch while updating
+                    availabilitySwitch.setEnabled(false);
+                    
+                    driversRef.child("isAvailable").setValue(isChecked)
+                        .addOnSuccessListener(aVoid -> {
+                            if (getContext() == null) return;  // Fragment not attached
+                            
+                            availabilitySwitch.setEnabled(true);
+                            String message = isChecked ? "You are now available for deliveries" : "You are now offline";
+                            Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            if (getContext() == null) return;  // Fragment not attached
+                            
+                            // Revert switch state if update fails
+                            availabilitySwitch.setEnabled(true);
+                            availabilitySwitch.setChecked(!isChecked);
+                            Toast.makeText(getContext(), "Failed to update availability: " + e.getMessage(), 
+                                Toast.LENGTH_SHORT).show();
+                            
+                            Log.e("DriverHomeFragment", "Failed to update availability", e);
+                        });
+                });
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(getContext(), "Failed to load availability status", Toast.LENGTH_SHORT).show();
+                if (getContext() == null) return;  // Fragment not attached
+                
+                availabilitySwitch.setEnabled(true);
+                Toast.makeText(getContext(), "Failed to load availability status: " + databaseError.getMessage(), 
+                    Toast.LENGTH_SHORT).show();
+                
+                Log.e("DriverHomeFragment", "Failed to load availability status", databaseError.toException());
             }
-        });
-
-        // Setup switch listener
-        availabilitySwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            driversRef.child("isAvailable").setValue(isChecked)
-                .addOnSuccessListener(aVoid -> {
-                    String message = isChecked ? "You are now available for deliveries" : "You are now offline";
-                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    // Revert switch state if update fails
-                    availabilitySwitch.setChecked(!isChecked);
-                    Toast.makeText(getContext(), "Failed to update availability", Toast.LENGTH_SHORT).show();
-                });
         });
     }
 
