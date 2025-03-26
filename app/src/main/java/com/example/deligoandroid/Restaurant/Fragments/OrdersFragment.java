@@ -428,9 +428,9 @@ public class OrdersFragment extends Fragment {
                 driverRef.child("isAvailable").setValue(false)
                     .addOnSuccessListener(aVoid2 -> {
                         if (getContext() != null) {
-                            Toast.makeText(getContext(), 
-                                "Order assigned to " + driverName, 
-                                Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), 
+                    "Order assigned to " + driverName, 
+                    Toast.LENGTH_SHORT).show();
                         }
                         Log.d("OrdersFragment", "Successfully assigned order to driver and updated availability");
                     })
@@ -445,9 +445,9 @@ public class OrdersFragment extends Fragment {
             })
             .addOnFailureListener(e -> {
                 if (getContext() != null) {
-                    Toast.makeText(getContext(), 
-                        "Failed to assign driver: " + e.getMessage(), 
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), 
+                    "Failed to assign driver: " + e.getMessage(), 
+                    Toast.LENGTH_SHORT).show();
                 }
                 Log.e("OrdersFragment", "Failed to assign driver", e);
             });

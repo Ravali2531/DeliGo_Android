@@ -88,41 +88,39 @@ public class OrderItem {
         item.setSpecialInstructions((String) map.get("specialInstructions"));
 
         // Handle customizations
-        Object itemCustomizationsObj = map.get("customizations");
-        if (itemCustomizationsObj instanceof List && customizationsMap != null) {
-            List<String> customizationIds = (List<String>) itemCustomizationsObj;
-            
-            for (String customizationId : customizationIds) {
-                Object customizationObj = customizationsMap.get(customizationId);
+        if (customizationsMap != null) {
+            for (Map.Entry<String, Object> entry : customizationsMap.entrySet()) {
+                String customizationId = entry.getKey();
+                Object customizationObj = entry.getValue();
+                
                 if (customizationObj instanceof Map) {
                     Map<String, Object> customizationMap = (Map<String, Object>) customizationObj;
-                    Map<String, Object> customizationData = (Map<String, Object>) customizationMap.get("0");
                     
-                    if (customizationData != null) {
-                        CustomizationOption option = new CustomizationOption();
-                        option.setOptionId(customizationId);
-                        option.setOptionName((String) customizationData.get("optionName"));
+                    CustomizationOption option = new CustomizationOption();
+                    option.setOptionId(customizationId);
+                    option.setOptionName((String) customizationMap.get("optionName"));
+                    
+                    Object selectedItemsObj = customizationMap.get("selectedItems");
+                    if (selectedItemsObj instanceof List) {
+                        List<Map<String, Object>> selectedItemsData = (List<Map<String, Object>>) selectedItemsObj;
                         
-                        List<Map<String, Object>> selectedItemsData = 
-                            (List<Map<String, Object>>) customizationData.get("selectedItems");
-                        if (selectedItemsData != null) {
-                            for (Map<String, Object> selectedItemMap : selectedItemsData) {
-                                SelectedItem selectedItem = new SelectedItem();
-                                selectedItem.setId((String) selectedItemMap.get("id"));
-                                selectedItem.setName((String) selectedItemMap.get("name"));
-                                
-                                Object selectedItemPrice = selectedItemMap.get("price");
-                                if (selectedItemPrice instanceof Double) {
-                                    selectedItem.setPrice((Double) selectedItemPrice);
-                                } else if (selectedItemPrice instanceof Long) {
-                                    selectedItem.setPrice(((Long) selectedItemPrice).doubleValue());
-                                }
-                                
-                                option.getSelectedItems().add(selectedItem);
+                        for (Map<String, Object> selectedItemMap : selectedItemsData) {
+                            SelectedItem selectedItem = new SelectedItem();
+                            selectedItem.setId((String) selectedItemMap.get("id"));
+                            selectedItem.setName((String) selectedItemMap.get("name"));
+                            
+                            Object selectedItemPrice = selectedItemMap.get("price");
+                            if (selectedItemPrice instanceof Double) {
+                                selectedItem.setPrice((Double) selectedItemPrice);
+                            } else if (selectedItemPrice instanceof Long) {
+                                selectedItem.setPrice(((Long) selectedItemPrice).doubleValue());
                             }
+                            
+                            option.getSelectedItems().add(selectedItem);
                         }
-                        item.getCustomizations().add(option);
                     }
+                    
+                    item.getCustomizations().add(option);
                 }
             }
         }

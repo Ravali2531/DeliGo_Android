@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.deligoandroid.Models.Order;
+import com.example.deligoandroid.Customer.Models.OrderItem;
 import com.example.deligoandroid.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
@@ -30,6 +31,7 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.ServerValue;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -38,6 +40,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAdapter.ViewHolder> {
     private static final String TAG = "CustomerOrdersAdapter";
@@ -104,10 +107,101 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             // Set up order items
             if (order.getItems() != null && !order.getItems().isEmpty()) {
                 holder.orderItemsRecyclerView.setVisibility(View.VISIBLE);
-                Map<String, Object> customizations = order.getCustomizations();
-                Log.d("CustomerOrdersAdapter", "Customizations from order: " + (customizations != null ? customizations.toString() : "null"));
                 
-                CustomerOrderItemsAdapter itemsAdapter = new CustomerOrderItemsAdapter(order.getItems(), customizations);
+                // Convert items to OrderItem objects
+                List<OrderItem> orderItems = new ArrayList<>();
+                for (Map<String, Object> itemMap : order.getItems()) {
+                    OrderItem item = new OrderItem();
+                    item.setItemId((String) itemMap.get("itemId"));
+                    item.setName((String) itemMap.get("name"));
+                    item.setQuantity(itemMap.get("quantity") instanceof Long ? ((Long) itemMap.get("quantity")).intValue() : 1);
+                    
+                    Object priceObj = itemMap.get("price");
+                    if (priceObj instanceof Double) {
+                        item.setPrice((Double) priceObj);
+                    } else if (priceObj instanceof Long) {
+                        item.setPrice(((Long) priceObj).doubleValue());
+                    }
+                    
+                    item.setSpecialInstructions((String) itemMap.get("specialInstructions"));
+
+                    // Handle customizations
+                    Object customizationsObj = itemMap.get("customizations");
+                    Log.d(TAG, "Raw customizations object: " + (customizationsObj != null ? customizationsObj.toString() : "null"));
+                    
+                    if (customizationsObj instanceof Map) {
+                        Map<String, Object> customizationsMap = (Map<String, Object>) customizationsObj;
+                        List<OrderItem.CustomizationOption> customizationOptions = new ArrayList<>();
+                        
+                        Log.d(TAG, "Found customizations map with " + customizationsMap.size() + " entries");
+                        
+                        for (Map.Entry<String, Object> entry : customizationsMap.entrySet()) {
+                            String customId = entry.getKey();
+                            Object customValue = entry.getValue();
+                            
+                            Log.d(TAG, "Processing customization: " + customId + ", value type: " + (customValue != null ? customValue.getClass().getSimpleName() : "null"));
+                            Log.d(TAG, "Customization value: " + customValue);
+                            
+                            try {
+                                if (customValue instanceof ArrayList) {
+                                    ArrayList<Map<String, Object>> customizationList = (ArrayList<Map<String, Object>>) customValue;
+                                    if (!customizationList.isEmpty()) {
+                                        Map<String, Object> optionData = customizationList.get(0);
+                                        Log.d(TAG, "Option data: " + optionData);
+                                        
+                                        OrderItem.CustomizationOption option = new OrderItem.CustomizationOption();
+                                        option.setOptionId((String) optionData.get("optionId"));
+                                        option.setOptionName((String) optionData.get("optionName"));
+                                        
+                                        Log.d(TAG, "Found option: " + option.getOptionName() + " with ID: " + option.getOptionId());
+                                        
+                                        // Get selectedItems from the option data
+                                        Object selectedItemsObj = optionData.get("selectedItems");
+                                        if (selectedItemsObj instanceof List) {
+                                            List<Map<String, Object>> selectedItemsData = (List<Map<String, Object>>) selectedItemsObj;
+                                            List<OrderItem.SelectedItem> selectedItems = new ArrayList<>();
+                                            
+                                            for (Map<String, Object> selectedItemMap : selectedItemsData) {
+                                                OrderItem.SelectedItem selectedItem = new OrderItem.SelectedItem();
+                                                String itemId = (String) selectedItemMap.get("id");
+                                                String itemName = (String) selectedItemMap.get("name");
+                                                Object itemPrice = selectedItemMap.get("price");
+                                                
+                                                selectedItem.setId(itemId);
+                                                selectedItem.setName(itemName);
+                                                
+                                                if (itemPrice instanceof Number) {
+                                                    selectedItem.setPrice(((Number) itemPrice).doubleValue());
+                                                }
+                                                
+                                                selectedItems.add(selectedItem);
+                                                Log.d(TAG, "Added selected item: " + itemName + " with ID: " + itemId);
+                                            }
+                                            
+                                            if (!selectedItems.isEmpty()) {
+                                                option.setSelectedItems(selectedItems);
+                                                customizationOptions.add(option);
+                                                Log.d(TAG, "Added option " + option.getOptionName() + " with " + selectedItems.size() + " items");
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error processing customization " + customId + ": " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                        }
+                        
+                        if (!customizationOptions.isEmpty()) {
+                            item.setCustomizations(customizationOptions);
+                            Log.d(TAG, "Successfully set " + customizationOptions.size() + " customization options on item");
+                        }
+                    }
+                    
+                    orderItems.add(item);
+                }
+                
+                CustomerOrderItemsAdapter itemsAdapter = new CustomerOrderItemsAdapter(orderItems);
                 holder.orderItemsRecyclerView.setAdapter(itemsAdapter);
                 holder.orderItemsRecyclerView.setLayoutManager(new LinearLayoutManager(holder.itemView.getContext()));
             } else {
@@ -354,80 +448,116 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
     private void addOrderToCart(Order order) {
         String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         DatabaseReference cartRef = FirebaseDatabase.getInstance()
-            .getReference("carts")
-            .child(customerId);
+            .getReference("customers")
+            .child(customerId)
+            .child("cart");
 
-        // Create a new cart item with the same specifications
-        Map<String, Object> cartData = new HashMap<>();
-        cartData.put("restaurantId", order.getRestaurantId());
-        cartData.put("items", order.getItems());
-        cartData.put("customizations", order.getCustomizations());
-        cartData.put("timestamp", System.currentTimeMillis());
-
-        // Add address information
-        Map<String, Object> addressData = new HashMap<>();
-        if (order.getAddress() != null) {
-            addressData.put("street", order.getAddress().getStreet());
-            addressData.put("unit", order.getAddress().getUnit());
-            // Add instructions if present
-            if (order.getAddress().getInstructions() != null && !order.getAddress().getInstructions().isEmpty()) {
-                addressData.put("instructions", order.getAddress().getInstructions());
-            }
-        } else {
-            // If no address in order, check if there's address data directly in the order
-            DatabaseReference orderRef = FirebaseDatabase.getInstance()
-                .getReference("orders")
-                .child(order.getId())
-                .child("address");
-            
-            orderRef.addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        String street = snapshot.child("street").getValue(String.class);
-                        String unit = snapshot.child("unit").getValue(String.class);
-                        String instructions = snapshot.child("instructions").getValue(String.class);
-                        
-                        if (street != null) addressData.put("street", street);
-                        if (unit != null) addressData.put("unit", unit);
-                        if (instructions != null && !instructions.isEmpty()) {
-                            addressData.put("instructions", instructions);
-                        }
-                        
-                        cartData.put("address", addressData);
-                        cartRef.setValue(cartData)
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
-                            });
-                    }
-                }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Log.e(TAG, "Error fetching address data", error.toException());
-                    // Still save the cart data even if address fetch fails
-                    cartRef.setValue(cartData)
-                        .addOnSuccessListener(aVoid -> {
-                            Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
-                        })
-                        .addOnFailureListener(e -> {
-                            Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
-                        });
-                }
-            });
-            return; // Return here as we're handling the cart save in the callback
+        // Get the first item from the order's items list
+        if (order.getItems() == null || order.getItems().isEmpty()) {
+            Toast.makeText(context, "No items found in the order", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        cartData.put("address", addressData);
-        cartRef.setValue(cartData)
+        Map<String, Object> firstItem = order.getItems().get(0);
+        Log.d(TAG, "First item from order: " + firstItem.toString());
+        
+        // Generate a unique ID for the cart item
+        String cartItemId = cartRef.push().getKey();
+        if (cartItemId == null) {
+            Toast.makeText(context, "Failed to generate cart item ID", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        DatabaseReference cartItemRef = cartRef.child(cartItemId);
+
+        // Create cart item data
+        Map<String, Object> cartItemData = new HashMap<>();
+        cartItemData.put("description", firstItem.get("description"));
+        cartItemData.put("id", cartItemId);
+        cartItemData.put("imageURL", firstItem.get("imageURL"));
+        cartItemData.put("menuItemId", firstItem.get("menuItemId"));
+        cartItemData.put("name", firstItem.get("name"));
+        cartItemData.put("price", firstItem.get("price"));
+        cartItemData.put("quantity", 1);
+        cartItemData.put("restaurantId", order.getRestaurantId());
+        cartItemData.put("specialInstructions", firstItem.get("specialInstructions"));
+        cartItemData.put("timestamp", ServerValue.TIMESTAMP);
+
+        // Calculate total price starting with base price
+        double totalPrice = firstItem.get("price") != null ? ((Number) firstItem.get("price")).doubleValue() : 0.0;
+
+        // Process customizations
+        Object customizationsObj = firstItem.get("customizations");
+        Log.d(TAG, "Raw customizations object: " + (customizationsObj != null ? customizationsObj.toString() : "null"));
+        
+        Map<String, Object> customizationsMap = new HashMap<>();
+        
+        if (customizationsObj instanceof Map) {
+            Map<String, Object> itemCustomizations = (Map<String, Object>) customizationsObj;
+            Log.d(TAG, "Found customizations map with " + itemCustomizations.size() + " entries");
+            
+            for (Map.Entry<String, Object> entry : itemCustomizations.entrySet()) {
+                String customizationId = entry.getKey();
+                Object customValue = entry.getValue();
+                Log.d(TAG, "Processing customization ID: " + customizationId);
+                
+                if (customValue instanceof ArrayList) {
+                    ArrayList<Map<String, Object>> customizationList = (ArrayList<Map<String, Object>>) customValue;
+                    if (!customizationList.isEmpty()) {
+                        Map<String, Object> optionData = customizationList.get(0);
+                        
+                        // Create customization data
+                        Map<String, Object> newCustomizationData = new HashMap<>();
+                        newCustomizationData.put("optionId", optionData.get("optionId"));
+                        newCustomizationData.put("optionName", optionData.get("optionName"));
+                        newCustomizationData.put("price", optionData.get("price") != null ? optionData.get("price") : 0);
+                        
+                        // Handle selected items
+                        Object selectedItemsObj = optionData.get("selectedItems");
+                        if (selectedItemsObj instanceof ArrayList) {
+                            ArrayList<Map<String, Object>> selectedItemsList = (ArrayList<Map<String, Object>>) selectedItemsObj;
+                            Map<String, Object> selectedItemsContainer = new HashMap<>();
+                            
+                            for (int i = 0; i < selectedItemsList.size(); i++) {
+                                Map<String, Object> selectedItemMap = selectedItemsList.get(i);
+                                Map<String, Object> selectedItem = new HashMap<>();
+                                selectedItem.put("id", selectedItemMap.get("id"));
+                                selectedItem.put("name", selectedItemMap.get("name"));
+                                selectedItem.put("price", selectedItemMap.get("price"));
+                                
+                                Object selectedItemPrice = selectedItemMap.get("price");
+                                if (selectedItemPrice instanceof Number) {
+                                    totalPrice += ((Number) selectedItemPrice).doubleValue();
+                                }
+                                
+                                selectedItemsContainer.put(String.valueOf(i), selectedItem);
+                            }
+                            
+                            newCustomizationData.put("selectedItems", selectedItemsContainer);
+                        }
+                        
+                        // Add the "0" level structure
+                        Map<String, Object> customizationContainer = new HashMap<>();
+                        customizationContainer.put("0", newCustomizationData);
+                        customizationsMap.put(customizationId, customizationContainer);
+                    }
+                }
+            }
+        }
+        
+        // Add customizations to cartItemData
+        cartItemData.put("customizations", customizationsMap);
+        cartItemData.put("totalPrice", totalPrice);
+
+        // Save the cart item data
+        cartItemRef.setValue(cartItemData)
             .addOnSuccessListener(aVoid -> {
-                Toast.makeText(context, "Items added to cart", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Item added to cart", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Successfully saved cart item with ID: " + cartItemId);
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(context, "Failed to add items to cart. Please try again.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Failed to add item to cart. Please try again.", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error adding item to cart", e);
             });
     }
 

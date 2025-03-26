@@ -342,7 +342,7 @@ public class CartFragment extends Fragment implements CartAdapter.CartItemListen
             itemRef.removeValue()
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "Successfully removed item from Firebase: " + itemId);
-                    Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Item removed from cart", Toast.LENGTH_SHORT).show();
                     
                     // Note: We don't need to manually update the UI or local list
                     // because the ValueEventListener will trigger and reload everything

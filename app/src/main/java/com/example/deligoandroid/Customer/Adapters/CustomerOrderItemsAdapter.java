@@ -10,24 +10,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.Customer.Models.OrderItem;
 import com.example.deligoandroid.R;
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class CustomerOrderItemsAdapter extends RecyclerView.Adapter<CustomerOrderItemsAdapter.ViewHolder> {
     private static final String TAG = "CustomerOrderItemsAdapter";
     private List<OrderItem> items;
     private NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.US);
 
-    public CustomerOrderItemsAdapter(List<Map<String, Object>> itemMaps, Map<String, Object> customizations) {
-        this.items = new ArrayList<>();
-        if (itemMaps != null) {
-            for (Map<String, Object> itemMap : itemMaps) {
-                OrderItem item = OrderItem.fromMap(itemMap, customizations);
-                items.add(item);
-            }
-        }
+    public CustomerOrderItemsAdapter(List<OrderItem> items) {
+        this.items = items;
     }
 
     @NonNull
@@ -79,16 +71,13 @@ public class CustomerOrderItemsAdapter extends RecyclerView.Adapter<CustomerOrde
                         }
                     }
                 }
-            } else {
-                Log.d(TAG, "Item has no customizations");
-            }
-            
-            // Set customizations text if any
-            if (customizationsText.length() > 0) {
+                
+                // Set customizations text
                 holder.itemCustomizations.setVisibility(View.VISIBLE);
-                holder.itemCustomizations.setText(customizationsText.toString());
+                holder.itemCustomizations.setText(customizationsText.toString().trim());
             } else {
                 holder.itemCustomizations.setVisibility(View.GONE);
+                Log.d(TAG, "Item has no customizations");
             }
             
             // Calculate total price
