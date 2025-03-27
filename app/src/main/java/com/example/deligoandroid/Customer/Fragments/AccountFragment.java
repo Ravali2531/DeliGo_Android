@@ -26,6 +26,7 @@ public class AccountFragment extends Fragment {
     private FragmentCustomerAccountBinding binding;
     private FirebaseAuth auth;
     private DatabaseReference userRef;
+    private ValueEventListener userDataListener;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -52,6 +53,8 @@ public class AccountFragment extends Fragment {
     }
 
     private void setupUI() {
+        if (binding == null) return;
+
         // Edit Profile Button
         binding.editProfileButton.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), EditProfileActivity.class);
@@ -69,31 +72,42 @@ public class AccountFragment extends Fragment {
     }
 
     private void loadUserData() {
-        if (auth.getCurrentUser() != null) {
-            // Set email
-            binding.emailText.setText(auth.getCurrentUser().getEmail());
+        if (auth.getCurrentUser() == null || userRef == null || binding == null) return;
 
-            // Load other user data from Firebase
-            userRef.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        String fullName = snapshot.child("fullName").getValue(String.class);
-                        String phone = snapshot.child("phone").getValue(String.class);
-                        String address = snapshot.child("address").getValue(String.class);
+        // Set email
+        binding.emailText.setText(auth.getCurrentUser().getEmail());
 
-                        binding.nameText.setText(fullName);
-                        binding.phoneText.setText(phone);
-                        binding.addressText.setText(address);
-                    }
+        // Remove any existing listener
+        if (userDataListener != null) {
+            userRef.removeEventListener(userDataListener);
+        }
+
+        // Create and add the new listener
+        userDataListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (!isAdded() || binding == null) return;
+
+                if (snapshot.exists()) {
+                    String fullName = snapshot.child("fullName").getValue(String.class);
+                    String phone = snapshot.child("phone").getValue(String.class);
+                    String address = snapshot.child("address").getValue(String.class);
+
+                    if (binding.nameText != null) binding.nameText.setText(fullName);
+                    if (binding.phoneText != null) binding.phoneText.setText(phone);
+                    if (binding.addressText != null) binding.addressText.setText(address);
                 }
+            }
 
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                if (isAdded()) {
                     Toast.makeText(getContext(), "Failed to load profile", Toast.LENGTH_SHORT).show();
                 }
-            });
-        }
+            }
+        };
+
+        userRef.addValueEventListener(userDataListener);
     }
 
     private void signOut() {
@@ -106,6 +120,10 @@ public class AccountFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        // Remove the Firebase listener
+        if (userRef != null && userDataListener != null) {
+            userRef.removeEventListener(userDataListener);
+        }
         binding = null;
     }
 } 

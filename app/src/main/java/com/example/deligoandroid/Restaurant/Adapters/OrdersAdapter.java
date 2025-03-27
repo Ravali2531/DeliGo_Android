@@ -74,10 +74,12 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         // Set status with appropriate color
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
         String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
+        String deliveryOption = order.getDeliveryOption() != null ? order.getDeliveryOption().toLowerCase() : "";
         
         Log.d("OrdersAdapter", "Order ID: " + orderId);
         Log.d("OrdersAdapter", "Status: " + status);
         Log.d("OrdersAdapter", "Order Status: " + orderStatus);
+        Log.d("OrdersAdapter", "Delivery Option: " + deliveryOption);
         
         // Set the displayed status text
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
@@ -104,7 +106,6 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
                 holder.orderStatus.setBackgroundResource(R.color.green);
             } else if (orderStatus.equals("ready_for_pickup")) {
                 // Ready for pickup - show appropriate button based on delivery option
-                String deliveryOption = order.getDeliveryOption();
                 Log.d("OrdersAdapter", "Order is ready for pickup, delivery option: " + deliveryOption);
                 if ("delivery".equalsIgnoreCase(deliveryOption)) {
                     // For delivery orders, show assign driver button
@@ -120,10 +121,16 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             } else if (orderStatus.equals("assigned_driver") || 
                       orderStatus.equals("driver_accepted") || 
                       orderStatus.equals("out_for_delivery")) {
-                // Driver assigned/accepted or out for delivery - show mark as delivered button
-                Log.d("OrdersAdapter", "Showing mark delivered button for order with driver");
-                holder.markDeliveredButton.setVisibility(View.VISIBLE);
-                holder.orderStatus.setBackgroundResource(R.color.purple);
+                // Driver assigned/accepted or out for delivery - only show mark as delivered for pickup orders
+                if (!"delivery".equalsIgnoreCase(deliveryOption)) {
+                    Log.d("OrdersAdapter", "Showing mark delivered button for pickup order with driver");
+                    holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                    holder.orderStatus.setBackgroundResource(R.color.purple);
+                } else {
+                    Log.d("OrdersAdapter", "Hiding mark delivered button for delivery order with driver");
+                    holder.markDeliveredButton.setVisibility(View.GONE);
+                    holder.orderStatus.setBackgroundResource(R.color.blue);
+                }
             }
         } else if (status.equals("delivered")) {
             Log.d("OrdersAdapter", "Order is delivered");
@@ -132,9 +139,9 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
         // Set customer name and delivery option
         String customerName = order.getCustomerName() != null ? order.getCustomerName() : "Unknown Customer";
-        String deliveryOption = order.getDeliveryOption() != null ? order.getDeliveryOption() : "Unknown";
+        String displayDeliveryOption = deliveryOption != null && !deliveryOption.isEmpty() ? deliveryOption : "Unknown";
         holder.customerName.setText(customerName);
-        holder.deliveryOption.setText(deliveryOption);
+        holder.deliveryOption.setText(displayDeliveryOption);
 
         // Set total amount with proper formatting
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.US);

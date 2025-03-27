@@ -300,6 +300,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         }
 
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
+        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference("drivers").child(driverId);
         
         // First check if the order exists and is still available
         orderRef.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -332,12 +333,23 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                 updates.put("order_status", "driver_accepted");
                 updates.put("driverAccepted", true);
 
+                // First update the order status
                 orderRef.updateChildren(updates)
                     .addOnSuccessListener(aVoid -> {
-                        Log.d("DriverOrdersAdapter", "Successfully accepted order: " + orderId);
-                        if (context != null) {
-                            Toast.makeText(context, "Order accepted", Toast.LENGTH_SHORT).show();
-                        }
+                        // Then update driver availability
+                        driverRef.child("isAvailable").setValue(false)
+                            .addOnSuccessListener(aVoid2 -> {
+                                Log.d("DriverOrdersAdapter", "Successfully accepted order and updated availability: " + orderId);
+                                if (context != null) {
+                                    Toast.makeText(context, "Order accepted", Toast.LENGTH_SHORT).show();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("DriverOrdersAdapter", "Failed to update driver availability: " + e.getMessage());
+                                if (context != null) {
+                                    Toast.makeText(context, "Warning: Order accepted but availability update failed", Toast.LENGTH_SHORT).show();
+                                }
+                            });
                     })
                     .addOnFailureListener(e -> {
                         Log.e("DriverOrdersAdapter", "Failed to accept order: " + e.getMessage());
