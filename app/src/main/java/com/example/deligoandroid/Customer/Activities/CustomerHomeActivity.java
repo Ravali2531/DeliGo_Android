@@ -387,8 +387,39 @@ public class CustomerHomeActivity extends AppCompatActivity
                             restaurant.setPhone("");
                             restaurant.setPriceRange("$");
                             restaurant.setImageURL("");
-                            restaurant.setRating(0.0);
-                            restaurant.setNumberOfRatings(0);
+
+                            // Get ratings data from ratingsandcomments
+                            DataSnapshot ratingsSnapshot = snapshot.child("ratingsandcomments").child("rating");
+                            if (ratingsSnapshot.exists()) {
+                                double totalRating = 0.0;
+                                int ratingCount = 0;
+                                
+                                for (DataSnapshot customerRatingSnapshot : ratingsSnapshot.getChildren()) {
+                                    Double rating = customerRatingSnapshot.getValue(Double.class);
+                                    if (rating != null) {
+                                        totalRating += rating;
+                                        ratingCount++;
+                                    }
+                                }
+                                
+                                if (ratingCount > 0) {
+                                    double averageRating = totalRating / ratingCount;
+                                    restaurant.setRating(averageRating);
+                                    restaurant.setNumberOfRatings(ratingCount);
+                                    Log.d("CustomerHomeActivity", "Restaurant " + restaurant.getName() + 
+                                        " has rating: " + averageRating + " from " + ratingCount + " ratings");
+                                } else {
+                                    restaurant.setRating(0.0);
+                                    restaurant.setNumberOfRatings(0);
+                                    Log.d("CustomerHomeActivity", "Restaurant " + restaurant.getName() + 
+                                        " has no ratings");
+                                }
+                            } else {
+                                restaurant.setRating(0.0);
+                                restaurant.setNumberOfRatings(0);
+                                Log.d("CustomerHomeActivity", "Restaurant " + restaurant.getName() + 
+                                    " has no ratings node");
+                            }
 
                             allRestaurants.add(restaurant);
                             hasRestaurants = true;
