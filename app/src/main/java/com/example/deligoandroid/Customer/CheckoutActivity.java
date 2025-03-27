@@ -41,6 +41,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.stripe.android.PaymentConfiguration;
@@ -644,15 +645,16 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
 
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         
-        // First get the customer's phone number
+        // First get the customer's details
         DatabaseReference customerRef = FirebaseDatabase.getInstance()
                 .getReference("customers")
-                .child(userId)
-                .child("phone");
+                .child(userId);
                 
         customerRef.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                String phoneNumber = task.getResult().getValue(String.class);
+                DataSnapshot customerSnapshot = task.getResult();
+                String phoneNumber = customerSnapshot.child("phone").getValue(String.class);
+                String customerName = customerSnapshot.child("fullName").getValue(String.class);
                 
                 // Now proceed with order creation
                 DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
@@ -661,7 +663,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 Map<String, Object> orderData = new HashMap<>();
                 orderData.put("customerId", userId);
                 orderData.put("userId", userId);
-                orderData.put("customerName", FirebaseAuth.getInstance().getCurrentUser().getDisplayName());
+                orderData.put("customerName", customerName);
                 orderData.put("customerPhone", phoneNumber);
                 orderData.put("createdAt", System.currentTimeMillis());
                 orderData.put("updatedAt", System.currentTimeMillis());
@@ -793,7 +795,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                                     Toast.LENGTH_SHORT).show();
                         });
             } else {
-                Toast.makeText(this, "Failed to get customer phone number", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to get customer details", Toast.LENGTH_SHORT).show();
             }
         });
     }
