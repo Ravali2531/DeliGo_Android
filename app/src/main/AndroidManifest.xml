@@ -178,6 +178,11 @@
         <activity android:name=".Driver.Activities.TipHistoryActivity"
             android:label="Tip History" />
 
+        <activity android:name=".Driver.Activities.DriverEarningsActivity"
+            android:label="Earnings"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
