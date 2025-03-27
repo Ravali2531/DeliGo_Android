@@ -27,6 +27,26 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/itemCustomizations"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#757575"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"/>
+
+    <TextView
+        android:id="@+id/itemSubtotal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="#1976D2"
+        android:textStyle="bold"
+        android:gravity="end"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"/>
+
+    <TextView
         android:id="@+id/specialInstructions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

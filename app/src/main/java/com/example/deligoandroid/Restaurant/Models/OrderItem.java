@@ -11,7 +11,7 @@ public class OrderItem {
     private int quantity;
     private double price;
     private String specialInstructions;
-    private List<Customization> customizations;
+    private List<CustomizationOption> customizations;
 
     public OrderItem() {
         // Initialize with default values
@@ -52,24 +52,49 @@ public class OrderItem {
     public void setSpecialInstructions(String specialInstructions) { this.specialInstructions = specialInstructions; }
 
     @PropertyName("customizations")
-    public List<Customization> getCustomizations() { return customizations != null ? customizations : new ArrayList<>(); }
+    public List<CustomizationOption> getCustomizations() { return customizations != null ? customizations : new ArrayList<>(); }
     @PropertyName("customizations")
-    public void setCustomizations(List<Customization> customizations) { this.customizations = customizations; }
+    public void setCustomizations(List<CustomizationOption> customizations) { this.customizations = customizations; }
 
-    public static class Customization {
-        private String choice;
+    public static class CustomizationOption {
+        private String optionId;
+        private String optionName;
+        private List<SelectedItem> selectedItems;
+
+        public CustomizationOption() {
+            this.selectedItems = new ArrayList<>();
+        }
+
+        @PropertyName("optionId")
+        public String getOptionId() { return optionId; }
+        @PropertyName("optionId")
+        public void setOptionId(String optionId) { this.optionId = optionId; }
+
+        @PropertyName("optionName")
+        public String getOptionName() { return optionName; }
+        @PropertyName("optionName")
+        public void setOptionName(String optionName) { this.optionName = optionName; }
+
+        @PropertyName("selectedItems")
+        public List<SelectedItem> getSelectedItems() { return selectedItems; }
+        @PropertyName("selectedItems")
+        public void setSelectedItems(List<SelectedItem> selectedItems) { this.selectedItems = selectedItems; }
+    }
+
+    public static class SelectedItem {
+        private String id;
         private String name;
         private double price;
 
-        public Customization() {}
+        public SelectedItem() {}
 
-        @PropertyName("choice")
-        public String getChoice() { return choice != null ? choice : ""; }
-        @PropertyName("choice")
-        public void setChoice(String choice) { this.choice = choice; }
+        @PropertyName("id")
+        public String getId() { return id; }
+        @PropertyName("id")
+        public void setId(String id) { this.id = id; }
 
         @PropertyName("name")
-        public String getName() { return name != null ? name : ""; }
+        public String getName() { return name; }
         @PropertyName("name")
         public void setName(String name) { this.name = name; }
 

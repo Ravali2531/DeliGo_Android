@@ -38,8 +38,12 @@ public class AdminActivity extends AppCompatActivity {
         restaurantCountBadge = findViewById(R.id.restaurantCountBadge);
 
         // Setup click listeners
-        userManagementBtn.setOnClickListener(v -> 
-            startActivity(new Intent(this, ManageUsersActivity.class)));
+        chatManagementBtn.setOnClickListener(v ->
+            startActivity(new Intent(this, ChatManagementActivity.class)));
+
+        // Setup click listeners
+        userManagementBtn.setOnClickListener(v ->
+                startActivity(new Intent(this, ManageUsersActivity.class)));
         
         logoutButton.setOnClickListener(v -> handleLogout());
         

@@ -53,6 +53,16 @@
         <activity android:name=".Admin.ManageUsersActivity" />
 
         <activity
+            android:name=".Admin.ChatManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
+            android:name=".Admin.ChatDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
             android:name=".Driver.DriverDocumentsActivity"
             android:exported="false" />
 
@@ -127,6 +137,39 @@
             android:name=".Driver.DocumentsUnderReviewActivity"
             android:exported="false"
             android:noHistory="true" />
+
+        <activity
+            android:name=".Customer.CustomerSupportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
+            android:name=".Driver.DriverSupportActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".Restaurant.RestaurantSupportActivity"
+            android:exported="false"/>
+
+        <activity
+            android:name=".Customer.EditProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:parentActivityName=".Customer.CustomerMainActivity" />
+
+        <activity
+            android:name=".Driver.EditDriverProfileActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.StoreHoursActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
+            android:name=".Customer.Activities.RestaurantReviewsActivity"
+            android:exported="false" />
 
         <!-- Google Maps API Key -->
         <meta-data

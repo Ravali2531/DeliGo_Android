@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.UUID;
 
 public class CartItem implements Serializable {
     private String id;
@@ -48,14 +49,17 @@ public class CartItem implements Serializable {
         this.timestamp = System.currentTimeMillis();
         this.totalPrice = menuItem.getPrice();
         this.restaurantId = ""; // Will be set when adding to cart
-        // ID will be set when customizations are added
         this.specialInstructions = "";
         this.customizationsList = new ArrayList<>();
+        generateUniqueId(); // Generate random ID when creating new cart item
     }
 
     // Getters and Setters with null checks
     public String getId() {
-        return id != null ? id : "";
+        if (id == null) {
+            id = ""; // Ensure never returning null
+        }
+        return id;
     }
 
     public void setId(String id) {
@@ -124,7 +128,7 @@ public class CartItem implements Serializable {
 
     public void setCustomizations(Map<String, List<CustomizationSelection>> customizations) {
         this.customizations = customizations;
-        generateUniqueId(); // Generate new ID when customizations change
+        // Don't regenerate ID here as it breaks removal
     }
 
     public double getTotalPrice() {
@@ -175,27 +179,12 @@ public class CartItem implements Serializable {
         this.totalPrice = total;
     }
 
-    // Generate a unique ID based on menu item and customizations
+    // Generate a random unique ID using UUID - only for NEW cart items
     public void generateUniqueId() {
-        StringBuilder idBuilder = new StringBuilder(menuItemId);
-        
-        if (customizations != null && !customizations.isEmpty()) {
-            for (Map.Entry<String, List<CustomizationSelection>> entry : customizations.entrySet()) {
-                idBuilder.append("_").append(entry.getKey());
-                List<CustomizationSelection> selections = entry.getValue();
-                if (selections != null) {
-                    for (CustomizationSelection selection : selections) {
-                        if (selection.getSelectedItems() != null) {
-                            for (SelectedItem item : selection.getSelectedItems()) {
-                                idBuilder.append("_").append(item.getName());
-                            }
-                        }
-                    }
-                }
-            }
+        // Only generate a new ID if the current one is empty
+        if (id == null || id.isEmpty()) {
+            this.id = UUID.randomUUID().toString();
         }
-        
-        this.id = idBuilder.toString();
     }
 
     public Map<String, Object> toMap() {

@@ -2,6 +2,7 @@ package com.example.deligoandroid.Models;
 
 import java.util.List;
 import java.util.Map;
+import android.util.Log;
 
 public class Order {
     private String orderId;
@@ -21,14 +22,29 @@ public class Order {
     private double deliveryLatitude;
     private double deliveryLongitude;
     private long timestamp;
+    private String id;
+    private Double deliveryFee;
+    private Object total;  // Added for Firebase total field
+    private Map<String, Object> customizations;  // Updated type to match Firebase structure
+    private Address address;
 
     public Order() {
         // Required empty constructor for Firebase
     }
 
     // Getters and Setters
-    public String getOrderId() { return orderId; }
-    public void setOrderId(String orderId) { this.orderId = orderId; }
+    public String getOrderId() {
+        // If orderId is null, fallback to id
+        return orderId != null ? orderId : id;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+        // Also set id if it's not already set
+        if (this.id == null) {
+            this.id = orderId;
+        }
+    }
 
     public String getCustomerId() { return customerId; }
     public void setCustomerId(String customerId) { this.customerId = customerId; }
@@ -78,5 +94,34 @@ public class Order {
     public long getTimestamp() { return timestamp; }
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 
-    public String getId() { return orderId; }
+    public String getId() {
+        // Log the ID value for debugging
+        Log.d("Order", "Getting ID: " + id);
+        return id;
+    }
+
+    public void setId(String id) {
+        // Log the ID being set
+        Log.d("Order", "Setting ID: " + id);
+        this.id = id;
+        // Also set orderId for compatibility
+        this.orderId = id;
+    }
+
+    public Map<String, Object> getCustomizations() { return customizations; }
+    public void setCustomizations(Map<String, Object> customizations) { this.customizations = customizations; }
+
+    public Object getTotal() { return total; }
+    public void setTotal(Object total) { this.total = total; }
+
+    public Double getDeliveryFee() { return deliveryFee; }
+    public void setDeliveryFee(Double deliveryFee) { this.deliveryFee = deliveryFee; }
+
+    public Address getAddress() {
+        return address;
+    }
+
+    public void setAddress(Address address) {
+        this.address = address;
+    }
 } 

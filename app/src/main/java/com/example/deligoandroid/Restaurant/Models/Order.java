@@ -8,6 +8,7 @@ public class Order {
     private String id;
     private String customerId;
     private String customerName;
+    private String customerPhone;
     private String restaurantId;
     private String status; // PENDING, ACCEPTED, PREPARING, READY, PICKED_UP, DELIVERED, CANCELLED
     private String orderStatus;
@@ -27,6 +28,7 @@ public class Order {
         this.totalAmount = 0.0;
         this.deliveryFee = 0.0;
         this.status = "NEW";
+        this.customerPhone = "";
     }
 
     @PropertyName("id")
@@ -43,6 +45,11 @@ public class Order {
     public String getCustomerName() { return customerName != null ? customerName : ""; }
     @PropertyName("customerName")
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    @PropertyName("customerPhone")
+    public String getCustomerPhone() { return customerPhone != null ? customerPhone : ""; }
+    @PropertyName("customerPhone")
+    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
 
     @PropertyName("restaurantId")
     public String getRestaurantId() { return restaurantId != null ? restaurantId : ""; }

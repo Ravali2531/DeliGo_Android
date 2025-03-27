@@ -72,6 +72,17 @@
                 android:textColor="@android:color/darker_gray"
                 android:textSize="14sp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/viewReviewsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="View Reviews"
+                android:textAllCaps="false"
+                app:icon="@drawable/ic_star"
+                app:iconGravity="textStart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
         </LinearLayout>
 
         <!-- Search Bar -->

@@ -28,6 +28,7 @@ import android.app.AlertDialog;
 import java.util.HashMap;
 import java.util.Map;
 import com.google.firebase.database.Query;
+import android.util.Log;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -45,6 +46,11 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
     public OrdersAdapter(String restaurantId) {
         this.restaurantId = restaurantId;
+    }
+
+    public void clearOrders() {
+        this.orders.clear();
+        notifyDataSetChanged();
     }
 
     @Override
@@ -69,6 +75,10 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
         String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
         
+        Log.d("OrdersAdapter", "Order ID: " + orderId);
+        Log.d("OrdersAdapter", "Status: " + status);
+        Log.d("OrdersAdapter", "Order Status: " + orderStatus);
+        
         // Set the displayed status text
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
         holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + displayStatus.substring(1));
@@ -80,24 +90,30 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.markDeliveredButton.setVisibility(View.GONE);
         
         // Show appropriate buttons based on status
-        if (status.equals("new") || status.equals("pending")) {
-            // New or pending order - show accept button
+        if (status.equals("pending")) {
+            // New/pending order - show accept button
+            Log.d("OrdersAdapter", "Showing accept button for pending order");
             holder.acceptButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
         } else if (status.equals("in_progress")) {
-            if (orderStatus.equals("accepted")) {
+            Log.d("OrdersAdapter", "Order is in progress");
+            if (orderStatus == null || orderStatus.isEmpty() || orderStatus.equals("accepted")) {
                 // Order accepted - show ready for pickup button
+                Log.d("OrdersAdapter", "Showing ready for pickup button for accepted order");
                 holder.readyForPickupButton.setVisibility(View.VISIBLE);
                 holder.orderStatus.setBackgroundResource(R.color.green);
             } else if (orderStatus.equals("ready_for_pickup")) {
                 // Ready for pickup - show appropriate button based on delivery option
                 String deliveryOption = order.getDeliveryOption();
+                Log.d("OrdersAdapter", "Order is ready for pickup, delivery option: " + deliveryOption);
                 if ("delivery".equalsIgnoreCase(deliveryOption)) {
                     // For delivery orders, show assign driver button
+                    Log.d("OrdersAdapter", "Showing assign driver button for delivery order");
                     holder.assignDriverButton.setVisibility(View.VISIBLE);
                     holder.orderStatus.setBackgroundResource(R.color.blue);
                 } else {
                     // For pickup orders, show mark as delivered button
+                    Log.d("OrdersAdapter", "Showing mark delivered button for pickup order");
                     holder.markDeliveredButton.setVisibility(View.VISIBLE);
                     holder.orderStatus.setBackgroundResource(R.color.purple);
                 }
@@ -105,10 +121,12 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
                       orderStatus.equals("driver_accepted") || 
                       orderStatus.equals("out_for_delivery")) {
                 // Driver assigned/accepted or out for delivery - show mark as delivered button
+                Log.d("OrdersAdapter", "Showing mark delivered button for order with driver");
                 holder.markDeliveredButton.setVisibility(View.VISIBLE);
                 holder.orderStatus.setBackgroundResource(R.color.purple);
             }
         } else if (status.equals("delivered")) {
+            Log.d("OrdersAdapter", "Order is delivered");
             holder.orderStatus.setBackgroundResource(R.color.green);
         }
 
@@ -170,15 +188,18 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
         switch (newStatus) {
             case "accepted":
+                // When accepting order: status -> in_progress, order_status -> accepted
                 updates.put("status", "in_progress");
                 updates.put("order_status", "accepted");
                 message = "Order accepted";
                 break;
             case "ready_for_pickup":
+                // When marking ready: keep status as in_progress, update order_status -> ready_for_pickup
                 updates.put("order_status", "ready_for_pickup");
                 message = "Order marked as ready for pickup";
                 break;
             case "delivered":
+                // When marking delivered: both status and order_status should be delivered
                 updates.put("status", "delivered");
                 updates.put("order_status", "delivered");
                 message = "Order marked as delivered";

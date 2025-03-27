@@ -5,74 +5,108 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.ImageView;
-import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
-import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.deligoandroid.Driver.Adapters.DriverOrdersAdapter;
+import com.example.deligoandroid.Models.Order;
 import com.example.deligoandroid.R;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.tabs.TabLayoutMediator;
-import androidx.viewpager2.widget.ViewPager2;
+import com.google.firebase.database.ValueEventListener;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DriverOrdersFragment extends Fragment {
-    private TabLayout tabLayout;
-    private ViewPager2 viewPager;
-    private DatabaseReference databaseRef;
-    private String userId;
+    private RecyclerView ordersRecyclerView;
+    private TextView noOrdersMessage;
+    private DriverOrdersAdapter adapter;
+    private DatabaseReference ordersRef;
+    private ValueEventListener ordersListener;
+    private String driverId;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_driver_orders, container, false);
-
-        // Initialize Firebase
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseRef = FirebaseDatabase.getInstance().getReference()
-                .child("drivers").child(userId).child("orders");
-
-        // Setup header
-        View header = view.findViewById(R.id.header);
-        ((TextView) header.findViewById(R.id.headerTitle)).setText("DeliGo Driver");
-
+        
         // Initialize views
-        tabLayout = view.findViewById(R.id.tabLayout);
-        viewPager = view.findViewById(R.id.viewPager);
-
-        // Setup ViewPager
-        setupViewPager();
-
+        ordersRecyclerView = view.findViewById(R.id.ordersRecyclerView);
+        noOrdersMessage = view.findViewById(R.id.noOrdersMessage);
+        
+        // Get current driver ID
+        driverId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        
+        // Setup RecyclerView
+        ordersRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new DriverOrdersAdapter(driverId);
+        ordersRecyclerView.setAdapter(adapter);
+        
+        // Initialize Firebase
+        ordersRef = FirebaseDatabase.getInstance().getReference("orders");
+        
+        // Load orders
+        loadOrders();
+        
         return view;
     }
 
-    private void setupViewPager() {
-        OrdersPagerAdapter pagerAdapter = new OrdersPagerAdapter(requireActivity());
-        viewPager.setAdapter(pagerAdapter);
+    private void loadOrders() {
+        ordersListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                List<Order> ordersList = new ArrayList<>();
+                
+                for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
+                    try {
+                        Order order = orderSnapshot.getValue(Order.class);
+                        if (order != null) {
+                            // Set the order ID
+                            order.setId(orderSnapshot.getKey());
+                            
+                            // Check if this order is assigned to the current driver
+                            String orderDriverId = order.getDriverId();
+                            if (orderDriverId != null && orderDriverId.equals(driverId)) {
+                                ordersList.add(order);
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Log the error but continue processing other orders
+                        e.printStackTrace();
+                    }
+                }
+                
+                // Update UI based on whether there are orders
+                if (ordersList.isEmpty()) {
+                    ordersRecyclerView.setVisibility(View.GONE);
+                    noOrdersMessage.setVisibility(View.VISIBLE);
+                } else {
+                    ordersRecyclerView.setVisibility(View.VISIBLE);
+                    noOrdersMessage.setVisibility(View.GONE);
+                    adapter.setOrders(ordersList);
+                }
+            }
 
-        // Connect TabLayout with ViewPager2
-        new TabLayoutMediator(tabLayout, viewPager,
-                (tab, position) -> tab.setText(position == 0 ? "Current" : "Past")
-        ).attach();
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                // Handle the error
+                noOrdersMessage.setText("Error loading orders");
+                noOrdersMessage.setVisibility(View.VISIBLE);
+                ordersRecyclerView.setVisibility(View.GONE);
+            }
+        };
+        
+        ordersRef.addValueEventListener(ordersListener);
     }
 
-    private class OrdersPagerAdapter extends FragmentStateAdapter {
-        public OrdersPagerAdapter(@NonNull FragmentActivity fragmentActivity) {
-            super(fragmentActivity);
-        }
-
-        @NonNull
-        @Override
-        public Fragment createFragment(int position) {
-            return position == 0 ? new CurrentOrdersFragment() : new PastOrdersFragment();
-        }
-
-        @Override
-        public int getItemCount() {
-            return 2;
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Remove the listener when the fragment is destroyed
+        if (ordersRef != null && ordersListener != null) {
+            ordersRef.removeEventListener(ordersListener);
         }
     }
 } 
