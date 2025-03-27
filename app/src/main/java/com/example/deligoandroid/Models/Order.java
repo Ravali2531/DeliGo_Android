@@ -3,6 +3,7 @@ package com.example.deligoandroid.Models;
 import java.util.List;
 import java.util.Map;
 import android.util.Log;
+import java.util.HashMap;
 
 public class Order {
     private String orderId;
@@ -123,5 +124,29 @@ public class Order {
 
     public void setAddress(Address address) {
         this.address = address;
+    }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("orderId", getOrderId());
+        map.put("customerId", customerId);
+        map.put("customerName", customerName);
+        map.put("restaurantId", restaurantId);
+        map.put("restaurantName", restaurantName);
+        map.put("items", items);
+        map.put("total", total);
+        map.put("status", status);
+        map.put("orderStatus", orderStatus);
+        map.put("driverId", driverId);
+        map.put("driverName", driverName);
+        map.put("driverAccepted", driverAccepted);
+        map.put("deliveryOption", deliveryOption);
+        map.put("deliveryAddress", deliveryAddress);
+        map.put("deliveryLatitude", deliveryLatitude);
+        map.put("deliveryLongitude", deliveryLongitude);
+        map.put("timestamp", timestamp);
+        map.put("deliveryFee", deliveryFee);
+        map.put("customizations", customizations);
+        return map;
     }
 } 

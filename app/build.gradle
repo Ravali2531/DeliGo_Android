@@ -35,6 +35,10 @@ android {
     }
 }
 
+configurations.all {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+}
+
 dependencies {
     implementation libs.swiperefreshlayout
     def nav_version = "2.7.7"
@@ -74,6 +78,20 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
+    
+    // iText PDF Dependencies
+    def itext_version = '7.1.16'
+    implementation "com.itextpdf:barcodes:${itext_version}"
+    implementation "com.itextpdf:font-asian:${itext_version}"
+    implementation "com.itextpdf:forms:${itext_version}"
+    implementation "com.itextpdf:hyph:${itext_version}"
+    implementation "com.itextpdf:io:${itext_version}"
+    implementation "com.itextpdf:kernel:${itext_version}"
+    implementation "com.itextpdf:layout:${itext_version}"
+    implementation "com.itextpdf:pdfa:${itext_version}"
+    implementation "com.itextpdf:sign:${itext_version}"
+    implementation "com.itextpdf:styled-xml-parser:${itext_version}"
+    implementation "com.itextpdf:svg:${itext_version}"
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

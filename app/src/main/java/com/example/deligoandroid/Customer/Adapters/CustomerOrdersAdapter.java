@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.Models.Order;
 import com.example.deligoandroid.Customer.Models.OrderItem;
 import com.example.deligoandroid.R;
+import com.example.deligoandroid.Utils.PdfGenerator;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -41,6 +42,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ArrayList;
+import java.io.File;
 
 public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAdapter.ViewHolder> {
     private static final String TAG = "CustomerOrdersAdapter";
@@ -233,6 +235,22 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                 
                 // Handle reorder button click
                 holder.reorderButton.setOnClickListener(v -> showReorderConfirmationDialog(order));
+
+                // Handle download receipt button click
+                holder.downloadReceiptButton.setOnClickListener(v -> {
+                    Map<String, Object> orderMap = order.toMap();
+                    PdfGenerator.generateOrderReceipt(holder.itemView.getContext(), orderMap, file -> {
+                        if (file != null) {
+                            Toast.makeText(holder.itemView.getContext(), 
+                                "Receipt saved!\n\nTo find it:\n1. Open Files app or File Manager\n2. Go to Downloads > DeliGo_Receipts", 
+                                Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(holder.itemView.getContext(), 
+                                "Failed to generate receipt", 
+                                Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                });
             } else {
                 holder.deliveredOrderActions.setVisibility(View.GONE);
             }
@@ -609,7 +627,7 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         TextView orderNumber, orderStatus, restaurantName, deliveryType, deliveryFee, totalAmount;
         RecyclerView orderItemsRecyclerView;
         LinearLayout deliveredOrderActions;
-        MaterialButton rateOrderButton, reorderButton;
+        MaterialButton rateOrderButton, reorderButton, downloadReceiptButton;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -623,6 +641,7 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             deliveredOrderActions = itemView.findViewById(R.id.deliveredOrderActions);
             rateOrderButton = itemView.findViewById(R.id.rateOrderButton);
             reorderButton = itemView.findViewById(R.id.reorderButton);
+            downloadReceiptButton = itemView.findViewById(R.id.downloadReceiptButton);
         }
     }
 } 
