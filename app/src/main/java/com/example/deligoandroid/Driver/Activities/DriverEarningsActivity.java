@@ -32,9 +32,10 @@ import java.util.HashMap;
 
 public class DriverEarningsActivity extends AppCompatActivity {
     private static final String TAG = "DriverEarningsActivity";
-    private static final int TAB_DAILY = 0;
-    private static final int TAB_WEEKLY = 1;
-    private static final int TAB_MONTHLY = 2;
+    private static final int TAB_ALL = 0;
+    private static final int TAB_DAILY = 1;
+    private static final int TAB_WEEKLY = 2;
+    private static final int TAB_MONTHLY = 3;
 
     private TextView periodText;
     private TextView totalEarnings;
@@ -68,8 +69,8 @@ public class DriverEarningsActivity extends AppCompatActivity {
         dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
         calendar = Calendar.getInstance();
 
-        // Load initial data (Daily by default)
-        loadEarningsData(TAB_DAILY);
+        // Load initial data (All by default)
+        loadEarningsData(TAB_ALL);
     }
 
     private void initializeViews() {
@@ -117,73 +118,24 @@ public class DriverEarningsActivity extends AppCompatActivity {
     }
 
     private void loadEarningsData(int tabPosition) {
+        // For "All" tab, we don't need time constraints
+        if (tabPosition == TAB_ALL) {
+            loadAllEarnings();
+            return;
+        }
+
         long startTime = getStartTime(tabPosition);
         long endTime = System.currentTimeMillis();
 
         Log.d(TAG, "Loading earnings data from " + new Date(startTime) + " to " + new Date(endTime));
 
-        // First query orders by driverId to get all orders for this driver
+        // Query orders by driverId
         Query query = ordersRef.orderByChild("driverId").equalTo(currentUserId);
 
         query.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                List<Map<String, Object>> earningsList = new ArrayList<>();
-                double totalDeliveryFees = 0;
-                double totalTips = 0;
-                int totalDeliveries = 0;
-
-                for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
-                    try {
-                        String status = orderSnapshot.child("status").getValue(String.class);
-                        Long updatedAt = orderSnapshot.child("updatedAt").getValue(Long.class);
-                        
-                        // Skip if not delivered or updatedAt is outside our time range
-                        if (!"delivered".equals(status) || updatedAt == null || 
-                            updatedAt < startTime || updatedAt > endTime) {
-                            continue;
-                        }
-                        
-                        Log.d(TAG, "Processing delivered order: " + orderSnapshot.getKey() + 
-                              " | Updated at: " + new Date(updatedAt));
-
-                        Map<String, Object> earning = new HashMap<>();
-                        
-                        // Get order details
-                        earning.put("orderId", orderSnapshot.getKey());
-                        earning.put("timestamp", updatedAt); // Use updatedAt as delivery completion time
-                        earning.put("restaurantName", orderSnapshot.child("restaurantName").getValue(String.class));
-                        earning.put("deliveryAddress", orderSnapshot.child("deliveryAddress").getValue(String.class));
-                        
-                        // Get earnings details with proper type handling
-                        double deliveryFee = getDoubleValue(orderSnapshot.child("deliveryFee").getValue());
-                        double tipAmount = getDoubleValue(orderSnapshot.child("tipAmount").getValue());
-                        
-                        Log.d(TAG, "Order " + orderSnapshot.getKey() + 
-                              " | Delivery Fee: " + deliveryFee + 
-                              " | Tip: " + tipAmount);
-                        
-                        earning.put("deliveryFee", deliveryFee);
-                        earning.put("tipAmount", tipAmount);
-                        earning.put("total", deliveryFee + tipAmount);
-                        
-                        earningsList.add(earning);
-                        
-                        // Update totals
-                        totalDeliveryFees += deliveryFee;
-                        totalTips += tipAmount;
-                        totalDeliveries++;
-                    } catch (Exception e) {
-                        Log.e(TAG, "Error processing order " + orderSnapshot.getKey(), e);
-                    }
-                }
-
-                Log.d(TAG, "Found " + totalDeliveries + " deliveries" +
-                      " | Total Fees: " + totalDeliveryFees +
-                      " | Total Tips: " + totalTips);
-
-                // Update UI
-                updateUI(earningsList, totalDeliveryFees, totalTips, totalDeliveries, tabPosition);
+                processEarningsData(dataSnapshot, startTime, endTime, tabPosition);
             }
 
             @Override
@@ -193,6 +145,82 @@ public class DriverEarningsActivity extends AppCompatActivity {
                     "Failed to load earnings data", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void loadAllEarnings() {
+        Query query = ordersRef.orderByChild("driverId").equalTo(currentUserId);
+        query.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                processEarningsData(dataSnapshot, 0, Long.MAX_VALUE, TAB_ALL);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "Error loading all earnings data", databaseError.toException());
+                Toast.makeText(DriverEarningsActivity.this, 
+                    "Failed to load earnings data", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void processEarningsData(DataSnapshot dataSnapshot, long startTime, long endTime, int tabPosition) {
+        List<Map<String, Object>> earningsList = new ArrayList<>();
+        double totalDeliveryFees = 0;
+        double totalTips = 0;
+        int totalDeliveries = 0;
+
+        for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
+            try {
+                String status = orderSnapshot.child("status").getValue(String.class);
+                Long updatedAt = orderSnapshot.child("updatedAt").getValue(Long.class);
+                
+                // Skip if not delivered or updatedAt is outside our time range
+                if (!"delivered".equals(status) || updatedAt == null || 
+                    updatedAt < startTime || updatedAt > endTime) {
+                    continue;
+                }
+                
+                Log.d(TAG, "Processing delivered order: " + orderSnapshot.getKey() + 
+                      " | Updated at: " + new Date(updatedAt));
+
+                Map<String, Object> earning = new HashMap<>();
+                
+                // Get order details
+                earning.put("orderId", orderSnapshot.getKey());
+                earning.put("timestamp", updatedAt);
+                earning.put("restaurantName", orderSnapshot.child("restaurantName").getValue(String.class));
+                earning.put("deliveryAddress", orderSnapshot.child("deliveryAddress").getValue(String.class));
+                
+                // Get earnings details with proper type handling
+                double deliveryFee = getDoubleValue(orderSnapshot.child("deliveryFee").getValue());
+                double tipAmount = getDoubleValue(orderSnapshot.child("tipAmount").getValue());
+                
+                Log.d(TAG, "Order " + orderSnapshot.getKey() + 
+                      " | Delivery Fee: " + deliveryFee + 
+                      " | Tip: " + tipAmount);
+                
+                earning.put("deliveryFee", deliveryFee);
+                earning.put("tipAmount", tipAmount);
+                earning.put("total", deliveryFee + tipAmount);
+                
+                earningsList.add(earning);
+                
+                // Update totals
+                totalDeliveryFees += deliveryFee;
+                totalTips += tipAmount;
+                totalDeliveries++;
+            } catch (Exception e) {
+                Log.e(TAG, "Error processing order " + orderSnapshot.getKey(), e);
+            }
+        }
+
+        Log.d(TAG, "Found " + totalDeliveries + " deliveries" +
+              " | Total Fees: " + totalDeliveryFees +
+              " | Total Tips: " + totalTips);
+
+        // Update UI
+        updateUI(earningsList, totalDeliveryFees, totalTips, totalDeliveries, tabPosition);
     }
 
     private long getStartTime(int tabPosition) {
@@ -235,6 +263,8 @@ public class DriverEarningsActivity extends AppCompatActivity {
 
     private String getPeriodText(int tabPosition) {
         switch (tabPosition) {
+            case TAB_ALL:
+                return "All Time";
             case TAB_DAILY:
                 return "Today, " + dateFormat.format(new Date());
             case TAB_WEEKLY:
