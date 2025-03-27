@@ -52,12 +52,31 @@
             android:textSize="16sp"/>
 
         <TextView
+            android:id="@+id/restaurantAddress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
+        <TextView
             android:id="@+id/customerName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="12dp"
-            android:textSize="16sp"/>
+            android:layout_marginBottom="4dp"
+            android:textSize="15sp"
+            android:textColor="@android:color/black"/>
+
+        <TextView
+            android:id="@+id/deliveryAddress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
 
         <!-- Order Items -->
         <androidx.recyclerview.widget.RecyclerView

@@ -65,11 +65,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             orderId = order.getOrderId();
         }
         
-        // Debug logging for ID values
-        Log.d("DriverOrdersAdapter", "Order details - ID: " + order.getId() + ", OrderId: " + order.getOrderId());
-        Log.d("DriverOrdersAdapter", "Final orderId to be used: " + orderId);
-        
-        final String finalOrderId = orderId; // Create final copy for use in click listeners
+        final String finalOrderId = orderId;
         holder.orderNumber.setText("Order #" + (orderId != null ? orderId : "Unknown") + " • " + orderTime);
 
         // Set status with appropriate color
@@ -116,6 +112,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
 
         // Load restaurant and customer names from Firebase
         if (order.getRestaurantId() != null) {
+            holder.restaurantName.setTag(holder); // Store ViewHolder reference for later use
             loadRestaurantName(order.getRestaurantId(), holder.restaurantName);
         } else {
             holder.restaurantName.setText("From: Unknown Restaurant");
@@ -127,8 +124,10 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             holder.customerName.setText("To: Unknown Customer");
         }
 
-        // Calculate total amount including items and delivery fee
-        double totalAmount = 0.0;
+        // Load delivery address
+        loadDeliveryAddress(finalOrderId, holder.deliveryAddress);
+
+        // Load order items
         List<Map<String, Object>> items = order.getItems();
         if (items != null && !items.isEmpty()) {
             holder.orderItemsRecyclerView.setVisibility(View.VISIBLE);
@@ -148,47 +147,30 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                     double price = priceObj instanceof Number ? ((Number) priceObj).doubleValue() : 0.0;
                     orderItem.setPrice(price);
                     
-                    // Calculate item total
-                    double itemTotal = price * orderItem.getQuantity();
-                    
                     // Handle customizations
                     Object customizationsObj = itemMap.get("customizations");
-                    Log.d("DriverOrdersAdapter", "Raw customizations object: " + (customizationsObj != null ? customizationsObj.toString() : "null"));
-                    
                     if (customizationsObj instanceof Map) {
                         Map<String, Object> customizationsMap = (Map<String, Object>) customizationsObj;
                         List<OrderItem.CustomizationOption> customizationOptions = new ArrayList<>();
-                        double customizationTotal = 0.0;
-                        
-                        Log.d("DriverOrdersAdapter", "Found customizations map with " + customizationsMap.size() + " entries");
                         
                         for (Map.Entry<String, Object> entry : customizationsMap.entrySet()) {
                             String customId = entry.getKey();
                             Object customValue = entry.getValue();
-                            
-                            Log.d("DriverOrdersAdapter", "Processing customization: " + customId + ", value type: " + (customValue != null ? customValue.getClass().getSimpleName() : "null"));
-                            Log.d("DriverOrdersAdapter", "Customization value: " + customValue);
                             
                             try {
                                 if (customValue instanceof ArrayList) {
                                     ArrayList<Map<String, Object>> customizationList = (ArrayList<Map<String, Object>>) customValue;
                                     if (!customizationList.isEmpty()) {
                                         Map<String, Object> optionData = customizationList.get(0);
-                                        Log.d("DriverOrdersAdapter", "Option data: " + optionData);
                                         
                                         OrderItem.CustomizationOption option = new OrderItem.CustomizationOption();
                                         option.setOptionId((String) optionData.get("optionId"));
                                         option.setOptionName((String) optionData.get("optionName"));
                                         
-                                        Log.d("DriverOrdersAdapter", "Found option: " + option.getOptionName() + " with ID: " + option.getOptionId());
-                                        
-                                        // Get selectedItems from the option data
                                         Object selectedItemsObj = optionData.get("selectedItems");
                                         if (selectedItemsObj instanceof ArrayList) {
                                             ArrayList<Map<String, Object>> selectedItemsList = (ArrayList<Map<String, Object>>) selectedItemsObj;
                                             List<OrderItem.SelectedItem> selectedItems = new ArrayList<>();
-                                            
-                                            Log.d("DriverOrdersAdapter", "Found selectedItems list with " + selectedItemsList.size() + " entries");
                                             
                                             for (Map<String, Object> selectedItemMap : selectedItemsList) {
                                                 OrderItem.SelectedItem selectedItem = new OrderItem.SelectedItem();
@@ -200,21 +182,15 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                                                 selectedItem.setId(itemId);
                                                 selectedItem.setName(itemName);
                                                 if (customizationPriceObj instanceof Number) {
-                                                    double customizationPrice = ((Number) customizationPriceObj).doubleValue();
-                                                    selectedItem.setPrice(customizationPrice);
-                                                    // Add customization price to the total for this item
-                                                    customizationTotal += customizationPrice * orderItem.getQuantity();
-                                                    Log.d("DriverOrdersAdapter", "Added customization price: " + customizationPrice + " for " + itemName);
+                                                    selectedItem.setPrice(((Number) customizationPriceObj).doubleValue());
                                                 }
                                                 
                                                 selectedItems.add(selectedItem);
-                                                Log.d("DriverOrdersAdapter", "Added selected item: " + itemName + " with ID: " + itemId);
                                             }
                                             
                                             if (!selectedItems.isEmpty()) {
                                                 option.setSelectedItems(selectedItems);
                                                 customizationOptions.add(option);
-                                                Log.d("DriverOrdersAdapter", "Added option " + option.getOptionName() + " with " + selectedItems.size() + " items");
                                             }
                                         }
                                     }
@@ -227,18 +203,8 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                         
                         if (!customizationOptions.isEmpty()) {
                             orderItem.setCustomizations(customizationOptions);
-                            Log.d("DriverOrdersAdapter", "Successfully set " + customizationOptions.size() + " customization options on item");
-                            Log.d("DriverOrdersAdapter", "Item total before customizations: " + itemTotal);
-                            Log.d("DriverOrdersAdapter", "Customization total: " + customizationTotal);
-                            
-                            // Add customization total to item total
-                            itemTotal += customizationTotal;
-                            Log.d("DriverOrdersAdapter", "Final item total with customizations: " + itemTotal);
                         }
                     }
-                    
-                    // Add item total to overall total
-                    totalAmount += itemTotal;
                     
                     orderItems.add(orderItem);
                 } catch (Exception e) {
@@ -260,15 +226,38 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         // Add delivery fee to total if present
         Double deliveryFee = order.getDeliveryFee();
         if (deliveryFee != null && deliveryFee > 0) {
-            totalAmount += deliveryFee;
             holder.deliveryFee.setVisibility(View.VISIBLE);
-            holder.deliveryFee.setText(NumberFormat.getCurrencyInstance(Locale.US).format(deliveryFee));
+            holder.deliveryFee.setText("Delivery Fee: " + NumberFormat.getCurrencyInstance(Locale.US).format(deliveryFee));
         } else {
             holder.deliveryFee.setVisibility(View.GONE);
         }
         
-        // Set total amount
-        holder.totalAmount.setText(NumberFormat.getCurrencyInstance(Locale.US).format(totalAmount));
+        // Load total from Firebase
+        if (finalOrderId != null) {
+            FirebaseDatabase.getInstance().getReference()
+                    .child("orders")
+                    .child(finalOrderId)
+                    .child("total")
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+                            Object totalObj = dataSnapshot.getValue();
+                            if (totalObj instanceof Number) {
+                                double total = ((Number) totalObj).doubleValue();
+                                holder.totalAmount.setText("Total Amount: " + NumberFormat.getCurrencyInstance(Locale.US).format(total));
+                            } else {
+                                holder.totalAmount.setText("Total Amount: " + NumberFormat.getCurrencyInstance(Locale.US).format(0.0));
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            holder.totalAmount.setText("Total Amount: " + NumberFormat.getCurrencyInstance(Locale.US).format(0.0));
+                        }
+                    });
+        } else {
+            holder.totalAmount.setText("Total Amount: " + NumberFormat.getCurrencyInstance(Locale.US).format(0.0));
+        }
 
         // Setup button click listeners with null check
         if (finalOrderId != null && !finalOrderId.isEmpty()) {
@@ -448,13 +437,23 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             FirebaseDatabase.getInstance().getReference()
                     .child("restaurants")
                     .child(restaurantId)
-                    .child("store_info")
-                    .child("name")
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
-                            String name = dataSnapshot.getValue(String.class);
-                            restaurantNameView.setText("From: " + (name != null ? name : "Unknown Restaurant"));
+                            if (dataSnapshot.exists()) {
+                                String name = dataSnapshot.child("store_info").child("name").getValue(String.class);
+                                String address = dataSnapshot.child("store_info").child("address").getValue(String.class);
+                                restaurantNameView.setText("From: " + (name != null ? name : "Unknown Restaurant"));
+                                
+                                // Show restaurant address
+                                TextView restaurantAddressView = ((ViewHolder) restaurantNameView.getTag()).restaurantAddress;
+                                if (address != null && restaurantAddressView != null) {
+                                    restaurantAddressView.setText("Restaurant Address: " + address);
+                                    restaurantAddressView.setVisibility(View.VISIBLE);
+                                }
+                            } else {
+                                restaurantNameView.setText("From: Unknown Restaurant");
+                            }
                         }
 
                         @Override
@@ -472,7 +471,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             FirebaseDatabase.getInstance().getReference()
                     .child("customers")
                     .child(customerId)
-                    .child("name")
+                    .child("fullName")
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
@@ -490,6 +489,35 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         }
     }
 
+    private void loadDeliveryAddress(String orderId, TextView addressView) {
+        if (orderId != null) {
+            FirebaseDatabase.getInstance().getReference()
+                    .child("orders")
+                    .child(orderId)
+                    .child("address")
+                    .child("street")
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot dataSnapshot) {
+                            String address = dataSnapshot.getValue(String.class);
+                            if (address != null) {
+                                addressView.setText("Delivery Address: " + address);
+                                addressView.setVisibility(View.VISIBLE);
+                            } else {
+                                addressView.setVisibility(View.GONE);
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                            addressView.setVisibility(View.GONE);
+                        }
+                    });
+        } else {
+            addressView.setVisibility(View.GONE);
+        }
+    }
+
     @Override
     public int getItemCount() {
         return orders != null ? orders.size() : 0;
@@ -501,7 +529,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        TextView orderNumber, orderStatus, restaurantName, customerName, totalAmount, deliveryFee;
+        TextView orderNumber, orderStatus, restaurantName, restaurantAddress, customerName, totalAmount, deliveryFee, deliveryAddress;
         Button acceptButton, rejectButton, markDeliveredButton, markPickedUpButton;
         RecyclerView orderItemsRecyclerView;
 
@@ -510,9 +538,11 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             orderNumber = itemView.findViewById(R.id.orderNumber);
             orderStatus = itemView.findViewById(R.id.orderStatus);
             restaurantName = itemView.findViewById(R.id.restaurantName);
+            restaurantAddress = itemView.findViewById(R.id.restaurantAddress);
             customerName = itemView.findViewById(R.id.customerName);
             totalAmount = itemView.findViewById(R.id.totalAmount);
             deliveryFee = itemView.findViewById(R.id.deliveryFee);
+            deliveryAddress = itemView.findViewById(R.id.deliveryAddress);
             acceptButton = itemView.findViewById(R.id.acceptButton);
             rejectButton = itemView.findViewById(R.id.rejectButton);
             markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
