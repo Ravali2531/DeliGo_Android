@@ -171,6 +171,10 @@
             android:name=".Customer.Activities.RestaurantReviewsActivity"
             android:exported="false" />
 
+        <activity android:name=".Customer.Activities.CustomerMainActivity" />
+        <activity android:name=".Customer.Activities.ChatActivity"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

@@ -3,6 +3,7 @@ package com.example.deligoandroid.Customer.Adapters;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
@@ -11,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
@@ -21,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.deligoandroid.Customer.Activities.ChatActivity;
 import com.example.deligoandroid.Models.Order;
 import com.example.deligoandroid.Customer.Models.OrderItem;
 import com.example.deligoandroid.R;
@@ -250,6 +253,14 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                                 Toast.LENGTH_SHORT).show();
                         }
                     });
+                });
+
+                holder.chatButton.setOnClickListener(v -> {
+                    Intent chatIntent = new Intent(context, ChatActivity.class);
+                    chatIntent.putExtra("orderId", orderId);
+                    chatIntent.putExtra("restaurantId", order.getRestaurantId());
+                    chatIntent.putExtra("restaurantName", order.getRestaurantName());
+                    context.startActivity(chatIntent);
                 });
             } else {
                 holder.deliveredOrderActions.setVisibility(View.GONE);
@@ -628,6 +639,7 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         RecyclerView orderItemsRecyclerView;
         LinearLayout deliveredOrderActions;
         MaterialButton rateOrderButton, reorderButton, downloadReceiptButton;
+        Button chatButton;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -642,6 +654,7 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             rateOrderButton = itemView.findViewById(R.id.rateOrderButton);
             reorderButton = itemView.findViewById(R.id.reorderButton);
             downloadReceiptButton = itemView.findViewById(R.id.downloadReceiptButton);
+            chatButton = itemView.findViewById(R.id.chatButton);
         }
     }
 } 

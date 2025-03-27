@@ -126,37 +126,64 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="16dp"
-            android:gravity="end"
-            android:visibility="gone">
+            android:padding="8dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/rateOrderButton"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Rate Order"
-                android:textAllCaps="false"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/reorderButton"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rateOrderButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Rate Order"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/reorderButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Reorder"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Reorder"
-                android:textAllCaps="false"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/downloadReceiptButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Download Receipt"
-                android:textAllCaps="false"
-                app:icon="@drawable/ic_download"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/downloadReceiptButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Invoice"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chatButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Chat"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+            </LinearLayout>
         </LinearLayout>
 
     </LinearLayout>
