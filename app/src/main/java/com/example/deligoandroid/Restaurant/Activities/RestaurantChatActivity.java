@@ -1,17 +1,18 @@
-package com.example.deligoandroid.Customer.Activities;
+package com.example.deligoandroid.Restaurant.Activities;
 
 import android.os.Bundle;
-import android.view.View;
+import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.deligoandroid.Customer.Adapters.ChatAdapter;
 import com.example.deligoandroid.R;
+import com.example.deligoandroid.Restaurant.Adapters.RestaurantChatAdapter;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -23,47 +24,60 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ChatActivity extends AppCompatActivity {
+public class RestaurantChatActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private EditText messageInput;
     private ImageButton sendButton;
-    private TextView restaurantNameText;
-    private ChatAdapter chatAdapter;
+    private TextView customerNameText;
+    private RestaurantChatAdapter chatAdapter;
     private List<ChatMessage> messages;
     private String orderId;
-    private String restaurantId;
-    private String restaurantName;
+    private String customerId;
+    private String customerName;
     private DatabaseReference chatRef;
+    private DatabaseReference restaurantRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_chat);
+        setContentView(R.layout.activity_restaurant_chat);
+
+        // Set up toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setTitle("Chat");
 
         // Get order details from intent
         orderId = getIntent().getStringExtra("orderId");
-        restaurantId = getIntent().getStringExtra("restaurantId");
-        restaurantName = getIntent().getStringExtra("restaurantName");
+        customerId = getIntent().getStringExtra("customerId");
+        customerName = getIntent().getStringExtra("customerName");
 
         // Initialize views
         recyclerView = findViewById(R.id.chatRecyclerView);
         messageInput = findViewById(R.id.messageInput);
         sendButton = findViewById(R.id.sendButton);
-        restaurantNameText = findViewById(R.id.restaurantNameText);
+        customerNameText = findViewById(R.id.customerNameText);
 
-        restaurantNameText.setText(restaurantName);
+        customerNameText.setText(customerName);
 
         // Initialize chat
         messages = new ArrayList<>();
-        chatAdapter = new ChatAdapter(messages);
+        chatAdapter = new RestaurantChatAdapter(messages);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(chatAdapter);
 
-        // Initialize Firebase chat reference
+        // Initialize Firebase references
         chatRef = FirebaseDatabase.getInstance()
                 .getReference("orders")
                 .child(orderId)
                 .child("messages");
+        
+        String restaurantId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        restaurantRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("store_info");
 
         // Load existing messages
         loadMessages();
@@ -102,7 +116,7 @@ public class ChatActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(ChatActivity.this, "Failed to load messages", Toast.LENGTH_SHORT).show();
+                Toast.makeText(RestaurantChatActivity.this, "Failed to load messages", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -116,37 +130,41 @@ public class ChatActivity extends AppCompatActivity {
             Map<String, Object> messageMap = new HashMap<>();
             messageMap.put("message", messageText);
             messageMap.put("senderId", senderId);
-            messageMap.put("senderType", "customer");
+            messageMap.put("senderType", "restaurant");
             messageMap.put("timestamp", timestamp);
             messageMap.put("isRead", false);
 
-            // Get customer name from Firebase
-            FirebaseDatabase.getInstance().getReference()
-                .child("customers")
-                .child(senderId)
-                .child("fullName")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        String senderName = task.getResult().getValue(String.class);
-                        messageMap.put("senderName", senderName != null ? senderName : "Customer");
-                        
-                        // Send message
-                        chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
-                            messageInput.setText("");
-                        }).addOnFailureListener(e -> {
-                            Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
-                        });
-                    } else {
-                        messageMap.put("senderName", "Customer");
-                        chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
-                            messageInput.setText("");
-                        }).addOnFailureListener(e -> {
-                            Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
-                        });
-                    }
-                });
+            // Get restaurant name from Firebase
+            restaurantRef.child("name").get().addOnCompleteListener(task -> {
+                if (task.isSuccessful() && task.getResult() != null) {
+                    String senderName = task.getResult().getValue(String.class);
+                    messageMap.put("senderName", senderName != null ? senderName : "Restaurant");
+                    
+                    // Send message
+                    chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
+                        messageInput.setText("");
+                    }).addOnFailureListener(e -> {
+                        Toast.makeText(RestaurantChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                    });
+                } else {
+                    messageMap.put("senderName", "Restaurant");
+                    chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
+                        messageInput.setText("");
+                    }).addOnFailureListener(e -> {
+                        Toast.makeText(RestaurantChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            });
         }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     public static class ChatMessage {

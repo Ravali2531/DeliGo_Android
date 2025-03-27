@@ -183,6 +183,10 @@
             android:theme="@style/Theme.DeliGoAndroid"
             android:exported="false" />
 
+        <activity android:name=".Restaurant.Activities.RestaurantChatActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

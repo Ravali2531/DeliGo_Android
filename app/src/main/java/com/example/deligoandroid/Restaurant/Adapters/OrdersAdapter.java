@@ -29,6 +29,9 @@ import java.util.HashMap;
 import java.util.Map;
 import com.google.firebase.database.Query;
 import android.util.Log;
+import android.content.Intent;
+import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
+import androidx.annotation.NonNull;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -61,7 +64,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Order order = orders.get(position);
         if (order == null) return;
         
@@ -135,6 +138,13 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         } else if (status.equals("delivered")) {
             Log.d("OrdersAdapter", "Order is delivered");
             holder.orderStatus.setBackgroundResource(R.color.green);
+            holder.chatButton.setVisibility(View.VISIBLE);
+            holder.chatButton.setOnClickListener(v -> {
+                Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
+                chatIntent.putExtra("orderId", order.getId());
+                chatIntent.putExtra("customerName", order.getCustomerName());
+                context.startActivity(chatIntent);
+            });
         }
 
         // Set customer name and delivery option
@@ -240,7 +250,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, rejectButton, assignDriverButton, markDeliveredButton, readyForPickupButton;
+        Button acceptButton, rejectButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -257,6 +267,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             readyForPickupButton = itemView.findViewById(R.id.readyForPickupButton);
             actionButtons = itemView.findViewById(R.id.actionButtons);
             deliveryOption = itemView.findViewById(R.id.deliveryOption);
+            chatButton = itemView.findViewById(R.id.chatButton);
         }
     }
 } 
