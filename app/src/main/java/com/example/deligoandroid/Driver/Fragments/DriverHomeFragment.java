@@ -150,16 +150,34 @@ public class DriverHomeFragment extends Fragment {
                 double totalEarnings = 0;
                 int deliveryCount = 0;
                 
+                // Get today's start timestamp (midnight)
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                long todayStart = calendar.getTimeInMillis();
+                
                 for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                     String driverId = orderSnapshot.child("driverId").getValue(String.class);
                     String status = orderSnapshot.child("status").getValue(String.class);
+                    Long updatedAt = orderSnapshot.child("updatedAt").getValue(Long.class);
                     
-                    if (currentDriverId.equals(driverId) && "delivered".equals(status)) {
-                        Double amount = orderSnapshot.child("total").getValue(Double.class);
-                        if (amount != null) {
-                            totalEarnings += amount;
-                            deliveryCount++;
-                        }
+                    // Only count orders delivered today
+                    if (currentDriverId.equals(driverId) && 
+                        "delivered".equals(status) && 
+                        updatedAt != null && 
+                        updatedAt >= todayStart) {
+                        
+                        // Get delivery fee and tip amount
+                        Double deliveryFee = orderSnapshot.child("deliveryFee").getValue(Double.class);
+                        Double tipAmount = orderSnapshot.child("tipAmount").getValue(Double.class);
+                        
+                        // Add to total earnings
+                        if (deliveryFee != null) totalEarnings += deliveryFee;
+                        if (tipAmount != null) totalEarnings += tipAmount;
+                        
+                        deliveryCount++;
                     }
                 }
 
@@ -190,7 +208,11 @@ public class DriverHomeFragment extends Fragment {
                 
                 for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                     String driverId = orderSnapshot.child("driverId").getValue(String.class);
-                    if (driverId != null && driverId.equals(currentDriverId)) {
+                    String status = orderSnapshot.child("status").getValue(String.class);
+                    
+                    // Only show orders that are assigned to this driver and are not delivered/cancelled
+                    if (driverId != null && driverId.equals(currentDriverId) && 
+                        status != null && !status.equals("delivered") && !status.equals("cancelled")) {
                         Order order = new Order();
                         
                         // Map the data from Firebase to our Order model
@@ -239,7 +261,7 @@ public class DriverHomeFragment extends Fragment {
                             }
                         }
                         
-                        order.setStatus(orderSnapshot.child("status").getValue(String.class));
+                        order.setStatus(status);
                         order.setOrderStatus(orderSnapshot.child("order_status").getValue(String.class));
                         order.setDriverId(driverId);
                         order.setDriverName(orderSnapshot.child("driverName").getValue(String.class));
@@ -308,7 +330,6 @@ public class DriverHomeFragment extends Fragment {
                     }
                 }
 
-                // Update UI
                 if (driverOrders.isEmpty()) {
                     noOrdersText.setVisibility(View.VISIBLE);
                     recyclerView.setVisibility(View.GONE);
