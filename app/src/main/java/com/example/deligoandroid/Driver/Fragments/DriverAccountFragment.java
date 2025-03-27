@@ -12,6 +12,7 @@ import androidx.fragment.app.Fragment;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.Driver.DriverSupportActivity;
+import com.example.deligoandroid.Driver.Activities.TipHistoryActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -33,6 +34,7 @@ public class DriverAccountFragment extends Fragment {
     private Button signOutButton;
     private LinearLayout supportSection;
     private LinearLayout profileSection;
+    private LinearLayout tipHistorySection;
     private DatabaseReference databaseRef;
     private String driverId;
     private SharedPreferences sharedPreferences;
@@ -67,6 +69,7 @@ public class DriverAccountFragment extends Fragment {
         signOutButton = view.findViewById(R.id.signOutButton);
         supportSection = view.findViewById(R.id.supportSection);
         profileSection = view.findViewById(R.id.profileSection);
+        tipHistorySection = view.findViewById(R.id.tipHistorySection);
 
         // Set dark mode switch state
         boolean isDarkMode = sharedPreferences.getBoolean("dark_mode", false);
@@ -91,6 +94,11 @@ public class DriverAccountFragment extends Fragment {
         
         supportSection.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), DriverSupportActivity.class);
+            startActivity(intent);
+        });
+
+        tipHistorySection.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), TipHistoryActivity.class);
             startActivity(intent);
         });
     }
@@ -132,5 +140,6 @@ public class DriverAccountFragment extends Fragment {
         signOutButton = null;
         supportSection = null;
         profileSection = null;
+        tipHistorySection = null;
     }
 } 

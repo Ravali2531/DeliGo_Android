@@ -175,6 +175,9 @@
         <activity android:name=".Customer.Activities.ChatActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name=".Driver.Activities.TipHistoryActivity"
+            android:label="Tip History" />
+
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
