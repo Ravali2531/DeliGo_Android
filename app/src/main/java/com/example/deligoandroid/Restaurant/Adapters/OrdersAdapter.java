@@ -32,6 +32,7 @@ import android.util.Log;
 import android.content.Intent;
 import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
 import androidx.annotation.NonNull;
+import com.google.firebase.database.ServerValue;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -177,7 +178,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
         // Setup button click listeners
         holder.acceptButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "accepted");
+            acceptOrder(order, holder);
         });
 
         holder.readyForPickupButton.setOnClickListener(v -> {
@@ -192,6 +193,72 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
         holder.markDeliveredButton.setOnClickListener(v -> {
             updateOrderStatus(order.getId(), "delivered");
+        });
+    }
+
+    private void acceptOrder(Order order, ViewHolder holder) {
+        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
+                .child("orders")
+                .child(order.getId());
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", "in_progress");
+        updates.put("order_status", "accepted");
+        updates.put("acceptedAt", ServerValue.TIMESTAMP);
+
+        orderRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
+            // Get customer's FCM token
+            FirebaseDatabase.getInstance().getReference()
+                    .child("customers")
+                    .child(order.getCustomerId())
+                    .child("fcmToken")
+                    .get()
+                    .addOnSuccessListener(dataSnapshot -> {
+                        if (dataSnapshot.exists()) {
+                            String customerToken = dataSnapshot.getValue(String.class);
+                            if (customerToken != null && !customerToken.isEmpty()) {
+                                // Send notification using FCM
+                                Map<String, String> data = new HashMap<>();
+                                data.put("orderId", order.getId());
+                                data.put("type", "order_accepted");
+                                data.put("navigate_to", "orders");
+
+                                Map<String, Object> message = new HashMap<>();
+                                message.put("token", customerToken);
+                                message.put("notification", new HashMap<String, String>() {{
+                                    put("title", "Order Accepted!");
+                                    put("body", "Your order #" + order.getId() + " has been accepted by the restaurant");
+                                }});
+                                message.put("data", data);
+
+                                // Send to FCM topic for the specific customer
+                                FirebaseDatabase.getInstance().getReference()
+                                        .child("notifications")
+                                        .push()
+                                        .setValue(message)
+                                        .addOnSuccessListener(aVoid2 -> {
+                                            Log.d("OrdersAdapter", "Notification sent successfully to customer: " + order.getCustomerId());
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e("OrdersAdapter", "Failed to send notification: " + e.getMessage());
+                                        });
+                            } else {
+                                Log.e("OrdersAdapter", "Customer FCM token is null or empty");
+                            }
+                        } else {
+                            Log.e("OrdersAdapter", "Customer FCM token not found");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("OrdersAdapter", "Failed to get customer FCM token: " + e.getMessage());
+                    });
+
+            Toast.makeText(context, "Order accepted successfully", Toast.LENGTH_SHORT).show();
+            holder.acceptButton.setVisibility(View.GONE);
+            holder.orderStatus.setText("Accepted");
+            holder.orderStatus.setBackgroundResource(R.color.green);
+        }).addOnFailureListener(e -> {
+            Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -250,7 +317,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, rejectButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton;
+        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -261,7 +328,6 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             totalAmount = itemView.findViewById(R.id.totalAmount);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
             acceptButton = itemView.findViewById(R.id.acceptButton);
-            rejectButton = itemView.findViewById(R.id.rejectButton);
             assignDriverButton = itemView.findViewById(R.id.assignDriverButton);
             markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
             readyForPickupButton = itemView.findViewById(R.id.readyForPickupButton);

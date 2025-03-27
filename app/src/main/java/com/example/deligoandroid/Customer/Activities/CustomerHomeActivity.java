@@ -32,6 +32,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.messaging.FirebaseMessaging;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -60,12 +61,58 @@ public class CustomerHomeActivity extends AppCompatActivity
         binding = ActivityCustomerHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Initialize FCM token
+        Log.d("CustomerHomeActivity", "Initializing FCM token...");
+        FirebaseMessaging.getInstance().getToken()
+            .addOnCompleteListener(task -> {
+                if (!task.isSuccessful()) {
+                    Log.w("CustomerHomeActivity", "Fetching FCM registration token failed", task.getException());
+                    return;
+                }
+
+                // Get new FCM registration token
+                String token = task.getResult();
+                Log.d("CustomerHomeActivity", "FCM Token: " + token);
+
+                // Store the token in Firebase
+                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                if (userId != null) {
+                    Log.d("CustomerHomeActivity", "Storing FCM token for user: " + userId);
+                    FirebaseDatabase.getInstance().getReference("customers")
+                        .child(userId)
+                        .child("fcmToken")
+                        .setValue(token)
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d("CustomerHomeActivity", "FCM token stored successfully in Firebase");
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("CustomerHomeActivity", "Failed to store FCM token in Firebase", e);
+                        });
+                } else {
+                    Log.e("CustomerHomeActivity", "User ID is null, cannot store FCM token");
+                }
+            });
+
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         checkLocationPermission();
 
         setupViews();
         setupBottomNavigation();
         loadRestaurants();
+
+        // Handle notification navigation
+        if (getIntent().hasExtra("navigate_to")) {
+            String navigateTo = getIntent().getStringExtra("navigate_to");
+            if ("orders".equals(navigateTo)) {
+                // Navigate to orders fragment
+                getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new OrdersFragment())
+                    .commit();
+                
+                // Update bottom navigation selection
+                binding.bottomNavigation.setSelectedItemId(R.id.nav_orders);
+            }
+        }
     }
 
     private void checkLocationPermission() {
