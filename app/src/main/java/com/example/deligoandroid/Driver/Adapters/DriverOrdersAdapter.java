@@ -373,7 +373,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     private void rejectOrder(String orderId) {
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
         Map<String, Object> updates = new HashMap<>();
-        updates.put("order_status", "pending");
+        updates.put("order_status", "ready_for_pickup");
         updates.put("driverId", null);
         updates.put("driverName", null);
         updates.put("driverAccepted", false);
