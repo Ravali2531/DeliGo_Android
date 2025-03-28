@@ -100,6 +100,17 @@
                     android:layout_marginStart="8dp"
                     android:visibility="gone"/>
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/priceRangeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:layout_marginTop="4dp"
+                android:drawableStart="@drawable/ic_price"
+                android:drawablePadding="4dp"
+                android:visibility="gone"/>
         </LinearLayout>
 
         <!-- Status Badge -->

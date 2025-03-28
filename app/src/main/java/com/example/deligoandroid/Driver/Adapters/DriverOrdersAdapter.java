@@ -361,23 +361,52 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
 
     private void rejectOrder(String orderId) {
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("order_status", "ready_for_pickup");
-        updates.put("driverId", null);
-        updates.put("driverName", null);
-        updates.put("driverAccepted", false);
+        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference("drivers").child(driverId);
+        
+        // First update the order status
+        Map<String, Object> orderUpdates = new HashMap<>();
+        orderUpdates.put("order_status", "ready_for_pickup");
+        orderUpdates.put("driverId", null);
+        orderUpdates.put("driverName", null);
+        orderUpdates.put("driverAccepted", false);
 
-        orderRef.updateChildren(updates)
-                .addOnSuccessListener(aVoid -> {
-                    if (context != null) {
-                        Toast.makeText(context, "Order rejected", Toast.LENGTH_SHORT).show();
+        orderRef.updateChildren(orderUpdates)
+            .addOnSuccessListener(aVoid -> {
+                // After order is updated, increment the rejected orders count
+                driverRef.child("rejectedOrdersCount").runTransaction(new Transaction.Handler() {
+                    @NonNull
+                    @Override
+                    public Transaction.Result doTransaction(@NonNull MutableData currentData) {
+                        Integer currentCount = currentData.getValue(Integer.class);
+                        if (currentCount == null) {
+                            currentData.setValue(1);
+                        } else {
+                            currentData.setValue(currentCount + 1);
+                        }
+                        return Transaction.success(currentData);
                     }
-                })
-                .addOnFailureListener(e -> {
-                    if (context != null) {
-                        Toast.makeText(context, "Failed to reject order", Toast.LENGTH_SHORT).show();
+
+                    @Override
+                    public void onComplete(DatabaseError error, boolean committed, DataSnapshot currentData) {
+                        if (error != null) {
+                            Log.e("DriverOrdersAdapter", "Error updating rejected orders count", error.toException());
+                            if (context != null) {
+                                Toast.makeText(context, "Failed to update rejected orders count", Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     }
                 });
+
+                if (context != null) {
+                    Toast.makeText(context, "Order rejected", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .addOnFailureListener(e -> {
+                if (context != null) {
+                    Toast.makeText(context, "Failed to reject order", Toast.LENGTH_SHORT).show();
+                }
+                Log.e("DriverOrdersAdapter", "Failed to reject order", e);
+            });
     }
 
     private void markOrderAsPickedUp(String orderId) {

@@ -30,6 +30,7 @@ public class DriverHomeFragment extends Fragment {
     private SwipeRefreshLayout swipeRefreshLayout;
     private TextView earningsText;
     private TextView deliveriesText;
+    private TextView rejectedOrdersText;
     private Switch availabilitySwitch;
     private String currentDriverId;
     private DatabaseReference ordersRef;
@@ -48,6 +49,7 @@ public class DriverHomeFragment extends Fragment {
         swipeRefreshLayout = view.findViewById(R.id.swipeRefresh);
         earningsText = view.findViewById(R.id.earningsText);
         deliveriesText = view.findViewById(R.id.deliveriesText);
+        rejectedOrdersText = view.findViewById(R.id.rejectedOrdersText);
         availabilitySwitch = view.findViewById(R.id.availabilitySwitch);
 
         // Get current driver ID
@@ -71,6 +73,7 @@ public class DriverHomeFragment extends Fragment {
         // Load data
         loadOrders();
         loadEarnings();
+        loadRejectedOrders();
 
         return view;
     }
@@ -353,6 +356,24 @@ public class DriverHomeFragment extends Fragment {
         };
 
         ordersRef.addValueEventListener(ordersListener);
+    }
+
+    private void loadRejectedOrders() {
+        driversRef.child("rejectedOrdersCount")
+            .addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    Integer rejectedCount = dataSnapshot.getValue(Integer.class);
+                    if (rejectedOrdersText != null) {
+                        rejectedOrdersText.setText((rejectedCount != null ? rejectedCount : 0) + " Rejected Orders");
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    Log.e("DriverHomeFragment", "Error loading rejected orders count", databaseError.toException());
+                }
+            });
     }
 
     @Override

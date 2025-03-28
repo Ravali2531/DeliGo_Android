@@ -49,6 +49,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="0 Deliveries"/>
+
+                <TextView
+                    android:id="@+id/rejectedOrdersText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="0 Rejected Orders"
+                    android:textColor="@android:color/holo_red_dark"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
