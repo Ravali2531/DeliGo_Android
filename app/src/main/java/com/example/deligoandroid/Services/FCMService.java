@@ -20,56 +20,73 @@ import android.util.Log;
 public class FCMService extends FirebaseMessagingService {
     private static final String CHANNEL_ID = "order_notifications";
     private static final String CHANNEL_NAME = "Order Notifications";
+    private static final String TAG = "FCMService";
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
-        Log.d("FCMService", "Received message: " + remoteMessage.getMessageId());
+        Log.d(TAG, "Received message: " + remoteMessage.getMessageId());
 
         // Check if message contains a notification payload
         if (remoteMessage.getNotification() != null) {
             String title = remoteMessage.getNotification().getTitle();
             String message = remoteMessage.getNotification().getBody();
             String orderId = remoteMessage.getData().get("orderId");
+            String type = remoteMessage.getData().get("type");
+            String navigateTo = remoteMessage.getData().get("navigate_to");
             
-            Log.d("FCMService", "Notification received - Title: " + title + ", Message: " + message + ", OrderId: " + orderId);
-            sendNotification(title, message, orderId);
+            Log.d(TAG, "Notification received - Title: " + title + ", Message: " + message + 
+                      ", OrderId: " + orderId + ", Type: " + type + ", Navigate to: " + navigateTo);
+            
+            // Only show notification if user is logged in
+            FirebaseAuth auth = FirebaseAuth.getInstance();
+            if (auth.getCurrentUser() != null) {
+                sendNotification(title, message, orderId, navigateTo);
+            } else {
+                Log.d(TAG, "User not logged in, skipping notification");
+            }
         } else {
-            Log.d("FCMService", "Message received without notification payload");
+            Log.d(TAG, "Message received without notification payload");
         }
     }
 
     @Override
     public void onNewToken(@NonNull String token) {
         super.onNewToken(token);
-        Log.d("FCMService", "New FCM token received: " + token);
+        Log.d(TAG, "New FCM token received: " + token);
         
         // Store the new token in Firebase for the current user
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        if (userId != null) {
-            Log.d("FCMService", "Storing new FCM token for user: " + userId);
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() != null) {
+            String userId = auth.getCurrentUser().getUid();
+            Log.d(TAG, "Storing new FCM token for user: " + userId);
             FirebaseDatabase.getInstance().getReference("customers")
                     .child(userId)
                     .child("fcmToken")
                     .setValue(token)
                     .addOnSuccessListener(aVoid -> {
-                        Log.d("FCMService", "New FCM token stored successfully in Firebase");
+                        Log.d(TAG, "New FCM token stored successfully in Firebase");
                     })
                     .addOnFailureListener(e -> {
-                        Log.e("FCMService", "Failed to store new FCM token in Firebase", e);
+                        Log.e(TAG, "Failed to store new FCM token in Firebase", e);
                     });
         } else {
-            Log.e("FCMService", "User ID is null, cannot store new FCM token");
+            Log.e(TAG, "User not logged in, cannot store FCM token");
         }
     }
 
-    private void sendNotification(String title, String messageBody, String orderId) {
-        Log.d("FCMService", "Creating notification - Title: " + title + ", Message: " + messageBody + ", OrderId: " + orderId);
+    private void sendNotification(String title, String messageBody, String orderId, String navigateTo) {
+        Log.d(TAG, "Creating notification - Title: " + title + ", Message: " + messageBody + 
+                  ", OrderId: " + orderId + ", Navigate to: " + navigateTo);
         
         Intent intent = new Intent(this, CustomerHomeActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        intent.putExtra("orderId", orderId);
-        intent.putExtra("navigate_to", "orders");
+        if (orderId != null) {
+            intent.putExtra("orderId", orderId);
+        }
+        if (navigateTo != null) {
+            intent.putExtra("navigate_to", navigateTo);
+        }
 
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent,
                 PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
@@ -80,6 +97,7 @@ public class FCMService extends FirebaseMessagingService {
                         .setContentTitle(title)
                         .setContentText(messageBody)
                         .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                         .setContentIntent(pendingIntent);
 
@@ -90,11 +108,15 @@ public class FCMService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID,
                     CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_DEFAULT);
+                    NotificationManager.IMPORTANCE_HIGH);
+            channel.enableLights(true);
+            channel.enableVibration(true);
             notificationManager.createNotificationChannel(channel);
         }
 
-        notificationManager.notify(0, notificationBuilder.build());
-        Log.d("FCMService", "Notification sent successfully");
+        // Use orderId as notification ID to prevent duplicate notifications for the same order
+        int notificationId = orderId != null ? orderId.hashCode() : 0;
+        notificationManager.notify(notificationId, notificationBuilder.build());
+        Log.d(TAG, "Notification sent successfully with ID: " + notificationId);
     }
 } 

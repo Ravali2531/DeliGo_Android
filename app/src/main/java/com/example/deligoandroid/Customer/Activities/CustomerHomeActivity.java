@@ -1,10 +1,13 @@
 package com.example.deligoandroid.Customer.Activities;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
+import android.app.NotificationManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -42,6 +45,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import android.app.NotificationChannel;
+import android.app.PendingIntent;
+import android.media.RingtoneManager;
+import androidx.core.app.NotificationCompat;
+
 public class CustomerHomeActivity extends AppCompatActivity 
     implements RestaurantAdapter.OnRestaurantClickListener,
                MenuAdapter.OnFavoriteClickListener {
@@ -49,6 +57,9 @@ public class CustomerHomeActivity extends AppCompatActivity
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1001;
     private ActivityCustomerHomeBinding binding;
     private DatabaseReference restaurantsRef;
+    private DatabaseReference ordersRef;
+    private DatabaseReference notificationsRef;
+    private ValueEventListener ordersListener;
     private List<Restaurant> allRestaurants = new ArrayList<>();
     private RestaurantAdapter restaurantAdapter;
     private MenuAdapter menuAdapter;
@@ -61,7 +72,27 @@ public class CustomerHomeActivity extends AppCompatActivity
         binding = ActivityCustomerHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Initialize Firebase references
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        ordersRef = FirebaseDatabase.getInstance().getReference().child("orders");
+        notificationsRef = FirebaseDatabase.getInstance().getReference().child("notifications");
+
         // Initialize FCM token
+        initializeFCMToken();
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        checkLocationPermission();
+
+        setupViews();
+        setupBottomNavigation();
+        loadRestaurants();
+        setupOrderStatusListener();
+
+        // Handle notification navigation
+        handleNotificationNavigation(getIntent());
+    }
+
+    private void initializeFCMToken() {
         Log.d("CustomerHomeActivity", "Initializing FCM token...");
         FirebaseMessaging.getInstance().getToken()
             .addOnCompleteListener(task -> {
@@ -92,27 +123,6 @@ public class CustomerHomeActivity extends AppCompatActivity
                     Log.e("CustomerHomeActivity", "User ID is null, cannot store FCM token");
                 }
             });
-
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        checkLocationPermission();
-
-        setupViews();
-        setupBottomNavigation();
-        loadRestaurants();
-
-        // Handle notification navigation
-        if (getIntent().hasExtra("navigate_to")) {
-            String navigateTo = getIntent().getStringExtra("navigate_to");
-            if ("orders".equals(navigateTo)) {
-                // Navigate to orders fragment
-                getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new OrdersFragment())
-                    .commit();
-                
-                // Update bottom navigation selection
-                binding.bottomNavigation.setSelectedItemId(R.id.nav_orders);
-            }
-        }
     }
 
     private void checkLocationPermission() {
@@ -643,5 +653,193 @@ public class CustomerHomeActivity extends AppCompatActivity
     @Override
     public void onFavoriteClick(MenuItem menuItem, boolean isFavorite) {
         toggleFavorite(menuItem, isFavorite);
+    }
+
+    private void setupOrderStatusListener() {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        
+        // Remove any existing listener
+        if (ordersListener != null) {
+            ordersRef.removeEventListener(ordersListener);
+        }
+
+        // Setup new listener for orders
+        ordersListener = ordersRef.orderByChild("customerId").equalTo(userId)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
+                            String status = orderSnapshot.child("status").getValue(String.class);
+                            String orderStatus = orderSnapshot.child("order_status").getValue(String.class);
+                            String orderId = orderSnapshot.getKey();
+
+                            // Check various order statuses and show notifications
+                            if ("in_progress".equals(status) && "accepted".equals(orderStatus)) {
+                                checkAndShowNotification(
+                                    notificationsRef,
+                                    orderId,
+                                    "accepted",
+                                    "Order Accepted",
+                                    "Your order #" + orderId + " has been accepted by the restaurant"
+                                );
+                            }
+                            
+                            if ("in_progress".equals(status) && "driver_accepted".equals(orderStatus)) {
+                                String driverName = orderSnapshot.child("driverName").getValue(String.class);
+                                String message = driverName != null ? 
+                                    "Driver " + driverName + " has accepted your order #" + orderId :
+                                    "A driver has accepted your order #" + orderId;
+                                
+                                checkAndShowNotification(
+                                    notificationsRef,
+                                    orderId,
+                                    "driver_accepted",
+                                    "Driver Assigned",
+                                    message
+                                );
+                            }
+                            
+                            if ("in_progress".equals(status) && "picked_up".equals(orderStatus)) {
+                                String driverName = orderSnapshot.child("driverName").getValue(String.class);
+                                String message = driverName != null ? 
+                                    "Driver " + driverName + " has picked up your order #" + orderId :
+                                    "Your order #" + orderId + " has been picked up";
+                                
+                                checkAndShowNotification(
+                                    notificationsRef,
+                                    orderId,
+                                    "picked_up",
+                                    "Order Picked Up",
+                                    message
+                                );
+                            }
+
+                            if ("delivered".equals(status) && "delivered".equals(orderStatus)) {
+                                String driverName = orderSnapshot.child("driverName").getValue(String.class);
+                                String message = driverName != null ?
+                                    "Driver " + driverName + " has delivered your order #" + orderId :
+                                    "Your order #" + orderId + " has been delivered";
+                                
+                                checkAndShowNotification(
+                                    notificationsRef,
+                                    orderId,
+                                    "delivered",
+                                    "Order Delivered",
+                                    message
+                                );
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Log.e("CustomerHomeActivity", "Error monitoring orders", databaseError.toException());
+                    }
+                });
+    }
+
+    private void checkAndShowNotification(DatabaseReference notificationsRef, String orderId, 
+                                        String type, String title, String message) {
+        // Check if this notification has already been shown
+        notificationsRef.child(orderId).child(type)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if (!dataSnapshot.exists() || !Boolean.TRUE.equals(dataSnapshot.child("shown").getValue(Boolean.class))) {
+                            // Show notification
+                            showOrderNotification(orderId + "_" + type, title, message);
+
+                            // Store notification data
+                            Map<String, Object> notificationData = new HashMap<>();
+                            notificationData.put("title", title);
+                            notificationData.put("body", message);
+                            notificationData.put("timestamp", ServerValue.TIMESTAMP);
+                            notificationData.put("shown", true);
+                            notificationData.put("read", false);
+
+                            notificationsRef.child(orderId).child(type).setValue(notificationData)
+                                    .addOnSuccessListener(aVoid -> {
+                                        Log.d("CustomerHomeActivity", "Notification status stored successfully");
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("CustomerHomeActivity", "Failed to store notification status", e);
+                                    });
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Log.e("CustomerHomeActivity", "Error checking notification status", databaseError.toException());
+                    }
+                });
+    }
+
+    private void showOrderNotification(String orderId, String title, String message) {
+        NotificationManager notificationManager = 
+            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // Create notification channel for Android O and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                "order_notifications",
+                "Order Notifications",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.enableLights(true);
+            channel.enableVibration(true);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        // Create intent for notification click
+        Intent intent = new Intent(this, CustomerHomeActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra("orderId", orderId);
+        intent.putExtra("navigate_to", "orders");
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            this, 
+            0, 
+            intent,
+            PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        // Build notification
+        NotificationCompat.Builder notificationBuilder =
+                new NotificationCompat.Builder(this, "order_notifications")
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle(title)
+                        .setContentText(message)
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                        .setContentIntent(pendingIntent);
+
+        // Show notification
+        int notificationId = orderId != null ? orderId.hashCode() : 0;
+        notificationManager.notify(notificationId, notificationBuilder.build());
+    }
+
+    private void handleNotificationNavigation(Intent intent) {
+        if (intent.hasExtra("navigate_to")) {
+            String navigateTo = intent.getStringExtra("navigate_to");
+            if ("orders".equals(navigateTo)) {
+                // Navigate to orders fragment
+                getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentContainer, new OrdersFragment())
+                    .commit();
+                
+                // Update bottom navigation selection
+                binding.bottomNavigation.setSelectedItemId(R.id.nav_orders);
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Remove the orders listener when activity is destroyed
+        if (ordersListener != null) {
+            ordersRef.removeEventListener(ordersListener);
+        }
     }
 } 

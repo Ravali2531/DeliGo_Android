@@ -207,52 +207,6 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         updates.put("acceptedAt", ServerValue.TIMESTAMP);
 
         orderRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
-            // Get customer's FCM token
-            FirebaseDatabase.getInstance().getReference()
-                    .child("customers")
-                    .child(order.getCustomerId())
-                    .child("fcmToken")
-                    .get()
-                    .addOnSuccessListener(dataSnapshot -> {
-                        if (dataSnapshot.exists()) {
-                            String customerToken = dataSnapshot.getValue(String.class);
-                            if (customerToken != null && !customerToken.isEmpty()) {
-                                // Send notification using FCM
-                                Map<String, String> data = new HashMap<>();
-                                data.put("orderId", order.getId());
-                                data.put("type", "order_accepted");
-                                data.put("navigate_to", "orders");
-
-                                Map<String, Object> message = new HashMap<>();
-                                message.put("token", customerToken);
-                                message.put("notification", new HashMap<String, String>() {{
-                                    put("title", "Order Accepted!");
-                                    put("body", "Your order #" + order.getId() + " has been accepted by the restaurant");
-                                }});
-                                message.put("data", data);
-
-                                // Send to FCM topic for the specific customer
-                                FirebaseDatabase.getInstance().getReference()
-                                        .child("notifications")
-                                        .push()
-                                        .setValue(message)
-                                        .addOnSuccessListener(aVoid2 -> {
-                                            Log.d("OrdersAdapter", "Notification sent successfully to customer: " + order.getCustomerId());
-                                        })
-                                        .addOnFailureListener(e -> {
-                                            Log.e("OrdersAdapter", "Failed to send notification: " + e.getMessage());
-                                        });
-                            } else {
-                                Log.e("OrdersAdapter", "Customer FCM token is null or empty");
-                            }
-                        } else {
-                            Log.e("OrdersAdapter", "Customer FCM token not found");
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e("OrdersAdapter", "Failed to get customer FCM token: " + e.getMessage());
-                    });
-
             Toast.makeText(context, "Order accepted successfully", Toast.LENGTH_SHORT).show();
             holder.acceptButton.setVisibility(View.GONE);
             holder.orderStatus.setText("Accepted");
