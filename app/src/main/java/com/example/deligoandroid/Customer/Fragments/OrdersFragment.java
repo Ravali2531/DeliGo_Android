@@ -85,12 +85,21 @@ public class OrdersFragment extends Fragment {
                         
                         for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                             try {
+                                // Get order data
+                                String orderId = orderSnapshot.getKey();
+                                String status = orderSnapshot.child("status").getValue(String.class);
+                                String orderStatus = orderSnapshot.child("order_status").getValue(String.class);
+                                
+                                // Create order object
                                 Order order = orderSnapshot.getValue(Order.class);
                                 if (order != null) {
-                                    order.setId(orderSnapshot.getKey());
+                                    order.setId(orderId);
+                                    order.setStatus(status);
+                                    order.setOrderStatus(orderStatus);
+                                    
+                                    Log.d(TAG, "Order " + orderId + " - status: " + status + ", order_status: " + orderStatus);
                                     
                                     // Categorize order based on status
-                                    String status = order.getStatus();
                                     if (status != null) {
                                         if (status.equals("delivered")) {
                                             pastOrders.add(order);
@@ -110,8 +119,8 @@ public class OrdersFragment extends Fragment {
                     }
 
                     @Override
-                    public void onCancelled(@NonNull DatabaseError databaseError) {
-                        Log.e(TAG, "Error loading orders", databaseError.toException());
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e(TAG, "Error loading orders", error.toException());
                     }
                 });
     }

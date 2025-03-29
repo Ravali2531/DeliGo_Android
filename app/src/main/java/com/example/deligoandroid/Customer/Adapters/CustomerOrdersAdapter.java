@@ -88,15 +88,44 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             // Set status with appropriate color
             String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
             String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
-            String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
-            holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + displayStatus.substring(1).replace("_", " "));
+            
+            Log.d(TAG, "Order ID: " + orderId);
+            Log.d(TAG, "Status: " + status);
+            Log.d(TAG, "Order Status: " + orderStatus);
+            
+            // Set the displayed status text
+            String displayStatus;
+            if (orderStatus != null && !orderStatus.isEmpty()) {
+                switch (orderStatus) {
+                    case "accepted":
+                        displayStatus = "Restaurant Accepted";
+                        break;
+                    case "driver_accepted":
+                        displayStatus = "Driver Assigned";
+                        break;
+                    case "picked_up":
+                        displayStatus = "Picked Up";
+                        break;
+                    case "ready_for_pickup":
+                        displayStatus = "Ready for Pickup";
+                        break;
+                    default:
+                        displayStatus = orderStatus.substring(0, 1).toUpperCase() + orderStatus.substring(1).replace("_", " ");
+                        break;
+                }
+            } else {
+                displayStatus = status.substring(0, 1).toUpperCase() + status.substring(1).replace("_", " ");
+            }
+            holder.orderStatus.setText(displayStatus);
             
             // Set status background color
             int backgroundColor;
             if (status.equals("delivered")) {
                 backgroundColor = R.color.green;
-            } else if (status.equals("in_progress")) {
+            } else if (orderStatus.equals("driver_accepted") || orderStatus.equals("picked_up")) {
                 backgroundColor = R.color.blue;
+            } else if (orderStatus.equals("accepted") || orderStatus.equals("ready_for_pickup")) {
+                backgroundColor = R.color.orange;
             } else {
                 backgroundColor = R.color.purple;
             }
