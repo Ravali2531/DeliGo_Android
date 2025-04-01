@@ -101,10 +101,10 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                         displayStatus = "Restaurant Accepted";
                         break;
                     case "driver_accepted":
-                        displayStatus = "Driver Assigned";
+                        displayStatus = "Driver Accepted";
                         break;
                     case "picked_up":
-                        displayStatus = "Picked Up";
+                        displayStatus = "Driver Picked Up";
                         break;
                     case "ready_for_pickup":
                         displayStatus = "Ready for Pickup";
