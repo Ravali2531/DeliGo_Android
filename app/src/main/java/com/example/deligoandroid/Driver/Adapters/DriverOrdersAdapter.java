@@ -38,11 +38,32 @@ import android.graphics.drawable.ColorDrawable;
 import android.app.Dialog;
 import android.view.Window;
 import android.widget.EditText;
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.MapsInitializer;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import androidx.core.app.ActivityCompat;
+import android.location.Geocoder;
+import android.location.Address;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapter.ViewHolder> {
+    private static final String TAG = "DriverOrdersAdapter";
     private List<Order> orders = new ArrayList<>();
     private Context context;
     private String driverId;
+    private FusedLocationProviderClient fusedLocationClient;
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
 
     public DriverOrdersAdapter(String driverId) {
         this.driverId = driverId;
@@ -51,6 +72,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         context = parent.getContext();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(context);
         View view = LayoutInflater.from(context).inflate(R.layout.item_driver_order, parent, false);
         return new ViewHolder(view);
     }
@@ -59,6 +81,29 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
     public void onBindViewHolder(ViewHolder holder, int position) {
         Order order = orders.get(position);
         if (order == null) return;
+
+        // Set status with appropriate color
+        String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
+        String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
+        
+        // Handle MapView lifecycle
+        if (holder.mapView.getTag() == null) {
+            holder.mapView.setTag(position);
+            holder.mapView.onCreate(null);
+        }
+        
+        // Hide map view for delivered orders
+        if (status.equals("delivered") || orderStatus.equals("delivered")) {
+            holder.mapView.setVisibility(View.GONE);
+        } else {
+            holder.mapView.setVisibility(View.VISIBLE);
+            holder.mapView.onResume();
+            holder.mapView.getMapAsync(googleMap -> {
+                googleMap.clear(); // Clear previous markers
+                googleMap.getUiSettings().setScrollGesturesEnabled(false);
+                loadLocationsOnMap(googleMap, order, holder.mapView);
+            });
+        }
 
         // Set order number and timestamp
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
@@ -76,10 +121,6 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         holder.orderNumber.setText("Order #" + (orderId != null ? orderId : "Unknown") + " • " + orderTime);
 
         // Set status with appropriate color
-        String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
-        String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
-        
-        // Set the displayed status text and background color
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
         if (!displayStatus.isEmpty()) {
             holder.orderStatus.setVisibility(View.VISIBLE);
@@ -286,6 +327,31 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             holder.rejectButton.setEnabled(false);
             holder.markPickedUpButton.setEnabled(false);
             holder.markDeliveredButton.setEnabled(false);
+        }
+    }
+
+    @Override
+    public void onViewAttachedToWindow(@NonNull ViewHolder holder) {
+        super.onViewAttachedToWindow(holder);
+        if (holder.mapView != null && holder.mapView.getVisibility() == View.VISIBLE) {
+            holder.mapView.onResume();
+        }
+    }
+
+    @Override
+    public void onViewDetachedFromWindow(@NonNull ViewHolder holder) {
+        super.onViewDetachedFromWindow(holder);
+        if (holder.mapView != null) {
+            holder.mapView.onPause();
+        }
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull ViewHolder holder) {
+        super.onViewRecycled(holder);
+        if (holder.mapView != null) {
+            holder.mapView.onPause();
+            holder.mapView.onDestroy();
         }
     }
 
@@ -727,6 +793,141 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         }
     }
 
+    private void loadLocationsOnMap(GoogleMap googleMap, Order order, MapView mapView) {
+        if (googleMap == null) return;
+        
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        final AtomicInteger locationCount = new AtomicInteger(0);
+        final int expectedLocations = 3; // Driver, Restaurant, and Customer locations
+
+        // Get driver's current location
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+                if (location != null) {
+                    LatLng driverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                    googleMap.addMarker(new MarkerOptions()
+                            .position(driverLocation)
+                            .title("Your Location")
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+                    builder.include(driverLocation);
+                    if (locationCount.incrementAndGet() == expectedLocations) {
+                        updateMapBounds(googleMap, builder, mapView);
+                    }
+                }
+            });
+        }
+
+        // Get restaurant location
+        if (order.getRestaurantId() != null) {
+            DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                    .getReference("restaurants")
+                    .child(order.getRestaurantId())
+                    .child("store_info")
+                    .child("address");
+
+            restaurantRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String address = snapshot.getValue(String.class);
+                    if (address != null) {
+                        getLocationFromAddress(address, location -> {
+                            if (location != null) {
+                                googleMap.addMarker(new MarkerOptions()
+                                        .position(location)
+                                        .title("Restaurant")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                builder.include(location);
+                                if (locationCount.incrementAndGet() == expectedLocations) {
+                                    updateMapBounds(googleMap, builder, mapView);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error loading restaurant address", error.toException());
+                }
+            });
+        }
+
+        // Get customer delivery location
+        if (order.getId() != null) {
+            DatabaseReference deliveryRef = FirebaseDatabase.getInstance()
+                    .getReference("orders")
+                    .child(order.getId())
+                    .child("address");
+
+            deliveryRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String street = snapshot.child("street").getValue(String.class);
+                    if (street != null) {
+                        getLocationFromAddress(street, location -> {
+                            if (location != null) {
+                                googleMap.addMarker(new MarkerOptions()
+                                        .position(location)
+                                        .title("Delivery Location")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                                builder.include(location);
+                                if (locationCount.incrementAndGet() == expectedLocations) {
+                                    updateMapBounds(googleMap, builder, mapView);
+                                }
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error loading delivery address", error.toException());
+                }
+            });
+        }
+    }
+
+    private void updateMapBounds(GoogleMap googleMap, LatLngBounds.Builder builder, MapView mapView) {
+        try {
+            if (googleMap == null || builder == null) return;
+            
+            LatLngBounds bounds = builder.build();
+            int padding = 100;
+            
+            // Post to main thread to ensure the MapView has been properly laid out
+            mapView.post(() -> {
+                try {
+                    googleMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, padding));
+                } catch (Exception e) {
+                    Log.e(TAG, "Error animating camera", e);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating map bounds", e);
+        }
+    }
+
+    private void getLocationFromAddress(String address, OnLocationReadyCallback callback) {
+        try {
+            Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocationName(address, 1);
+            if (!addresses.isEmpty()) {
+                Address location = addresses.get(0);
+                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                callback.onLocationReady(latLng);
+            } else {
+                callback.onLocationReady(null);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "Error getting location from address", e);
+            callback.onLocationReady(null);
+        }
+    }
+
+    interface OnLocationReadyCallback {
+        void onLocationReady(LatLng location);
+    }
+
     @Override
     public int getItemCount() {
         return orders != null ? orders.size() : 0;
@@ -741,6 +942,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         TextView orderNumber, orderStatus, restaurantName, restaurantAddress, customerName, totalAmount, deliveryFee, deliveryAddress;
         Button acceptButton, rejectButton, markDeliveredButton, markPickedUpButton, chatButton;
         RecyclerView orderItemsRecyclerView;
+        MapView mapView;
 
         public ViewHolder(View itemView) {
             super(itemView);
@@ -758,6 +960,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             markPickedUpButton = itemView.findViewById(R.id.markPickedUpButton);
             chatButton = itemView.findViewById(R.id.chatButton);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
+            mapView = itemView.findViewById(R.id.mapView);
         }
     }
 } 

@@ -190,7 +190,7 @@
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key"/>
+            android:value="AIzaSyDHujk0Z7p3_mjmPsicmn7T9iyQBC0ZqtU" />
 
         <service
             android:name=".Services.FCMService"
