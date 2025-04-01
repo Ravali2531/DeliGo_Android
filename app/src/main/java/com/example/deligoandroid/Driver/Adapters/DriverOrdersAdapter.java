@@ -56,6 +56,16 @@ import android.location.Geocoder;
 import android.location.Address;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import android.content.Intent;
+import android.net.Uri;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+import org.json.JSONObject;
+import org.json.JSONArray;
 
 public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapter.ViewHolder> {
     private static final String TAG = "DriverOrdersAdapter";
@@ -86,13 +96,13 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
         String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
         
-        // Handle MapView lifecycle
+        // Handle MapView lifecycle and visibility based on order status
         if (holder.mapView.getTag() == null) {
             holder.mapView.setTag(position);
             holder.mapView.onCreate(null);
         }
         
-        // Hide map view for delivered orders
+        // Show map only for specific statuses
         if (status.equals("delivered") || orderStatus.equals("delivered")) {
             holder.mapView.setVisibility(View.GONE);
         } else {
@@ -797,27 +807,39 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         if (googleMap == null) return;
         
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
-        final AtomicInteger locationCount = new AtomicInteger(0);
-        final int expectedLocations = 3; // Driver, Restaurant, and Customer locations
+        String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
+        String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
 
-        // Get driver's current location
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
-                if (location != null) {
-                    LatLng driverLocation = new LatLng(location.getLatitude(), location.getLongitude());
-                    googleMap.addMarker(new MarkerOptions()
-                            .position(driverLocation)
-                            .title("Your Location")
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-                    builder.include(driverLocation);
-                    if (locationCount.incrementAndGet() == expectedLocations) {
-                        updateMapBounds(googleMap, builder, mapView);
+        if (orderStatus.equals("picked_up") || status.equals("picked_up")) {
+            // For picked_up status, only show restaurant and customer locations
+            loadRestaurantAndCustomerLocations(googleMap, order, builder, mapView);
+        } else {
+            // For other statuses, get driver's current location
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                fusedLocationClient.getLastLocation().addOnSuccessListener(location -> {
+                    if (location != null) {
+                        LatLng driverLocation = new LatLng(location.getLatitude(), location.getLongitude());
+                        googleMap.addMarker(new MarkerOptions()
+                                .position(driverLocation)
+                                .title("Your Location")
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+                        builder.include(driverLocation);
+
+                        if (orderStatus.equals("assigned_driver")) {
+                            // Show all three locations without polyline
+                            loadAllLocations(googleMap, order, builder, mapView, driverLocation);
+                        } else if (orderStatus.equals("driver_accepted")) {
+                            // Show only driver and restaurant with polyline
+                            loadRestaurantLocationWithRoute(googleMap, order, builder, mapView, driverLocation);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
+    }
 
-        // Get restaurant location
+    private void loadRestaurantAndCustomerLocations(GoogleMap googleMap, Order order, LatLngBounds.Builder builder, MapView mapView) {
+        // First load restaurant location
         if (order.getRestaurantId() != null) {
             DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
                     .getReference("restaurants")
@@ -830,15 +852,82 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     String address = snapshot.getValue(String.class);
                     if (address != null) {
-                        getLocationFromAddress(address, location -> {
-                            if (location != null) {
+                        getLocationFromAddress(address, restaurantLocation -> {
+                            if (restaurantLocation != null) {
                                 googleMap.addMarker(new MarkerOptions()
-                                        .position(location)
+                                        .position(restaurantLocation)
                                         .title("Restaurant")
                                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-                                builder.include(location);
-                                if (locationCount.incrementAndGet() == expectedLocations) {
-                                    updateMapBounds(googleMap, builder, mapView);
+                                builder.include(restaurantLocation);
+
+                                // Now load customer location and draw route from restaurant to customer
+                                loadCustomerLocationWithRoute(googleMap, order, builder, mapView, restaurantLocation);
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error loading restaurant address", error.toException());
+                }
+            });
+        }
+    }
+
+    private void loadAllLocations(GoogleMap googleMap, Order order, LatLngBounds.Builder builder, 
+                                MapView mapView, LatLng driverLocation) {
+        // Load restaurant location
+        if (order.getRestaurantId() != null) {
+            DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                    .getReference("restaurants")
+                    .child(order.getRestaurantId())
+                    .child("store_info")
+                    .child("address");
+
+            restaurantRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String address = snapshot.getValue(String.class);
+                    if (address != null) {
+                        getLocationFromAddress(address, restaurantLocation -> {
+                            if (restaurantLocation != null) {
+                                googleMap.addMarker(new MarkerOptions()
+                                        .position(restaurantLocation)
+                                        .title("Restaurant")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                builder.include(restaurantLocation);
+
+                                // Load customer location after restaurant location is loaded
+                                if (order.getId() != null) {
+                                    DatabaseReference deliveryRef = FirebaseDatabase.getInstance()
+                                            .getReference("orders")
+                                            .child(order.getId())
+                                            .child("address");
+
+                                    deliveryRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                                        @Override
+                                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                            String street = snapshot.child("street").getValue(String.class);
+                                            if (street != null) {
+                                                getLocationFromAddress(street, customerLocation -> {
+                                                    if (customerLocation != null) {
+                                                        googleMap.addMarker(new MarkerOptions()
+                                                                .position(customerLocation)
+                                                                .title("Delivery Location")
+                                                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                                                        builder.include(customerLocation);
+                                                        updateMapBounds(googleMap, builder, mapView);
+                                                    }
+                                                });
+                                            }
+                                        }
+
+                                        @Override
+                                        public void onCancelled(@NonNull DatabaseError error) {
+                                            Log.e(TAG, "Error loading delivery address", error.toException());
+                                        }
+                                    });
                                 }
                             }
                         });
@@ -851,8 +940,78 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                 }
             });
         }
+    }
 
-        // Get customer delivery location
+    private void loadRestaurantLocationWithRoute(GoogleMap googleMap, Order order, LatLngBounds.Builder builder, 
+                                               MapView mapView, LatLng driverLocation) {
+        if (order.getRestaurantId() != null) {
+            DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                    .getReference("restaurants")
+                    .child(order.getRestaurantId())
+                    .child("store_info")
+                    .child("address");
+
+            restaurantRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String address = snapshot.getValue(String.class);
+                    if (address != null) {
+                        getLocationFromAddress(address, restaurantLocation -> {
+                            if (restaurantLocation != null) {
+                                googleMap.addMarker(new MarkerOptions()
+                                        .position(restaurantLocation)
+                                        .title("Restaurant")
+                                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+                                builder.include(restaurantLocation);
+
+                                // Draw route between driver and restaurant
+                                drawRoute(googleMap, driverLocation, restaurantLocation);
+
+                                // Create directions URL and button
+                                String directionsUrl = String.format(Locale.US,
+                                        "https://www.google.com/maps/dir/?api=1&origin=%f,%f&destination=%f,%f",
+                                        driverLocation.latitude, driverLocation.longitude,
+                                        restaurantLocation.latitude, restaurantLocation.longitude);
+
+                                // Remove any existing directions button first
+                                if (mapView.getParent() instanceof ViewGroup) {
+                                    ViewGroup parent = (ViewGroup) mapView.getParent();
+                                    for (int i = 0; i < parent.getChildCount(); i++) {
+                                        View child = parent.getChildAt(i);
+                                        if (child instanceof Button && child.getTag() != null && 
+                                            child.getTag().equals("directions_button")) {
+                                            parent.removeView(child);
+                                            break;
+                                        }
+                                    }
+
+                                    // Add new directions button
+                                    Button directionsButton = new Button(context);
+                                    directionsButton.setText("Get Directions to Restaurant");
+                                    directionsButton.setTag("directions_button");
+                                    directionsButton.setOnClickListener(v -> {
+                                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(directionsUrl));
+                                        context.startActivity(intent);
+                                    });
+                                    parent.addView(directionsButton);
+                                }
+
+                                updateMapBounds(googleMap, builder, mapView);
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error loading restaurant address", error.toException());
+                }
+            });
+        }
+    }
+
+    private void loadCustomerLocationWithRoute(GoogleMap googleMap, Order order, LatLngBounds.Builder builder, 
+                                             MapView mapView, LatLng restaurantLocation) {
         if (order.getId() != null) {
             DatabaseReference deliveryRef = FirebaseDatabase.getInstance()
                     .getReference("orders")
@@ -864,16 +1023,47 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
                     String street = snapshot.child("street").getValue(String.class);
                     if (street != null) {
-                        getLocationFromAddress(street, location -> {
-                            if (location != null) {
+                        getLocationFromAddress(street, customerLocation -> {
+                            if (customerLocation != null) {
                                 googleMap.addMarker(new MarkerOptions()
-                                        .position(location)
+                                        .position(customerLocation)
                                         .title("Delivery Location")
                                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-                                builder.include(location);
-                                if (locationCount.incrementAndGet() == expectedLocations) {
-                                    updateMapBounds(googleMap, builder, mapView);
+                                builder.include(customerLocation);
+
+                                // Draw route between restaurant and customer
+                                drawRoute(googleMap, restaurantLocation, customerLocation);
+
+                                // Create directions URL and button for customer location
+                                String directionsUrl = String.format(Locale.US,
+                                        "https://www.google.com/maps/dir/?api=1&origin=%f,%f&destination=%f,%f",
+                                        restaurantLocation.latitude, restaurantLocation.longitude,
+                                        customerLocation.latitude, customerLocation.longitude);
+
+                                // Remove any existing directions button first
+                                if (mapView.getParent() instanceof ViewGroup) {
+                                    ViewGroup parent = (ViewGroup) mapView.getParent();
+                                    for (int i = 0; i < parent.getChildCount(); i++) {
+                                        View child = parent.getChildAt(i);
+                                        if (child instanceof Button && child.getTag() != null && 
+                                            child.getTag().equals("directions_button")) {
+                                            parent.removeView(child);
+                                            break;
+                                        }
+                                    }
+
+                                    // Add new directions button
+                                    Button directionsButton = new Button(context);
+                                    directionsButton.setText("Get Directions to Customer");
+                                    directionsButton.setTag("directions_button");
+                                    directionsButton.setOnClickListener(v -> {
+                                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(directionsUrl));
+                                        context.startActivity(intent);
+                                    });
+                                    parent.addView(directionsButton);
                                 }
+
+                                updateMapBounds(googleMap, builder, mapView);
                             }
                         });
                     }
@@ -905,6 +1095,79 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         } catch (Exception e) {
             Log.e(TAG, "Error updating map bounds", e);
         }
+    }
+
+    private void drawRoute(GoogleMap googleMap, LatLng origin, LatLng destination) {
+        String url = getDirectionsUrl(origin, destination);
+        RequestQueue queue = Volley.newRequestQueue(context);
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
+                response -> {
+                    try {
+                        JSONObject jsonResponse = new JSONObject(response);
+                        JSONArray routes = jsonResponse.getJSONArray("routes");
+
+                        if (routes.length() > 0) {
+                            JSONObject route = routes.getJSONObject(0);
+                            JSONObject overviewPolyline = route.getJSONObject("overview_polyline");
+                            String encodedPath = overviewPolyline.getString("points");
+
+                            List<LatLng> decodedPath = decodePolyline(encodedPath);
+                            PolylineOptions polylineOptions = new PolylineOptions()
+                                    .addAll(decodedPath)
+                                    .width(12)
+                                    .color(Color.BLUE)
+                                    .geodesic(true);
+
+                            googleMap.addPolyline(polylineOptions);
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing directions JSON", e);
+                    }
+                },
+                error -> Log.e(TAG, "Error fetching directions", error));
+
+        queue.add(stringRequest);
+    }
+
+    private String getDirectionsUrl(LatLng origin, LatLng destination) {
+        String str_origin = "origin=" + origin.latitude + "," + origin.longitude;
+        String str_dest = "destination=" + destination.latitude + "," + destination.longitude;
+        String sensor = "sensor=false";
+        String key = "key=" + context.getString(R.string.google_maps_key);
+        String parameters = str_origin + "&" + str_dest + "&" + sensor + "&" + key;
+        return "https://maps.googleapis.com/maps/api/directions/json?" + parameters;
+    }
+
+    private List<LatLng> decodePolyline(String encoded) {
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((double) lat / 1E5, (double) lng / 1E5);
+            poly.add(p);
+        }
+        return poly;
     }
 
     private void getLocationFromAddress(String address, OnLocationReadyCallback callback) {
