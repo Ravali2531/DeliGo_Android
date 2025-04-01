@@ -31,6 +31,7 @@ public class DriverHomeFragment extends Fragment {
     private TextView earningsText;
     private TextView deliveriesText;
     private TextView rejectedOrdersText;
+    private TextView ratingText;
     private Switch availabilitySwitch;
     private String currentDriverId;
     private DatabaseReference ordersRef;
@@ -38,6 +39,7 @@ public class DriverHomeFragment extends Fragment {
     private ValueEventListener ordersListener;
     private ValueEventListener earningsListener;
     private ValueEventListener availabilityListener;
+    private ValueEventListener ratingListener;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -50,6 +52,7 @@ public class DriverHomeFragment extends Fragment {
         earningsText = view.findViewById(R.id.earningsText);
         deliveriesText = view.findViewById(R.id.deliveriesText);
         rejectedOrdersText = view.findViewById(R.id.rejectedOrdersText);
+        ratingText = view.findViewById(R.id.ratingText);
         availabilitySwitch = view.findViewById(R.id.availabilitySwitch);
 
         // Get current driver ID
@@ -74,6 +77,7 @@ public class DriverHomeFragment extends Fragment {
         loadOrders();
         loadEarnings();
         loadRejectedOrders();
+        loadRating();
 
         return view;
     }
@@ -376,6 +380,60 @@ public class DriverHomeFragment extends Fragment {
             });
     }
 
+    private void loadRating() {
+        if (ratingListener != null) {
+            driversRef.child("ratingsandcomments").child("rating").removeEventListener(ratingListener);
+        }
+
+        ratingListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (getContext() == null || !isAdded()) return;
+
+                try {
+                    double sum = 0;
+                    int count = 0;
+
+                    // Iterate through each rating entry
+                    for (DataSnapshot ratingSnapshot : dataSnapshot.getChildren()) {
+                        Object value = ratingSnapshot.getValue();
+                        if (value instanceof Long) {
+                            sum += ((Long) value).doubleValue();
+                            count++;
+                        } else if (value instanceof Double) {
+                            sum += (Double) value;
+                            count++;
+                        } else if (value instanceof Integer) {
+                            sum += ((Integer) value).doubleValue();
+                            count++;
+                        }
+                    }
+
+                    if (count > 0) {
+                        double averageRating = sum / count;
+                        String formattedRating = String.format(Locale.US, "%.1f★ (%d)", averageRating, count);
+                        ratingText.setText(formattedRating);
+                    } else {
+                        ratingText.setText("No Rating");
+                    }
+                } catch (Exception e) {
+                    Log.e("DriverHomeFragment", "Error processing rating", e);
+                    ratingText.setText("No Rating");
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                if (getContext() == null || !isAdded()) return;
+                
+                Log.e("DriverHomeFragment", "Error loading rating", databaseError.toException());
+                ratingText.setText("No Rating");
+            }
+        };
+
+        driversRef.child("ratingsandcomments").child("rating").addValueEventListener(ratingListener);
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -389,6 +447,9 @@ public class DriverHomeFragment extends Fragment {
         }
         if (availabilityListener != null) {
             driversRef.child("isAvailable").removeEventListener(availabilityListener);
+        }
+        if (ratingListener != null) {
+            driversRef.child("ratingsandcomments").child("rating").removeEventListener(ratingListener);
         }
     }
 } 
