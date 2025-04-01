@@ -101,6 +101,51 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             holder.mapView.setTag(position);
             holder.mapView.onCreate(null);
         }
+
+        // Add real-time listener for order status changes
+        if (order.getId() != null) {
+            DatabaseReference orderRef = FirebaseDatabase.getInstance()
+                    .getReference("orders")
+                    .child(order.getId());
+
+            ValueEventListener statusListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    String newStatus = snapshot.child("status").getValue(String.class);
+                    String newOrderStatus = snapshot.child("order_status").getValue(String.class);
+                    
+                    // Update the order object
+                    order.setStatus(newStatus);
+                    order.setOrderStatus(newOrderStatus);
+
+                    // Update map based on new status
+                    if (newStatus != null && newStatus.equals("delivered") || 
+                        newOrderStatus != null && newOrderStatus.equals("delivered")) {
+                        holder.mapView.setVisibility(View.GONE);
+                    } else {
+                        holder.mapView.setVisibility(View.VISIBLE);
+                        holder.mapView.onResume();
+                        holder.mapView.getMapAsync(googleMap -> {
+                            googleMap.clear(); // Clear previous markers
+                            googleMap.getUiSettings().setScrollGesturesEnabled(false);
+                            loadLocationsOnMap(googleMap, order, holder.mapView);
+                        });
+                    }
+
+                    // Update status display
+                    updateOrderStatus(holder, newStatus, newOrderStatus);
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Log.e(TAG, "Error listening for status changes", error.toException());
+                }
+            };
+
+            // Store the listener reference in the ViewHolder
+            holder.statusListener = statusListener;
+            orderRef.addValueEventListener(statusListener);
+        }
         
         // Show map only for specific statuses
         if (status.equals("delivered") || orderStatus.equals("delivered")) {
@@ -362,6 +407,16 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         if (holder.mapView != null) {
             holder.mapView.onPause();
             holder.mapView.onDestroy();
+        }
+        // Remove the status listener when view is recycled
+        if (holder.statusListener != null && holder.getAdapterPosition() != -1) {
+            Order order = orders.get(holder.getAdapterPosition());
+            if (order != null && order.getId() != null) {
+                DatabaseReference orderRef = FirebaseDatabase.getInstance()
+                        .getReference("orders")
+                        .child(order.getId());
+                orderRef.removeEventListener(holder.statusListener);
+            }
         }
     }
 
@@ -1077,6 +1132,29 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         }
     }
 
+    private void updateOrderStatus(ViewHolder holder, String status, String orderStatus) {
+        String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
+        if (!displayStatus.isEmpty()) {
+            holder.orderStatus.setVisibility(View.VISIBLE);
+            holder.orderStatus.setText(displayStatus.substring(0, 1).toUpperCase() + 
+                                    displayStatus.substring(1).replace("_", " "));
+            
+            // Set status background color
+            int backgroundColor;
+            if (status.equals("delivered")) {
+                backgroundColor = R.color.green;
+            } else if (orderStatus.equals("assigned_driver")) {
+                backgroundColor = R.color.purple;
+            } else {
+                backgroundColor = R.color.blue;
+            }
+            holder.orderStatus.getBackground().setTint(
+                context.getResources().getColor(backgroundColor, null));
+        } else {
+            holder.orderStatus.setVisibility(View.GONE);
+        }
+    }
+
     private void updateMapBounds(GoogleMap googleMap, LatLngBounds.Builder builder, MapView mapView) {
         try {
             if (googleMap == null || builder == null) return;
@@ -1206,6 +1284,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         Button acceptButton, rejectButton, markDeliveredButton, markPickedUpButton, chatButton;
         RecyclerView orderItemsRecyclerView;
         MapView mapView;
+        ValueEventListener statusListener;
 
         public ViewHolder(View itemView) {
             super(itemView);
