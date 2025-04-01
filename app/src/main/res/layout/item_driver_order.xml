@@ -120,6 +120,15 @@
             android:gravity="end">
 
             <Button
+                android:id="@+id/chatButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Chat"
+                android:layout_marginEnd="8dp"
+                android:visibility="gone"
+                android:backgroundTint="@color/accent_orange" />
+
+            <Button
                 android:id="@+id/rejectButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

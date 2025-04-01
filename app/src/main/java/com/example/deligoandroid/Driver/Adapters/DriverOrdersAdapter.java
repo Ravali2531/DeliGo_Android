@@ -1,5 +1,7 @@
 package com.example.deligoandroid.Driver.Adapters;
 
+import static android.content.ContentValues.TAG;
+
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,6 +33,11 @@ import com.google.firebase.database.MutableData;
 import com.google.firebase.database.ValueEventListener;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.app.Dialog;
+import android.view.Window;
+import android.widget.EditText;
 
 public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -97,16 +104,21 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         holder.rejectButton.setVisibility(View.GONE);
         holder.markPickedUpButton.setVisibility(View.GONE);
         holder.markDeliveredButton.setVisibility(View.GONE);
+        holder.chatButton.setVisibility(View.GONE);
 
         // Show appropriate buttons based on status
         if (status.equals("in_progress")) {
             if (orderStatus.equals("assigned_driver") && order.getDriverId() != null && order.getDriverId().equals(driverId)) {
                 holder.acceptButton.setVisibility(View.VISIBLE);
                 holder.rejectButton.setVisibility(View.VISIBLE);
+                holder.chatButton.setVisibility(View.GONE);
             } else if (orderStatus.equals("driver_accepted") && order.getDriverId() != null && order.getDriverId().equals(driverId)) {
                 holder.markPickedUpButton.setVisibility(View.VISIBLE);
+                holder.chatButton.setVisibility(View.GONE);
             } else if (orderStatus.equals("picked_up") && order.getDriverId() != null && order.getDriverId().equals(driverId)) {
                 holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                holder.chatButton.setVisibility(View.VISIBLE);
+                holder.chatButton.setOnClickListener(v -> showChatDialog(order));
             }
         }
 
@@ -413,6 +425,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
         Map<String, Object> updates = new HashMap<>();
         updates.put("order_status", "picked_up");
+        updates.put("status", "in_progress");
 
         orderRef.updateChildren(updates)
                 .addOnSuccessListener(aVoid -> {
@@ -547,6 +560,173 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
         }
     }
 
+    private void showChatDialog(Order order) {
+        Dialog dialog = new Dialog(context);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_chat);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        RecyclerView messagesRecyclerView = dialog.findViewById(R.id.messagesRecyclerView);
+        EditText messageInput = dialog.findViewById(R.id.messageInput);
+        Button sendButton = dialog.findViewById(R.id.sendButton);
+        TextView dialogTitle = dialog.findViewById(R.id.dialogTitle);
+
+        dialogTitle.setText("Chat with Customer");
+
+        // Set up RecyclerView
+        messagesRecyclerView.setLayoutManager(new LinearLayoutManager(context));
+        List<ChatMessage> messages = new ArrayList<>();
+        ChatAdapter chatAdapter = new ChatAdapter(messages);
+        messagesRecyclerView.setAdapter(chatAdapter);
+
+        // Get current driver info
+        DatabaseReference driverRef = FirebaseDatabase.getInstance().getReference("drivers").child(driverId);
+        driverRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String driverName = snapshot.child("name").getValue(String.class);
+                
+                // Set up message listener
+                DatabaseReference messagesRef = FirebaseDatabase.getInstance()
+                    .getReference("orders")
+                    .child(order.getId())
+                    .child("driver_customer_messages");
+
+                messagesRef.addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        messages.clear();
+                        for (DataSnapshot messageSnapshot : dataSnapshot.getChildren()) {
+                            ChatMessage message = messageSnapshot.getValue(ChatMessage.class);
+                            if (message != null) {
+                                messages.add(message);
+                            }
+                        }
+                        chatAdapter.notifyDataSetChanged();
+                        messagesRecyclerView.scrollToPosition(messages.size() - 1);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e(TAG, "Error loading messages", error.toException());
+                    }
+                });
+
+                // Handle send button click
+                sendButton.setOnClickListener(v -> {
+                    String messageText = messageInput.getText().toString().trim();
+                    if (!messageText.isEmpty()) {
+                        // Create message object
+                        Map<String, Object> messageData = new HashMap<>();
+                        messageData.put("message", messageText);
+                        messageData.put("senderId", driverId);
+                        messageData.put("senderName", driverName);
+                        messageData.put("senderType", "driver");
+                        messageData.put("timestamp", System.currentTimeMillis());
+
+                        // Save message
+                        messagesRef.push().setValue(messageData);
+                        messageInput.setText("");
+                    }
+                });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error getting driver name", error.toException());
+            }
+        });
+
+        dialog.show();
+        
+        // Set dialog width to match parent
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    // Chat Message class
+    private static class ChatMessage {
+        private String message;
+        private String senderId;
+        private String senderName;
+        private String senderType;
+        private long timestamp;
+
+        public ChatMessage() {}
+
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
+        public String getSenderId() { return senderId; }
+        public void setSenderId(String senderId) { this.senderId = senderId; }
+
+        public String getSenderName() { return senderName; }
+        public void setSenderName(String senderName) { this.senderName = senderName; }
+
+        public String getSenderType() { return senderType; }
+        public void setSenderType(String senderType) { this.senderType = senderType; }
+
+        public long getTimestamp() { return timestamp; }
+        public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+
+    // Chat Adapter
+    private class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
+        private List<ChatMessage> messages;
+
+        public ChatAdapter(List<ChatMessage> messages) {
+            this.messages = messages;
+        }
+
+        @NonNull
+        @Override
+        public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_chat_message, parent, false);
+            return new MessageViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
+            ChatMessage message = messages.get(position);
+            holder.messageText.setText(message.getMessage());
+            holder.senderName.setText(message.getSenderName());
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String time = sdf.format(new Date(message.getTimestamp()));
+            holder.timestamp.setText(time);
+
+            // Align messages based on sender type
+            if (message.getSenderType().equals("driver")) {
+                holder.messageLayout.setGravity(android.view.Gravity.END);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_sent);
+            } else {
+                holder.messageLayout.setGravity(android.view.Gravity.START);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_received);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return messages.size();
+        }
+
+        class MessageViewHolder extends RecyclerView.ViewHolder {
+            TextView messageText, senderName, timestamp;
+            LinearLayout messageLayout;
+
+            MessageViewHolder(View itemView) {
+                super(itemView);
+                messageText = itemView.findViewById(R.id.messageText);
+                senderName = itemView.findViewById(R.id.senderName);
+                timestamp = itemView.findViewById(R.id.timestamp);
+                messageLayout = itemView.findViewById(R.id.messageLayout);
+            }
+        }
+    }
+
     @Override
     public int getItemCount() {
         return orders != null ? orders.size() : 0;
@@ -559,7 +739,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, restaurantName, restaurantAddress, customerName, totalAmount, deliveryFee, deliveryAddress;
-        Button acceptButton, rejectButton, markDeliveredButton, markPickedUpButton;
+        Button acceptButton, rejectButton, markDeliveredButton, markPickedUpButton, chatButton;
         RecyclerView orderItemsRecyclerView;
 
         public ViewHolder(View itemView) {
@@ -576,6 +756,7 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
             rejectButton = itemView.findViewById(R.id.rejectButton);
             markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
             markPickedUpButton = itemView.findViewById(R.id.markPickedUpButton);
+            chatButton = itemView.findViewById(R.id.chatButton);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
         }
     }

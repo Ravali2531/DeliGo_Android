@@ -120,13 +120,24 @@
                 android:textColor="@android:color/black" />
         </LinearLayout>
 
+        <Button
+            android:id="@+id/driverChatButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chat with Driver"
+            android:layout_gravity="end"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"
+            android:backgroundTint="@color/accent_orange" />
+
         <!-- Action Buttons for Delivered Orders -->
         <LinearLayout
             android:id="@+id/deliveredOrderActions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="8dp">
+            android:padding="8dp"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -160,7 +171,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/downloadReceiptButton"
@@ -174,12 +186,12 @@
                     style="@style/Widget.MaterialComponents.Button" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/chatButton"
+                    android:id="@+id/restaurantChatButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="4dp"
-                    android:text="Chat"
+                    android:text="Chat with Restaurant"
                     android:textAllCaps="false"
                     android:backgroundTint="@color/orange"
                     style="@style/Widget.MaterialComponents.Button" />

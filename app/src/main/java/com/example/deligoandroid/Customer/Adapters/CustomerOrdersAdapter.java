@@ -138,6 +138,14 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             holder.deliveryType.setVisibility(View.VISIBLE);
             holder.deliveryType.setText("Delivery");
 
+            // Show chat button if driver has accepted the order
+            if (orderStatus.equals("picked_up")) {
+                holder.driverChatButton.setVisibility(View.VISIBLE);
+                holder.driverChatButton.setOnClickListener(v -> showChatDialog(order, "driver"));
+            } else {
+                holder.driverChatButton.setVisibility(View.GONE);
+            }
+
             // Set up order items
             if (order.getItems() != null && !order.getItems().isEmpty()) {
                 holder.orderItemsRecyclerView.setVisibility(View.VISIBLE);
@@ -284,13 +292,8 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                     });
                 });
 
-                holder.chatButton.setOnClickListener(v -> {
-                    Intent chatIntent = new Intent(context, ChatActivity.class);
-                    chatIntent.putExtra("orderId", orderId);
-                    chatIntent.putExtra("restaurantId", order.getRestaurantId());
-                    chatIntent.putExtra("restaurantName", order.getRestaurantName());
-                    context.startActivity(chatIntent);
-                });
+                // Handle restaurant chat button click
+                holder.restaurantChatButton.setOnClickListener(v -> showChatDialog(order, "restaurant"));
             } else {
                 holder.deliveredOrderActions.setVisibility(View.GONE);
             }
@@ -663,12 +666,182 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         });
     }
 
+    private void showChatDialog(Order order, String chatType) {
+        Dialog dialog = new Dialog(context);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_chat);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+
+        RecyclerView messagesRecyclerView = dialog.findViewById(R.id.messagesRecyclerView);
+        EditText messageInput = dialog.findViewById(R.id.messageInput);
+        Button sendButton = dialog.findViewById(R.id.sendButton);
+        TextView dialogTitle = dialog.findViewById(R.id.dialogTitle);
+
+        // Set appropriate title based on chat type
+        dialogTitle.setText(chatType.equals("driver") ? "Chat with Driver" : "Chat with Restaurant");
+
+        // Set up RecyclerView
+        messagesRecyclerView.setLayoutManager(new LinearLayoutManager(context));
+        List<ChatMessage> messages = new ArrayList<>();
+        ChatAdapter chatAdapter = new ChatAdapter(messages);
+        messagesRecyclerView.setAdapter(chatAdapter);
+
+        // Get current customer info
+        String customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference customerRef = FirebaseDatabase.getInstance().getReference("customers").child(customerId);
+        customerRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                String customerName = snapshot.child("fullName").getValue(String.class);
+                
+                // Set up message listener with appropriate path based on chat type
+                String chatPath = chatType.equals("driver") ? "driver_customer_messages" : "messages";
+                DatabaseReference messagesRef = FirebaseDatabase.getInstance()
+                    .getReference("orders")
+                    .child(order.getId())
+                    .child(chatPath);
+
+                messagesRef.addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        messages.clear();
+                        for (DataSnapshot messageSnapshot : dataSnapshot.getChildren()) {
+                            ChatMessage message = messageSnapshot.getValue(ChatMessage.class);
+                            if (message != null) {
+                                messages.add(message);
+                            }
+                        }
+                        chatAdapter.notifyDataSetChanged();
+                        messagesRecyclerView.scrollToPosition(messages.size() - 1);
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e(TAG, "Error loading messages", error.toException());
+                    }
+                });
+
+                // Handle send button click
+                sendButton.setOnClickListener(v -> {
+                    String messageText = messageInput.getText().toString().trim();
+                    if (!messageText.isEmpty()) {
+                        // Create message object
+                        Map<String, Object> messageData = new HashMap<>();
+                        messageData.put("message", messageText);
+                        messageData.put("senderId", customerId);
+                        messageData.put("senderName", customerName);
+                        messageData.put("senderType", "customer");
+                        messageData.put("timestamp", System.currentTimeMillis());
+
+                        // Save message
+                        messagesRef.push().setValue(messageData);
+                        messageInput.setText("");
+                    }
+                });
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "Error getting customer name", error.toException());
+            }
+        });
+
+        dialog.show();
+        
+        // Set dialog width to match parent
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+    }
+
+    // Chat Message class
+    private static class ChatMessage {
+        private String message;
+        private String senderId;
+        private String senderName;
+        private String senderType;
+        private long timestamp;
+
+        public ChatMessage() {}
+
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+
+        public String getSenderId() { return senderId; }
+        public void setSenderId(String senderId) { this.senderId = senderId; }
+
+        public String getSenderName() { return senderName; }
+        public void setSenderName(String senderName) { this.senderName = senderName; }
+
+        public String getSenderType() { return senderType; }
+        public void setSenderType(String senderType) { this.senderType = senderType; }
+
+        public long getTimestamp() { return timestamp; }
+        public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
+
+    // Chat Adapter
+    private class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
+        private List<ChatMessage> messages;
+
+        public ChatAdapter(List<ChatMessage> messages) {
+            this.messages = messages;
+        }
+
+        @NonNull
+        @Override
+        public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_chat_message, parent, false);
+            return new MessageViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
+            ChatMessage message = messages.get(position);
+            holder.messageText.setText(message.getMessage());
+            holder.senderName.setText(message.getSenderName());
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String time = sdf.format(new Date(message.getTimestamp()));
+            holder.timestamp.setText(time);
+
+            // Align messages based on sender type
+            if (message.getSenderType().equals("customer")) {
+                holder.messageLayout.setGravity(android.view.Gravity.END);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_sent);
+            } else {
+                holder.messageLayout.setGravity(android.view.Gravity.START);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_received);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return messages.size();
+        }
+
+        class MessageViewHolder extends RecyclerView.ViewHolder {
+            TextView messageText, senderName, timestamp;
+            LinearLayout messageLayout;
+
+            MessageViewHolder(View itemView) {
+                super(itemView);
+                messageText = itemView.findViewById(R.id.messageText);
+                senderName = itemView.findViewById(R.id.senderName);
+                timestamp = itemView.findViewById(R.id.timestamp);
+                messageLayout = itemView.findViewById(R.id.messageLayout);
+            }
+        }
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, restaurantName, deliveryType, deliveryFee, totalAmount;
         RecyclerView orderItemsRecyclerView;
         LinearLayout deliveredOrderActions;
-        MaterialButton rateOrderButton, reorderButton, downloadReceiptButton;
-        Button chatButton;
+        MaterialButton rateOrderButton, reorderButton, downloadReceiptButton, restaurantChatButton;
+        Button driverChatButton;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -683,7 +856,8 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             rateOrderButton = itemView.findViewById(R.id.rateOrderButton);
             reorderButton = itemView.findViewById(R.id.reorderButton);
             downloadReceiptButton = itemView.findViewById(R.id.downloadReceiptButton);
-            chatButton = itemView.findViewById(R.id.chatButton);
+            driverChatButton = itemView.findViewById(R.id.driverChatButton);
+            restaurantChatButton = itemView.findViewById(R.id.restaurantChatButton);
         }
     }
 } 
