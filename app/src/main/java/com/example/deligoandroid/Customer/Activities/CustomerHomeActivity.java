@@ -49,6 +49,8 @@ import android.app.NotificationChannel;
 import android.app.PendingIntent;
 import android.media.RingtoneManager;
 import androidx.core.app.NotificationCompat;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
 
 public class CustomerHomeActivity extends AppCompatActivity 
     implements RestaurantAdapter.OnRestaurantClickListener,
@@ -252,6 +254,34 @@ public class CustomerHomeActivity extends AppCompatActivity
             }
         });
 
+        // Setup Spinner
+        ArrayAdapter<CharSequence> spinnerAdapter = ArrayAdapter.createFromResource(this,
+            R.array.sort_options, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        binding.sortSpinner.setAdapter(spinnerAdapter);
+        
+        binding.sortSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                switch (position) {
+                    case 0: // Distance
+                        sortRestaurantsByDistance();
+                        break;
+                    case 1: // Price: Low to High
+                        sortRestaurantsByPrice(true);
+                        break;
+                    case 2: // Price: High to Low
+                        sortRestaurantsByPrice(false);
+                        break;
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Do nothing
+            }
+        });
+
         // Initialize Firebase Reference
         restaurantsRef = FirebaseDatabase.getInstance().getReference().child("restaurants");
     }
@@ -327,7 +357,6 @@ public class CustomerHomeActivity extends AppCompatActivity
                             Restaurant restaurant = new Restaurant();
                             restaurant.setId(restaurantId);
 
-
                             DataSnapshot storeInfosnapshot = snapshot.child("store_info");
 
                             // Get basic info with default values
@@ -340,6 +369,44 @@ public class CustomerHomeActivity extends AppCompatActivity
                             // Get about info
                             String about = storeInfosnapshot.child("description").getValue(String.class);
                             restaurant.setDescription(about != null ? about : "");
+
+                            // Get price range - try multiple fields
+                            String priceRange = storeInfosnapshot.child("priceRange").getValue(String.class);
+                            
+                            // If no priceRange in store_info, check menu_info
+                            if (priceRange == null || priceRange.isEmpty()) {
+                                DataSnapshot menuInfoSnapshot = snapshot.child("menu_info");
+                                if (menuInfoSnapshot.exists()) {
+                                    priceRange = menuInfoSnapshot.child("priceRange").getValue(String.class);
+                                }
+                            }
+                            
+                            // If still no priceRange, look for minimum and maximum price
+                            if (priceRange == null || priceRange.isEmpty()) {
+                                DataSnapshot menuItemsSnapshot = snapshot.child("menu_items");
+                                if (menuItemsSnapshot.exists() && menuItemsSnapshot.getChildrenCount() > 0) {
+                                    double minPrice = Double.MAX_VALUE;
+                                    double maxPrice = 0;
+                                    boolean hasPrices = false;
+                                    
+                                    for (DataSnapshot itemSnapshot : menuItemsSnapshot.getChildren()) {
+                                        Double price = itemSnapshot.child("price").getValue(Double.class);
+                                        if (price != null && price > 0) {
+                                            minPrice = Math.min(minPrice, price);
+                                            maxPrice = Math.max(maxPrice, price);
+                                            hasPrices = true;
+                                        }
+                                    }
+                                    
+                                    if (hasPrices) {
+                                        priceRange = "$" + String.format("%.2f", minPrice) + "-$" + String.format("%.2f", maxPrice);
+                                    }
+                                }
+                            }
+                            
+                            restaurant.setPriceRange(priceRange != null ? priceRange : "");
+                            Log.d("CustomerHomeActivity", "Restaurant " + restaurant.getName() + 
+                                " has price range: " + restaurant.getPriceRange());
 
                             // Set open status
                             Boolean isOpen = snapshot.child("isOpen").getValue(Boolean.class);
@@ -395,7 +462,6 @@ public class CustomerHomeActivity extends AppCompatActivity
                             // Set default values for fields not in the current structure
                             restaurant.setCuisine("Restaurant");
                             restaurant.setPhone("");
-                            restaurant.setPriceRange("$");
                             restaurant.setImageURL("");
 
                             // Get ratings data from ratingsandcomments
@@ -442,21 +508,9 @@ public class CustomerHomeActivity extends AppCompatActivity
                         }
                     }
 
-                    // Sort restaurants by distance if location is available
-                    if (currentLocation != null) {
-                        Log.d("CustomerHomeActivity", "Sorting restaurants by distance...");
-                        Collections.sort(allRestaurants, (r1, r2) -> 
-                            Double.compare(r1.getDistance(), r2.getDistance()));
-                        
-                        // Log sorted restaurants
-                        for (Restaurant r : allRestaurants) {
-                            Log.d("CustomerHomeActivity", "Sorted restaurant: " + r.getName() + 
-                                " - Distance: " + r.getDistance() + " km");
-                        }
-                    } else {
-                        Log.d("CustomerHomeActivity", "Location not available, restaurants not sorted by distance");
-                    }
-
+                    // Apply the current sort preference based on the selected spinner item
+                    applySortBasedOnSelectedItem();
+                    
                     // Update UI based on results
                     binding.loadingProgressBar.setVisibility(View.GONE);
                     
@@ -495,6 +549,70 @@ public class CustomerHomeActivity extends AppCompatActivity
                 binding.restaurantsRecyclerView.setVisibility(View.GONE);
             }
         });
+    }
+
+    private void applySortBasedOnSelectedItem() {
+        int position = binding.sortSpinner.getSelectedItemPosition();
+        // Default to distance sort (0) if no selection
+        if (position < 0) position = 0;
+        
+        switch (position) {
+            case 0: // Distance
+                sortRestaurantsByDistance();
+                break;
+            case 1: // Price: Low to High
+                sortRestaurantsByPrice(true);
+                break;
+            case 2: // Price: High to Low
+                sortRestaurantsByPrice(false);
+                break;
+        }
+    }
+
+    private double getPriceRangeValue(String priceRange, boolean lowToHigh) {
+        if (priceRange == null || priceRange.isEmpty()) {
+            return 0; // Default value for unknown price ranges
+        }
+        
+        Log.d("CustomerHomeActivity", "Processing price range: " + priceRange);
+        
+        // Check if the price range is in "$" format
+        if (priceRange.startsWith("$") && !priceRange.contains("-")) {
+            return priceRange.length(); // $=1, $$=2, $$$=3, $$$$=4
+        }
+        
+        // Check if price range is in "min-max" format with currency symbol
+        if (priceRange.contains("-")) {
+            try {
+                // Remove currency symbols and any non-numeric characters except decimal points and minus
+                String cleanedRange = priceRange.replaceAll("\\$", "");
+                String[] parts = cleanedRange.split("-");
+                if (parts.length == 2) {
+                    // Further clean each part to ensure valid numbers
+                    String minPart = parts[0].trim().replaceAll("[^0-9\\.]", "");
+                    String maxPart = parts[1].trim().replaceAll("[^0-9\\.]", "");
+                    
+                    double min = Double.parseDouble(minPart);
+                    double max = Double.parseDouble(maxPart);
+                    
+                    Log.d("CustomerHomeActivity", "Parsed price range: min=" + min + ", max=" + max);
+                    
+                    // For low to high, use minimum price; for high to low, use maximum price
+                    return lowToHigh ? min : max;
+                }
+            } catch (NumberFormatException e) {
+                Log.e("CustomerHomeActivity", "Error parsing price range: " + priceRange, e);
+            }
+        }
+        
+        // Try to parse as a single number after removing currency symbol
+        try {
+            String cleanedPrice = priceRange.replaceAll("[^0-9\\.]", "");
+            return Double.parseDouble(cleanedPrice.trim());
+        } catch (NumberFormatException e) {
+            Log.e("CustomerHomeActivity", "Unable to parse price range: " + priceRange, e);
+            return 0;
+        }
     }
 
     private void filterRestaurants(String query) {
@@ -831,6 +949,35 @@ public class CustomerHomeActivity extends AppCompatActivity
                 // Update bottom navigation selection
                 binding.bottomNavigation.setSelectedItemId(R.id.nav_orders);
             }
+        }
+    }
+
+    private void sortRestaurantsByDistance() {
+        if (currentLocation != null) {
+            Collections.sort(allRestaurants, (r1, r2) -> 
+                Double.compare(r1.getDistance(), r2.getDistance()));
+            updateUI(allRestaurants);
+        } else {
+            Toast.makeText(this, "Location not available for distance sorting", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void sortRestaurantsByPrice(boolean lowToHigh) {
+        Collections.sort(allRestaurants, (r1, r2) -> {
+            double r1Price = getPriceRangeValue(r1.getPriceRange(), lowToHigh);
+            double r2Price = getPriceRangeValue(r2.getPriceRange(), lowToHigh);
+            return lowToHigh ? 
+                Double.compare(r1Price, r2Price) : 
+                Double.compare(r2Price, r1Price);
+        });
+        updateUI(allRestaurants);
+        Log.d("CustomerHomeActivity", "Sorted restaurants by price: " + (lowToHigh ? "Low to High" : "High to Low"));
+        
+        // Log sorted restaurants and their price ranges
+        for (Restaurant r : allRestaurants) {
+            Log.d("CustomerHomeActivity", "Restaurant: " + r.getName() + 
+                  ", Price range: " + r.getPriceRange() + 
+                  ", Sort value: " + getPriceRangeValue(r.getPriceRange(), lowToHigh));
         }
     }
 
