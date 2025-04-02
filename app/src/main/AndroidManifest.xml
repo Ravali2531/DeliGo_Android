@@ -58,6 +58,11 @@
             android:theme="@style/Theme.DeliGoAndroid" />
 
         <activity
+            android:name=".Admin.OtherActivitiesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
             android:name=".Admin.ChatDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.DeliGoAndroid" />
