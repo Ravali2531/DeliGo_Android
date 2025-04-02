@@ -9,7 +9,6 @@ import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Locale;
 
@@ -18,22 +17,17 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
-import com.example.deligoandroid.Admin.ManageUsersActivity;
 import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.R;
-import com.example.deligoandroid.Restaurant.RestaurantSupportActivity;
 import com.example.deligoandroid.Restaurant.StoreInformationActivity;
 import com.example.deligoandroid.Restaurant.StoreHoursActivity;
+import com.example.deligoandroid.Restaurant.SalesReportsActivity;
+import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
 import com.example.deligoandroid.Utils.PreferencesManager;
 import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 public class AccountFragment extends Fragment {
     private FragmentAccountBinding binding;
@@ -90,7 +84,21 @@ public class AccountFragment extends Fragment {
 
         // Store Information
         binding.storeInfoLayout.setOnClickListener(v -> {
-            startActivity(new Intent(requireContext(), StoreInformationActivity.class));
+            Intent intent = new Intent(getActivity(), StoreInformationActivity.class);
+            startActivity(intent);
+        });
+
+        // Sales Reports
+        View salesReportsLayout = requireView().findViewById(R.id.salesReportsLayout);
+        salesReportsLayout.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), SalesReportsActivity.class);
+            startActivity(intent);
+        });
+
+        // Support Section
+        binding.supportLayout.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), RestaurantChatActivity.class);
+            startActivity(intent);
         });
 
         // Dark Mode Switch
@@ -137,12 +145,6 @@ public class AccountFragment extends Fragment {
 
         // Sign Out
         binding.signOutButton.setOnClickListener(v -> signOut());
-
-        // Support Section
-        binding.supportSection.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), RestaurantSupportActivity.class);
-            startActivity(intent);
-        });
     }
 
     private int getBottomNavSelectedItemId() {

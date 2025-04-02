@@ -21,13 +21,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import android.widget.Toast;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
-import android.app.AlertDialog;
+
 import java.util.HashMap;
 import java.util.Map;
-import com.google.firebase.database.Query;
+
 import android.util.Log;
 import android.content.Intent;
 import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;

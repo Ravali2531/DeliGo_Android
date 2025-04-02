@@ -53,7 +53,7 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
-            android:id="@+id/storeHoursLayout"
+            android:id="@+id/store_hours_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -83,7 +83,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/storeInfoLayout"
+            android:id="@+id/store_info_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -112,6 +112,39 @@
                 app:tint="?android:textColorSecondary"/>
         </LinearLayout>
 
+        <!-- Sales Reports -->
+        <LinearLayout
+            android:id="@+id/salesReportsLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_analytics"
+                app:tint="?attr/colorPrimary"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Sales Reports"
+                android:textColor="?android:textColorPrimary"
+                android:layout_marginStart="16dp"/>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_right"
+                app:tint="?android:textColorSecondary"/>
+        </LinearLayout>
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -123,7 +156,6 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
-            android:id="@+id/darkModeLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -146,7 +178,7 @@
                 android:layout_marginStart="16dp"/>
 
             <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/darkModeSwitch"
+                android:id="@+id/dark_mode_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="false"/>
@@ -163,7 +195,7 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
-            android:id="@+id/languageLayout"
+            android:id="@+id/language_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -186,7 +218,7 @@
                 android:layout_marginStart="16dp"/>
 
             <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/languageSwitch"
+                android:id="@+id/language_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="false"/>
@@ -203,7 +235,7 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
-            android:id="@+id/supportSection"
+            android:id="@+id/support_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -240,7 +272,7 @@
             android:layout_weight="1"/>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/signOutButton"
+            android:id="@+id/sign_out_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/sign_out"
