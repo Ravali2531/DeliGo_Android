@@ -69,6 +69,19 @@ public class AccountFragment extends Fragment {
             startActivity(intent);
         });
 
+        // Refer to Friends Section
+        binding.referFriendsSection.setOnClickListener(v -> {
+            String shareText = "Hey! Check out DeliGo - the best food delivery app! " +
+                    "Use my referral code to get discounts on your first order. " +
+                    "Download now: https://play.google.com/store/apps/details?id=com.example.deligoandroid";
+            
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Try DeliGo - Food Delivery App");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+            startActivity(Intent.createChooser(shareIntent, "Share via"));
+        });
+
         // Sign Out Button
         binding.signOutButton.setOnClickListener(v -> signOut());
     }
