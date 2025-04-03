@@ -18,4 +18,7 @@ public class UserDocument {
     public String document2Url;
     public String documentStatus;
     public Boolean documentsSubmitted;
+    
+    // Block status
+    public Boolean blocked;
 } 

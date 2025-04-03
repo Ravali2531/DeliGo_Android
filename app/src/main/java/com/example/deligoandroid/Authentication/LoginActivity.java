@@ -133,6 +133,11 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
+                    Boolean isBlocked = dataSnapshot.child("blocked").getValue(Boolean.class);
+                    if (isBlocked != null && isBlocked) {
+                        handleBlockedUser();
+                        return;
+                    }
                     redirectUser("Customer");
                     return;
                 }
@@ -151,6 +156,11 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
+                    Boolean isBlocked = dataSnapshot.child("blocked").getValue(Boolean.class);
+                    if (isBlocked != null && isBlocked) {
+                        handleBlockedUser();
+                        return;
+                    }
                     // Check if documents are submitted
                     Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
                     String status = String.valueOf(dataSnapshot.child("documents/status").getValue());
@@ -187,6 +197,11 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
+                    Boolean isBlocked = dataSnapshot.child("blocked").getValue(Boolean.class);
+                    if (isBlocked != null && isBlocked) {
+                        handleBlockedUser();
+                        return;
+                    }
                     // Check if documents are submitted
                     Boolean documentsSubmitted = dataSnapshot.child("documentsSubmitted").getValue(Boolean.class);
                     if (documentsSubmitted == null || !documentsSubmitted) {
@@ -402,6 +417,13 @@ public class LoginActivity extends AppCompatActivity {
         // Show notification
         int notificationId = orderId != null ? orderId.hashCode() : 0;
         notificationManager.notify(notificationId, notificationBuilder.build());
+    }
+
+    private void handleBlockedUser() {
+        Toast.makeText(LoginActivity.this, "Your account has been blocked. Please contact support.", Toast.LENGTH_LONG).show();
+        mAuth.signOut();
+        loginButton.setEnabled(true);
+        loginButton.setText("Login");
     }
 
     private void handleDatabaseError(DatabaseError databaseError) {
