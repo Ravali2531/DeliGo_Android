@@ -1,5 +1,6 @@
 package com.example.deligoandroid.Admin;
 
+import android.content.Intent;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.deligoandroid.R;
@@ -15,14 +16,27 @@ public class OtherActivitiesActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         setupToolbar();
+        setupClickListeners();
     }
 
     private void setupToolbar() {
         setSupportActionBar(binding.toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(R.string.other_activities);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
         }
+    }
+
+    private void setupClickListeners() {
+        binding.btnOrderManagement.setOnClickListener(v -> {
+            Intent intent = new Intent(this, OrderManagementActivity.class);
+            startActivity(intent);
+        });
+
+        binding.btnViewPaymentTransactions.setOnClickListener(v -> {
+            Intent intent = new Intent(this, PaymentTransactionsActivity.class);
+            startActivity(intent);
+        });
     }
 
     @Override

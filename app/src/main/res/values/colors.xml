@@ -66,4 +66,9 @@
 
     <color name="purple">#673AB7</color>
 
+    <color name="light_orange">#FFE5B4</color>
+
+    <color name="orange_dark">#F57C00</color>
+    <color name="purple_dark">#512DA8</color>
+
 </resources>
