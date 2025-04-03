@@ -9,11 +9,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.example.deligoandroid.Authentication.LoginActivity;
 import com.example.deligoandroid.Customer.CustomerSupportActivity;
 import com.example.deligoandroid.Customer.EditProfileActivity;
+import com.example.deligoandroid.Utils.ThemeManager;
 import com.example.deligoandroid.databinding.FragmentCustomerAccountBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -49,6 +51,7 @@ public class CustomerAccountFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         setupUI();
         loadUserData();
+        setupDarkModeToggle();
     }
 
     private void setupUI() {
@@ -66,6 +69,32 @@ public class CustomerAccountFragment extends Fragment {
 
         // Sign Out Button
         binding.signOutButton.setOnClickListener(v -> signOut());
+    }
+
+    private void setupDarkModeToggle() {
+        ThemeManager themeManager = ThemeManager.getInstance(requireContext());
+        
+        // Set initial state based on current theme
+        boolean isDarkMode = themeManager.isDarkMode();
+        binding.darkModeSwitch.setChecked(isDarkMode);
+        
+        // Handle toggle changes
+        binding.darkModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (getActivity() == null) return;
+            
+            // First update the saved preference
+            themeManager.setDarkMode(isChecked);
+            
+            // Force dark mode application directly
+            if (isChecked) {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+            }
+            
+            // Force recreation of the activity to apply theme changes
+            getActivity().recreate();
+        });
     }
 
     private void loadUserData() {

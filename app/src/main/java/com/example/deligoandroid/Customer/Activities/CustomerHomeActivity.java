@@ -51,6 +51,8 @@ import android.media.RingtoneManager;
 import androidx.core.app.NotificationCompat;
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
+import com.example.deligoandroid.Utils.ThemeManager;
+import androidx.appcompat.app.AppCompatDelegate;
 
 public class CustomerHomeActivity extends AppCompatActivity 
     implements RestaurantAdapter.OnRestaurantClickListener,
@@ -70,6 +72,7 @@ public class CustomerHomeActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        ThemeManager.getInstance(this).initTheme();
         super.onCreate(savedInstanceState);
         binding = ActivityCustomerHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -988,5 +991,20 @@ public class CustomerHomeActivity extends AppCompatActivity
         if (ordersListener != null) {
             ordersRef.removeEventListener(ordersListener);
         }
+    }
+
+    public void reloadTheme() {
+        // Get the current dark mode state
+        boolean isDarkMode = ThemeManager.getInstance(this).isDarkMode();
+        
+        // Force apply the theme mode directly to ensure immediate effect
+        if (isDarkMode) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        }
+        
+        // Recreate the activity to fully apply the theme
+        recreate();
     }
 } 

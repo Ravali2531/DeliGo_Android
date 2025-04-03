@@ -71,4 +71,12 @@
     <color name="orange_dark">#F57C00</color>
     <color name="purple_dark">#512DA8</color>
 
+    <!-- Dark mode colors -->
+    <color name="dark_background">#121212</color>
+    <color name="dark_card_background">#1E1E1E</color>
+    <color name="dark_surface">#1E1E1E</color>
+
+    <!-- Gray colors -->
+    <color name="gray_300">#E0E0E0</color>
+
 </resources>
