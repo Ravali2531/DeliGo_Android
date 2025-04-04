@@ -6,6 +6,7 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,6 +24,7 @@ import com.example.deligoandroid.Restaurant.StoreInformationActivity;
 import com.example.deligoandroid.Restaurant.StoreHoursActivity;
 import com.example.deligoandroid.Restaurant.SalesReportsActivity;
 import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
+import com.example.deligoandroid.Restaurant.SpecialDiscountsActivity;
 import com.example.deligoandroid.Utils.PreferencesManager;
 import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -70,7 +72,7 @@ public class AccountFragment extends Fragment {
 
         // Set dark mode switch state
         binding.darkModeSwitch.setChecked(preferencesManager.isDarkMode());
-        
+
         // Set language switch state
         binding.languageSwitch.setChecked(isCurrentlyFrench);
     }
@@ -89,10 +91,20 @@ public class AccountFragment extends Fragment {
         });
 
         // Sales Reports
-        View salesReportsLayout = requireView().findViewById(R.id.salesReportsLayout);
-        salesReportsLayout.setOnClickListener(v -> {
+        binding.salesReportsLayout.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), SalesReportsActivity.class);
             startActivity(intent);
+        });
+
+        // Special Discounts
+        binding.specialDiscountsLayout.setOnClickListener(v -> {
+            try {
+                Intent intent = new Intent(getActivity(), SpecialDiscountsActivity.class);
+                startActivity(intent);
+            } catch (Exception e) {
+                Log.e("AccountFragment", "Error launching SpecialDiscountsActivity: " + e.getMessage());
+                Toast.makeText(requireContext(), "Special Discounts feature coming soon!", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // Support Section
@@ -112,7 +124,7 @@ public class AccountFragment extends Fragment {
                 mainHandler.postDelayed(() -> {
                     if (isAdded() && getActivity() != null) {
                         AppCompatDelegate.setDefaultNightMode(
-                            isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
+                                isChecked ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO
                         );
                     }
                 }, 100);
@@ -127,7 +139,7 @@ public class AccountFragment extends Fragment {
                 isCurrentlyFrench = isChecked;
                 // Always save account tab as the selected tab when switching language
                 preferencesManager.setSelectedTabId(R.id.navigation_account);
-                
+
                 // Save language preference
                 String languageCode = isCurrentlyFrench ? "fr" : "en";
                 preferencesManager.setLanguage(languageCode);

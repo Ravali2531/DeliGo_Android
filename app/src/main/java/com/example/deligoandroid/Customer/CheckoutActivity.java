@@ -72,7 +72,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
 
     private RecyclerView cartItemsRecyclerView;
     private CartAdapter cartAdapter;
-    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount;
+    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount, discountText;
     private MaterialButton placeOrderButton;
     private RadioGroup deliveryOptionsGroup;
     private RadioGroup paymentMethodGroup;
@@ -84,6 +84,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private View deliveryFeeRow;
     private View tipSection;
     private View tipRow;
+    private View discountRow;
     
     private PlacesClient placesClient;
     private AutocompleteSessionToken sessionToken;
@@ -95,6 +96,9 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private double subtotal = 0.0;
     private double tipPercentage = 15.0;
     private boolean isDelivery = true;
+    private String restaurantId = "";
+    private int discountPercentage = 0;
+    private double discountAmount = 0.0;
 
     private PaymentSheet paymentSheet;
     private String paymentIntentClientSecret;
@@ -161,7 +165,9 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         subtotalText = findViewById(R.id.subtotalText);
         totalText = findViewById(R.id.totalText);
         deliveryFeeAmount = findViewById(R.id.deliveryFeeAmount);
+        discountText = findViewById(R.id.discountText);
         deliveryFeeRow = findViewById(R.id.deliveryFeeRow);
+        discountRow = findViewById(R.id.discountRow);
         
         // Place order button
         placeOrderButton = findViewById(R.id.placeOrderButton);
@@ -420,57 +426,123 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     }
 
     private void loadCartItems() {
-        // Get cart items from intent
-        Serializable items = getIntent().getSerializableExtra("cartItems");
-        if (items instanceof ArrayList<?>) {
-            cartItems = (ArrayList<CartItem>) items;
-        } else {
-            cartItems = new ArrayList<>();
-            Log.e(TAG, "Failed to get cart items from intent");
-        }
-        subtotal = getIntent().getDoubleExtra("subtotal", 0.0);
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference cartRef = FirebaseDatabase.getInstance()
+                .getReference("customers")
+                .child(userId)
+                .child("cart");
 
-        Log.d(TAG, "Received " + (cartItems != null ? cartItems.size() : 0) + " items");
-        Log.d(TAG, "Subtotal: " + subtotal);
+        cartRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    cartItems = new ArrayList<>();
+                    for (com.google.firebase.database.DataSnapshot itemSnapshot : dataSnapshot.getChildren()) {
+                        CartItem item = itemSnapshot.getValue(CartItem.class);
+                        if (item != null) {
+                            cartItems.add(item);
+                            // Get the restaurant ID for fetching discount
+                            if (restaurantId.isEmpty() && !item.getRestaurantId().isEmpty()) {
+                                restaurantId = item.getRestaurantId();
+                                fetchRestaurantDiscount(restaurantId);
+                            }
+                        }
+                    }
+                    if (!cartItems.isEmpty()) {
+                        cartAdapter.setItems(cartItems);
+                        calculateSubtotal();
+                        updateTotals();
+                    } else {
+                        showEmptyCart();
+                    }
+                } else {
+                    showEmptyCart();
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Toast.makeText(CheckoutActivity.this, "Failed to load cart: " + 
+                        databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void setupRecyclerView() {
-        cartAdapter = new CartAdapter(this, this);
-        cartItemsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        cartItemsRecyclerView.setAdapter(cartAdapter);
-        cartAdapter.setItems(cartItems);
+    private void fetchRestaurantDiscount(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty()) {
+            return;
+        }
+        
+        DatabaseReference discountRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("discount");
+                
+        discountRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Long discountValue = snapshot.getValue(Long.class);
+                    if (discountValue != null && discountValue > 0) {
+                        discountPercentage = discountValue.intValue();
+                        calculateDiscountAmount();
+                        discountRow.setVisibility(View.VISIBLE);
+                        updateTotals();
+                    } else {
+                        discountRow.setVisibility(View.GONE);
+                        discountPercentage = 0;
+                        discountAmount = 0;
+                    }
+                } else {
+                    discountRow.setVisibility(View.GONE);
+                    discountPercentage = 0;
+                    discountAmount = 0;
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError error) {
+                Log.e(TAG, "Error loading discount", error.toException());
+                discountRow.setVisibility(View.GONE);
+                discountPercentage = 0;
+                discountAmount = 0;
+            }
+        });
+    }
+
+    private void calculateDiscountAmount() {
+        if (discountPercentage > 0) {
+            discountAmount = (subtotal * discountPercentage) / 100.0;
+            discountText.setText(String.format("-$%.2f", discountAmount));
+        } else {
+            discountAmount = 0;
+            discountText.setText("-$0.00");
+        }
     }
 
     private void updateTotals() {
-        // Calculate tip amount
-        double tipAmount = (subtotal * tipPercentage) / 100.0;
-        Log.d(TAG, "Calculating totals - Subtotal: " + subtotal + ", Tip: " + tipAmount);
-        
-        // Update UI
         subtotalText.setText(String.format("$%.2f", subtotal));
         
-        // Show/hide and update tip amount
-        if (isDelivery) {
-            tipRow.setVisibility(View.VISIBLE);
-            tipAmountText.setText(String.format("$%.2f", tipAmount));
+        // Calculate tip
+        double tipAmount = (subtotal * tipPercentage) / 100.0;
+        tipAmountText.setText(String.format("$%.2f", tipAmount));
+        
+        // Apply discount if available
+        if (discountPercentage > 0) {
+            calculateDiscountAmount();
+            discountRow.setVisibility(View.VISIBLE);
+            discountText.setText(String.format("-$%.2f", discountAmount));
         } else {
-            tipRow.setVisibility(View.GONE);
-            tipAmountText.setText("$0.00");
+            discountRow.setVisibility(View.GONE);
         }
         
-        // Calculate total
-        double total = subtotal + (isDelivery ? tipAmount : 0);
+        // Calculate final total
+        double total = subtotal + tipAmount - discountAmount;
         if (isDelivery) {
             total += DELIVERY_FEE;
-            deliveryFeeAmount.setText(String.format("$%.2f", DELIVERY_FEE));
-            deliveryFeeRow.setVisibility(View.VISIBLE);
-            Log.d(TAG, "Added delivery fee. New total: " + total);
-        } else {
-            deliveryFeeRow.setVisibility(View.GONE);
         }
         
         totalText.setText(String.format("$%.2f", total));
-        Log.d(TAG, "Final total: " + total);
     }
 
     private boolean validateOrder() {
@@ -693,7 +765,14 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 
                 // Calculate final amounts
                 double tipAmount = (subtotal * tipPercentage) / 100.0;
-                double total = subtotal + tipAmount;
+                
+                // Add discount information if applicable
+                if (discountPercentage > 0) {
+                    orderData.put("discountPercentage", discountPercentage);
+                    orderData.put("discountAmount", discountAmount);
+                }
+                
+                double total = subtotal + tipAmount - discountAmount;
                 if (isDelivery) {
                     total += DELIVERY_FEE;
                 }
@@ -874,5 +953,16 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
             }
         }
         Log.d(TAG, "New subtotal: " + subtotal);
+    }
+
+    private void setupRecyclerView() {
+        cartAdapter = new CartAdapter(this, this);
+        cartItemsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        cartItemsRecyclerView.setAdapter(cartAdapter);
+    }
+
+    private void showEmptyCart() {
+        Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show();
+        finish();
     }
 }

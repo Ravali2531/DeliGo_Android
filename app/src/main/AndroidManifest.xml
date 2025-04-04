@@ -168,6 +168,16 @@
             android:exported="false" />
 
         <activity
+            android:name=".Restaurant.SalesReportsActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.SpecialDiscountsActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
             android:name=".Customer.Activities.RestaurantReviewsActivity"
             android:exported="false" />
 

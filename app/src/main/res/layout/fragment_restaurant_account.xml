@@ -105,7 +105,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/sales_reports_layout"
+            android:id="@+id/salesReportsLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -126,6 +126,46 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Sales Reports"
+                android:textSize="16sp"/>
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_right"/>
+        </LinearLayout>
+
+        <!-- After the Sales Reports layout and before the Appearance section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PROMOTIONS"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:id="@+id/specialDiscountsLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_discount"
+                android:layout_marginEnd="16dp"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Special Discounts"
                 android:textSize="16sp"/>
 
             <ImageView
@@ -218,7 +258,7 @@
             android:layout_marginBottom="16dp"/>
 
         <LinearLayout
-            android:id="@+id/support_layout"
+            android:id="@+id/supportLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

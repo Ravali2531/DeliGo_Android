@@ -68,6 +68,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
         private TextView ratingText;
         private TextView numberOfRatingsText;
         private TextView statusBadge;
+        private TextView discountBadge;
         private TextView distanceText;
         private TextView priceRangeText;
 
@@ -80,6 +81,7 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
             ratingText = itemView.findViewById(R.id.ratingText);
             numberOfRatingsText = itemView.findViewById(R.id.numberOfRatings);
             statusBadge = itemView.findViewById(R.id.statusBadge);
+            discountBadge = itemView.findViewById(R.id.discountBadge);
             distanceText = itemView.findViewById(R.id.distanceText);
             priceRangeText = itemView.findViewById(R.id.priceRangeText);
 
@@ -151,6 +153,35 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
                         public void onCancelled(@NonNull DatabaseError error) {
                             Log.e("RestaurantAdapter", "Error loading price range", error.toException());
                             priceRangeText.setVisibility(View.GONE);
+                        }
+                    });
+                    
+                    // Load discount information
+                    DatabaseReference discountRef = FirebaseDatabase.getInstance()
+                        .getReference("restaurants")
+                        .child(restaurant.getId())
+                        .child("discount");
+                        
+                    discountRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                Long discountValue = snapshot.getValue(Long.class);
+                                if (discountValue != null && discountValue > 0) {
+                                    discountBadge.setVisibility(View.VISIBLE);
+                                    discountBadge.setText(discountValue + "% off");
+                                } else {
+                                    discountBadge.setVisibility(View.GONE);
+                                }
+                            } else {
+                                discountBadge.setVisibility(View.GONE);
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Log.e("RestaurantAdapter", "Error loading discount", error.toException());
+                            discountBadge.setVisibility(View.GONE);
                         }
                     });
                 }

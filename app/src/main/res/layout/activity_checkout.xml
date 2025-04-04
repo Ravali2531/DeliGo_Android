@@ -284,6 +284,29 @@
                     android:text="$0.00"/>
             </LinearLayout>
 
+            <!-- Discount Row -->
+            <LinearLayout
+                android:id="@+id/discountRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Discount"/>
+
+                <TextView
+                    android:id="@+id/discountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-$0.00"
+                    android:textColor="#4CAF50"/>
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/deliveryFeeRow"
                 android:layout_width="match_parent"

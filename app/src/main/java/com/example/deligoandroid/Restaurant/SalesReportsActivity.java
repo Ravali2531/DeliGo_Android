@@ -128,18 +128,18 @@ public class SalesReportsActivity extends AppCompatActivity {
     private boolean isOrderInTimeRange(long orderTimestamp) {
         Calendar orderCal = Calendar.getInstance();
         orderCal.setTimeInMillis(orderTimestamp);
-        
+
         Calendar now = Calendar.getInstance();
-        
+
         switch (currentTimeFilter) {
             case 0: // Daily - same day
                 return orderCal.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
-                       orderCal.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR);
-                
+                        orderCal.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR);
+
             case 1: // Weekly - all orders
             case 2: // Monthly - all orders
                 return true;
-                
+
             default:
                 return false;
         }
@@ -174,12 +174,12 @@ public class SalesReportsActivity extends AppCompatActivity {
             String status = orderSnapshot.child("status").getValue(String.class);
             Long updatedAt = orderSnapshot.child("updatedAt").getValue(Long.class);
             Double total = orderSnapshot.child("total").getValue(Double.class);
-            
+
             Log.d(TAG, "Order ID: " + orderSnapshot.getKey());
             Log.d(TAG, "Status: " + status);
             Log.d(TAG, "Total: " + total);
             Log.d(TAG, "UpdatedAt: " + updatedAt);
-            
+
             if (status != null && status.equals("delivered") && updatedAt != null && total != null) {
                 if (isOrderInTimeRange(updatedAt)) {
                     totalOrders++;
@@ -196,7 +196,7 @@ public class SalesReportsActivity extends AppCompatActivity {
         timeLabels = new ArrayList<>();
         revenueEntries = new ArrayList<>();
         int index = 0;
-        
+
         for (Map.Entry<Long, Double> entry : timeRevenueMap.entrySet()) {
             String timeLabel = dateFormat.format(new Date(entry.getKey()));
             timeLabels.add(timeLabel);
@@ -211,7 +211,7 @@ public class SalesReportsActivity extends AppCompatActivity {
     private void updateUI(int totalOrders, double totalRevenue) {
         binding.totalOrdersText.setText(String.valueOf(totalOrders));
         binding.totalRevenueText.setText(String.format(Locale.getDefault(), "$%.2f", totalRevenue));
-        
+
         double averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         binding.averageOrderValueText.setText(String.format(Locale.getDefault(), "$%.2f", averageOrderValue));
     }
