@@ -178,6 +178,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".Restaurant.BestSellingDishesActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".Customer.Activities.RestaurantReviewsActivity"
             android:exported="false" />
 

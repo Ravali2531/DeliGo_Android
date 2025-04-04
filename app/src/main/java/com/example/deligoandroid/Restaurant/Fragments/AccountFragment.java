@@ -25,6 +25,7 @@ import com.example.deligoandroid.Restaurant.StoreHoursActivity;
 import com.example.deligoandroid.Restaurant.SalesReportsActivity;
 import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
 import com.example.deligoandroid.Restaurant.SpecialDiscountsActivity;
+import com.example.deligoandroid.Restaurant.BestSellingDishesActivity;
 import com.example.deligoandroid.Utils.PreferencesManager;
 import com.example.deligoandroid.databinding.FragmentAccountBinding;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -94,6 +95,17 @@ public class AccountFragment extends Fragment {
         binding.salesReportsLayout.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), SalesReportsActivity.class);
             startActivity(intent);
+        });
+
+        // Best Selling Dishes
+        binding.bestSellingDishesLayout.setOnClickListener(v -> {
+            try {
+                Intent intent = new Intent(getActivity(), BestSellingDishesActivity.class);
+                startActivity(intent);
+            } catch (Exception e) {
+                Log.e("AccountFragment", "Error launching Best Selling Dishes: " + e.getMessage());
+                Toast.makeText(requireContext(), "Best Selling Dishes feature coming soon!", Toast.LENGTH_SHORT).show();
+            }
         });
 
         // Special Discounts
