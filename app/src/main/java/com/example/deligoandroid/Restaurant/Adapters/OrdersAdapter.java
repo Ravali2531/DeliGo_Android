@@ -93,9 +93,9 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.markDeliveredButton.setVisibility(View.GONE);
         
         // Show appropriate buttons based on status
-        if (status.equals("pending")) {
-            // New/pending order - show accept button
-            Log.d("OrdersAdapter", "Showing accept button for pending order");
+        if (status.equals("pending") || status.equals("scheduled")) {
+            // Show accept button for both pending and scheduled orders
+            Log.d("OrdersAdapter", "Showing accept button for " + status + " order");
             holder.acceptButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
         } else if (status.equals("in_progress")) {
@@ -194,23 +194,43 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     private void acceptOrder(Order order, ViewHolder holder) {
-        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
-                .child("orders")
-                .child(order.getId());
+        // First, get references to both orders and scheduled_orders
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
+        DatabaseReference scheduledOrdersRef = FirebaseDatabase.getInstance().getReference("scheduled_orders");
+        
+        // Create the order data
+        Map<String, Object> orderData = new HashMap<>();
+        orderData.put("status", "in_progress");
+        orderData.put("order_status", "accepted");
+        orderData.put("acceptedAt", ServerValue.TIMESTAMP);
+        orderData.put("restaurantId", order.getRestaurantId());
+        orderData.put("customerId", order.getCustomerId());
+        orderData.put("customerName", order.getCustomerName());
+        orderData.put("totalAmount", order.getTotalAmount());
+        orderData.put("items", order.getItems());
+        orderData.put("deliveryOption", order.getDeliveryOption());
+        orderData.put("timestamp", order.getTimestamp());
+        orderData.put("scheduled", true); // Mark as scheduled order
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", "in_progress");
-        updates.put("order_status", "accepted");
-        updates.put("acceptedAt", ServerValue.TIMESTAMP);
-
-        orderRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
-            Toast.makeText(context, "Order accepted successfully", Toast.LENGTH_SHORT).show();
-            holder.acceptButton.setVisibility(View.GONE);
-            holder.orderStatus.setText("Accepted");
-            holder.orderStatus.setBackgroundResource(R.color.green);
-        }).addOnFailureListener(e -> {
-            Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
-        });
+        // First, add to orders collection
+        String orderId = order.getId();
+        ordersRef.child(orderId).updateChildren(orderData)
+            .addOnSuccessListener(aVoid -> {
+                // Then remove from scheduled_orders
+                scheduledOrdersRef.child(orderId).removeValue()
+                    .addOnSuccessListener(aVoid1 -> {
+                        Toast.makeText(context, "Scheduled order accepted successfully", Toast.LENGTH_SHORT).show();
+                        holder.acceptButton.setVisibility(View.GONE);
+                        holder.orderStatus.setText("Accepted");
+                        holder.orderStatus.setBackgroundResource(R.color.green);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(context, "Failed to remove from scheduled orders", Toast.LENGTH_SHORT).show();
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void updateOrderStatus(String orderId, String newStatus) {

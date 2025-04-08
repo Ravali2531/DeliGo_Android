@@ -1,8 +1,10 @@
 package com.example.deligoandroid.Restaurant;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -30,6 +32,7 @@ public class RestaurantSupportActivity extends AppCompatActivity {
     private String restaurantId;
     private String restaurantName;
     private Toolbar toolbar;
+    private TextView noMessagesText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +51,7 @@ public class RestaurantSupportActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         messageInput = findViewById(R.id.messageInput);
         sendButton = findViewById(R.id.sendButton);
+        noMessagesText = findViewById(R.id.noMessagesText);
 
         // Set up RecyclerView
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -116,7 +120,15 @@ public class RestaurantSupportActivity extends AppCompatActivity {
                 Collections.sort(messages, (m1, m2) -> 
                     Long.compare(m1.getTimestamp(), m2.getTimestamp()));
                 chatAdapter.setMessages(messages);
-                recyclerView.scrollToPosition(messages.size() - 1);
+                
+                if (messages.isEmpty()) {
+                    recyclerView.setVisibility(View.GONE);
+                    noMessagesText.setVisibility(View.VISIBLE);
+                } else {
+                    recyclerView.setVisibility(View.VISIBLE);
+                    noMessagesText.setVisibility(View.GONE);
+                    recyclerView.scrollToPosition(messages.size() - 1);
+                }
             }
 
             @Override

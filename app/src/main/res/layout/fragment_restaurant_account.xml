@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,291 +15,323 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_card"
-            android:orientation="vertical"
+            android:background="@drawable/rounded_white_background"
+            android:orientation="horizontal"
             android:padding="16dp">
 
-            <TextView
-                android:id="@+id/nameText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+            <ImageView
+                android:id="@+id/profileImage"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:src="@drawable/ic_restaurant"
+                android:contentDescription="Profile" />
 
-            <TextView
-                android:id="@+id/emailText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textColor="?android:attr/textColorSecondary" />
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/restaurantNameText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/restaurantEmailText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray"
+                    android:textSize="14sp" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Store Settings -->
+        <!-- Store Settings Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Store Settings"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="STORE SETTINGS"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
 
         <LinearLayout
-            android:id="@+id/storeHoursLayout"
+            android:id="@+id/storeHoursSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
+            android:background="@drawable/rounded_white_background"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:orientation="horizontal"
+            android:padding="16dp">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_access_time"
-                android:layout_marginEnd="16dp"/>
+                android:src="@drawable/ic_time"
+                android:tint="@color/primary"
+                android:contentDescription="Store Hours" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_weight="1"
                 android:text="Store Hours"
-                android:textSize="16sp"/>
+                android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_chevron_right"/>
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/storeInfoLayout"
+            android:id="@+id/storeInfoSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/rounded_white_background"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:orientation="horizontal"
+            android:padding="16dp">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_info"
-                android:layout_marginEnd="16dp"/>
+                android:tint="@color/primary"
+                android:contentDescription="Store Information" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_weight="1"
                 android:text="Store Information"
-                android:textSize="16sp"/>
+                android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_chevron_right"/>
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/salesReportsLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_analytics"
-                android:layout_marginEnd="16dp"/>
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Sales Reports"
-                android:textSize="16sp"/>
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_chevron_right"/>
-        </LinearLayout>
-
-        <!-- After the Sales Reports layout and before the Appearance section -->
+        <!-- Reports Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="PROMOTIONS"
-            android:textSize="18sp"
-            android:textStyle="bold"
             android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="8dp"
+            android:text="REPORTS"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
 
         <LinearLayout
-            android:id="@+id/specialDiscountsLayout"
+            android:id="@+id/salesReportsSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
+            android:background="@drawable/rounded_white_background"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chart"
+                android:tint="@color/primary"
+                android:contentDescription="Sales Reports" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:text="Sales Reports"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/bestSellingDishesSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/rounded_white_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_star"
+                android:tint="@color/primary"
+                android:contentDescription="Best Selling Dishes" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:text="Best Selling Dishes"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
+        </LinearLayout>
+
+        <!-- Scheduled Orders Section -->
+        <LinearLayout
+            android:id="@+id/scheduledOrdersLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:background="@drawable/rounded_white_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_calendar"
+                android:tint="@color/primary"
+                android:contentDescription="Scheduled Orders" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:text="Scheduled Orders"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
+        </LinearLayout>
+
+        <!-- Promotions Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:text="PROMOTIONS"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:id="@+id/specialDiscountsSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_white_background"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="horizontal"
+            android:padding="16dp">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_discount"
-                android:layout_marginEnd="16dp"/>
+                android:tint="@color/primary"
+                android:contentDescription="Special Discounts" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_weight="1"
                 android:text="Special Discounts"
-                android:textSize="16sp"/>
+                android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_chevron_right"/>
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
         </LinearLayout>
 
-        <!-- Appearance -->
+        <!-- Support Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Appearance"
-            android:textSize="18sp"
-            android:textStyle="bold"
             android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_dark_mode"
-                android:layout_marginEnd="16dp"/>
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Dark Mode"
-                android:textSize="16sp"/>
-
-            <Switch
-                android:id="@+id/darkModeSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Language -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Language"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
-
-        <LinearLayout
-            android:id="@+id/languageLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_language"
-                android:layout_marginEnd="16dp"/>
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Language"
-                android:textSize="16sp"/>
-
-            <Switch
-                android:id="@+id/languageSwitch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
-
-        <!-- Support -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Support"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="8dp"
+            android:text="SUPPORT"
+            android:textColor="@color/gray"
+            android:textSize="14sp" />
 
         <LinearLayout
             android:id="@+id/supportLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
+            android:background="@drawable/rounded_white_background"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:orientation="horizontal"
+            android:padding="16dp">
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
                 android:src="@drawable/ic_support"
-                android:layout_marginEnd="16dp"/>
+                android:tint="@color/primary"
+                android:contentDescription="Support" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:layout_weight="1"
                 android:text="Chat with Support"
-                android:textSize="16sp"/>
+                android:textSize="16sp" />
 
             <ImageView
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:src="@drawable/ic_chevron_right"/>
+                android:src="@drawable/ic_chevron_right"
+                android:tint="@color/secondary"
+                android:contentDescription="Arrow" />
         </LinearLayout>
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"/>
-
         <!-- Sign Out Button -->
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/signOutButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
             android:text="Sign Out"
-            android:textColor="@android:color/white"
-            android:backgroundTint="@color/orange"/>
+            android:textColor="@color/white"
+            app:backgroundTint="@color/orange" />
 
     </LinearLayout>
 </ScrollView> 

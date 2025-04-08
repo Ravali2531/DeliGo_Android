@@ -182,6 +182,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".Restaurant.ScheduledOrdersActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
             android:name=".Customer.Activities.RestaurantReviewsActivity"
             android:exported="false" />
 

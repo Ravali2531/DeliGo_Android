@@ -441,10 +441,11 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                         CartItem item = itemSnapshot.getValue(CartItem.class);
                         if (item != null) {
                             cartItems.add(item);
-                            // Get the restaurant ID for fetching discount
+                            // Get the restaurant ID for fetching discount and checking status
                             if (restaurantId.isEmpty() && !item.getRestaurantId().isEmpty()) {
                                 restaurantId = item.getRestaurantId();
                                 fetchRestaurantDiscount(restaurantId);
+                                checkRestaurantStatus(restaurantId);
                             }
                         }
                     }
@@ -728,153 +729,163 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 String phoneNumber = customerSnapshot.child("phone").getValue(String.class);
                 String customerName = customerSnapshot.child("fullName").getValue(String.class);
                 
-                // Now proceed with order creation
-                DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
-                String orderId = java.util.UUID.randomUUID().toString().toUpperCase();
-
-                Map<String, Object> orderData = new HashMap<>();
-                orderData.put("customerId", userId);
-                orderData.put("userId", userId);
-                orderData.put("customerName", customerName);
-                orderData.put("customerPhone", phoneNumber);
-                orderData.put("createdAt", System.currentTimeMillis());
-                orderData.put("updatedAt", System.currentTimeMillis());
-                orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
-                orderData.put("deliveryOption", isDelivery ? "Delivery" : "Pickup");
-                orderData.put("status", "pending");
-                orderData.put("order_status", "pending");
-                
-                // Get restaurantId from the first cart item (all items are from the same restaurant)
-                if (!cartItems.isEmpty()) {
-                    CartItem firstItem = cartItems.get(0);
-                    String restaurantId = firstItem.getRestaurantId();
-                    if (restaurantId == null || restaurantId.isEmpty()) {
-                        Toast.makeText(this, "Error: Restaurant ID not found", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    orderData.put("restaurantId", restaurantId);
-                } else {
+                // Get restaurantId from the first cart item
+                if (cartItems.isEmpty()) {
                     Toast.makeText(this, "Error: No items in cart", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 
-                // Add payment method
-                String paymentMethod = paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? 
-                    "Credit Card" : "Cash on Delivery";
-                orderData.put("paymentMethod", paymentMethod);
+                String restaurantId = cartItems.get(0).getRestaurantId();
                 
-                // Calculate final amounts
-                double tipAmount = (subtotal * tipPercentage) / 100.0;
-                
-                // Add discount information if applicable
-                if (discountPercentage > 0) {
-                    orderData.put("discountPercentage", discountPercentage);
-                    orderData.put("discountAmount", discountAmount);
-                }
-                
-                double total = subtotal + tipAmount - discountAmount;
-                if (isDelivery) {
-                    total += DELIVERY_FEE;
-                }
-                
-                orderData.put("subtotal", subtotal);
-                orderData.put("tipAmount", tipAmount);
-                orderData.put("tipPercentage", tipPercentage);
-                orderData.put("total", total);
-
-                // Add delivery location if delivery is selected
-                if (isDelivery && selectedPlace != null && selectedPlace.getLatLng() != null) {
-                    orderData.put("latitude", selectedPlace.getLatLng().latitude);
-                    orderData.put("longitude", selectedPlace.getLatLng().longitude);
-                }
-
-                // Format items with proper customizations structure
-                Map<String, Object> items = new HashMap<>();
-                for (int i = 0; i < cartItems.size(); i++) {
-                    CartItem item = cartItems.get(i);
-                    Map<String, Object> itemData = new HashMap<>();
-                    itemData.put("id", item.getId());
-                    itemData.put("menuItemId", item.getMenuItemId());
-                    itemData.put("name", item.getName());
-                    itemData.put("description", item.getDescription());
-                    itemData.put("price", item.getPrice());
-                    itemData.put("imageURL", item.getImageURL());
-                    itemData.put("quantity", item.getQuantity());
-                    itemData.put("specialInstructions", item.getSpecialInstructions() != null ? item.getSpecialInstructions() : "");
-                    itemData.put("totalPrice", item.getTotalPrice());
-                    
-                    // Handle customizations with proper structure
-                    if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                        Map<String, Object> customizations = new HashMap<>();
+                // Check if restaurant is open
+                DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                        .getReference("restaurants")
+                        .child(restaurantId)
+                        .child("isOpen");
                         
-                        for (Map.Entry<String, List<CustomizationSelection>> entry : item.getCustomizations().entrySet()) {
-                            String optionId = entry.getKey();
-                            List<CustomizationSelection> selections = entry.getValue();
-                            
-                            Map<String, Object> customizationData = new HashMap<>();
-                            for (int j = 0; j < selections.size(); j++) {
-                                CustomizationSelection selection = selections.get(j);
-                                Map<String, Object> selectionData = new HashMap<>();
-                                selectionData.put("optionId", optionId);
-                                selectionData.put("optionName", selection.getOptionName());
-                                
-                                // Handle selected items
-                                if (selection.getSelectedItems() != null) {
-                                    Map<String, Object> selectedItemsMap = new HashMap<>();
-                                    for (int k = 0; k < selection.getSelectedItems().size(); k++) {
-                                        SelectedItem selectedItem = selection.getSelectedItems().get(k);
-                                        Map<String, Object> selectedItemData = new HashMap<>();
-                                        selectedItemData.put("id", selectedItem.getId());
-                                        selectedItemData.put("name", selectedItem.getName());
-                                        selectedItemData.put("price", selectedItem.getPrice());
-                                        selectedItemsMap.put(String.valueOf(k), selectedItemData);
-                                    }
-                                    selectionData.put("selectedItems", selectedItemsMap);
-                                }
-                                
-                                customizationData.put(String.valueOf(j), selectionData);
-                            }
-                            customizations.put(optionId, customizationData);
+                restaurantRef.get().addOnCompleteListener(restaurantTask -> {
+                    if (restaurantTask.isSuccessful()) {
+                        Boolean isOpen = restaurantTask.getResult().getValue(Boolean.class);
+                        boolean isScheduledOrder = isOpen != null && !isOpen;
+                        
+                        // Determine the order reference based on restaurant status
+                        String orderRefPath = isScheduledOrder ? "scheduled_orders" : "orders";
+                        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference(orderRefPath);
+                        String orderId = java.util.UUID.randomUUID().toString().toUpperCase();
+
+                        Map<String, Object> orderData = new HashMap<>();
+                        orderData.put("customerId", userId);
+                        orderData.put("userId", userId);
+                        orderData.put("customerName", customerName);
+                        orderData.put("customerPhone", phoneNumber);
+                        orderData.put("createdAt", System.currentTimeMillis());
+                        orderData.put("updatedAt", System.currentTimeMillis());
+                        orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
+                        orderData.put("deliveryOption", isDelivery ? "delivery" : "pickup");
+                        orderData.put("status", isScheduledOrder ? "scheduled" : "pending");
+                        orderData.put("order_status", "pending");
+                        orderData.put("restaurantId", restaurantId);
+                        
+                        // Add payment method
+                        String paymentMethod = paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? 
+                            "Credit Card" : "Cash on Delivery";
+                        orderData.put("paymentMethod", paymentMethod);
+                        
+                        // Calculate final amounts
+                        double tipAmount = (subtotal * tipPercentage) / 100.0;
+                        
+                        // Add discount information if applicable
+                        if (discountPercentage > 0) {
+                            orderData.put("discountPercentage", discountPercentage);
+                            orderData.put("discountAmount", discountAmount);
                         }
-                        itemData.put("customizations", customizations);
-                    }
-                    
-                    items.put(String.valueOf(i), itemData);
-                }
-                orderData.put("items", items);
+                        
+                        double total = subtotal + tipAmount - discountAmount;
+                        if (isDelivery) {
+                            total += DELIVERY_FEE;
+                        }
+                        
+                        orderData.put("subtotal", subtotal);
+                        orderData.put("tipAmount", tipAmount);
+                        orderData.put("tipPercentage", tipPercentage);
+                        orderData.put("total", total);
 
-                if (isDelivery && selectedPlace != null) {
-                    Map<String, Object> addressData = new HashMap<>();
-                    addressData.put("street", selectedPlace.getAddress());
-                    if (!TextUtils.isEmpty(unitInput.getText())) {
-                        addressData.put("unit", unitInput.getText().toString().trim());
-                    }
-                    // Add delivery instructions if provided
-                    if (!TextUtils.isEmpty(instructionsInput.getText())) {
-                        addressData.put("instructions", instructionsInput.getText().toString().trim());
-                    }
-                    orderData.put("address", addressData);
-                }
+                        // Add delivery location if delivery is selected
+                        if (isDelivery && selectedPlace != null && selectedPlace.getLatLng() != null) {
+                            orderData.put("latitude", selectedPlace.getLatLng().latitude);
+                            orderData.put("longitude", selectedPlace.getLatLng().longitude);
+                        }
 
-                // Add order to Firebase
-                ordersRef.child(orderId).setValue(orderData)
-                        .addOnSuccessListener(aVoid -> {
-                            // Clear cart after successful order
-                            DatabaseReference cartRef = FirebaseDatabase.getInstance()
+                        // Format items with proper customizations structure
+                        Map<String, Object> items = new HashMap<>();
+                        for (int i = 0; i < cartItems.size(); i++) {
+                            CartItem item = cartItems.get(i);
+                            Map<String, Object> itemData = new HashMap<>();
+                            itemData.put("id", item.getId());
+                            itemData.put("menuItemId", item.getMenuItemId());
+                            itemData.put("name", item.getName());
+                            itemData.put("description", item.getDescription());
+                            itemData.put("price", item.getPrice());
+                            itemData.put("imageURL", item.getImageURL());
+                            itemData.put("quantity", item.getQuantity());
+                            itemData.put("specialInstructions", item.getSpecialInstructions() != null ? item.getSpecialInstructions() : "");
+                            itemData.put("totalPrice", item.getTotalPrice());
+                            
+                            // Handle customizations with proper structure
+                            if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
+                                Map<String, Object> customizations = new HashMap<>();
+                                
+                                for (Map.Entry<String, List<CustomizationSelection>> entry : item.getCustomizations().entrySet()) {
+                                    String optionId = entry.getKey();
+                                    List<CustomizationSelection> selections = entry.getValue();
+                                    
+                                    Map<String, Object> customizationData = new HashMap<>();
+                                    for (int j = 0; j < selections.size(); j++) {
+                                        CustomizationSelection selection = selections.get(j);
+                                        Map<String, Object> selectionData = new HashMap<>();
+                                        selectionData.put("optionId", optionId);
+                                        selectionData.put("optionName", selection.getOptionName());
+                                        
+                                        // Handle selected items
+                                        if (selection.getSelectedItems() != null) {
+                                            Map<String, Object> selectedItemsMap = new HashMap<>();
+                                            for (int k = 0; k < selection.getSelectedItems().size(); k++) {
+                                                SelectedItem selectedItem = selection.getSelectedItems().get(k);
+                                                Map<String, Object> selectedItemData = new HashMap<>();
+                                                selectedItemData.put("id", selectedItem.getId());
+                                                selectedItemData.put("name", selectedItem.getName());
+                                                selectedItemData.put("price", selectedItem.getPrice());
+                                                selectedItemsMap.put(String.valueOf(k), selectedItemData);
+                                            }
+                                            selectionData.put("selectedItems", selectedItemsMap);
+                                        }
+                                        customizationData.put(String.valueOf(j), selectionData);
+                                    }
+                                    customizations.put(optionId, customizationData);
+                                }
+                                itemData.put("customizations", customizations);
+                            }
+                            items.put(String.valueOf(i), itemData);
+                        }
+                        orderData.put("items", items);
+
+                        // Save the order
+                        ordersRef.child(orderId).setValue(orderData)
+                            .addOnSuccessListener(aVoid -> {
+                                // Clear the cart
+                                DatabaseReference cartRef = FirebaseDatabase.getInstance()
                                     .getReference("customers")
                                     .child(userId)
                                     .child("cart");
-                            cartRef.removeValue();
-
-                            Toast.makeText(this, "Order placed successfully!", Toast.LENGTH_SHORT).show();
-                            finish();
-                        })
-                        .addOnFailureListener(e -> {
-                            Toast.makeText(this, "Failed to place order: " + e.getMessage(),
+                                
+                                cartRef.removeValue()
+                                    .addOnSuccessListener(cartVoid -> {
+                                        Toast.makeText(CheckoutActivity.this, 
+                                            isScheduledOrder ? "Order scheduled successfully!" : "Order placed successfully!", 
+                                            Toast.LENGTH_SHORT).show();
+                                        finish();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(CheckoutActivity.this, 
+                                            "Error clearing cart: " + e.getMessage(), 
+                                            Toast.LENGTH_SHORT).show();
+                                    });
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(CheckoutActivity.this, 
+                                    "Error placing order: " + e.getMessage(), 
                                     Toast.LENGTH_SHORT).show();
-                        });
+                            });
+                    } else {
+                        Toast.makeText(this, 
+                            "Error checking restaurant status: " + restaurantTask.getException().getMessage(), 
+                            Toast.LENGTH_SHORT).show();
+                    }
+                });
             } else {
-                Toast.makeText(this, "Failed to get customer details", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, 
+                    "Error getting customer details: " + task.getException().getMessage(), 
+                    Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -964,5 +975,34 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private void showEmptyCart() {
         Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show();
         finish();
+    }
+
+    private void checkRestaurantStatus(String restaurantId) {
+        DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("store_info")
+                .child("isOpen");
+                
+        restaurantRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Boolean isOpen = snapshot.getValue(Boolean.class);
+                    if (isOpen != null && !isOpen) {
+                        // Restaurant is closed, update button text
+                        placeOrderButton.setText("Schedule Order");
+                    } else {
+                        // Restaurant is open, use default text
+                        placeOrderButton.setText("Place Order");
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError error) {
+                Log.e(TAG, "Error checking restaurant status", error.toException());
+            }
+        });
     }
 }
