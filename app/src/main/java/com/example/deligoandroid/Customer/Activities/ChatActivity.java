@@ -1,11 +1,15 @@
 package com.example.deligoandroid.Customer.Activities;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -18,21 +22,24 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ChatActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private EditText messageInput;
     private ImageButton sendButton;
-    private TextView restaurantNameText;
+    private TextView chatTitleText;
     private ChatAdapter chatAdapter;
     private List<ChatMessage> messages;
     private String orderId;
-    private String restaurantId;
-    private String restaurantName;
+    private String chatType;
     private DatabaseReference chatRef;
 
     @Override
@@ -42,16 +49,22 @@ public class ChatActivity extends AppCompatActivity {
 
         // Get order details from intent
         orderId = getIntent().getStringExtra("orderId");
-        restaurantId = getIntent().getStringExtra("restaurantId");
-        restaurantName = getIntent().getStringExtra("restaurantName");
+        chatType = getIntent().getStringExtra("chatType");
 
         // Initialize views
         recyclerView = findViewById(R.id.chatRecyclerView);
         messageInput = findViewById(R.id.messageInput);
         sendButton = findViewById(R.id.sendButton);
-        restaurantNameText = findViewById(R.id.restaurantNameText);
+        chatTitleText = findViewById(R.id.chatTitleText);
 
-        restaurantNameText.setText(restaurantName);
+        // Set chat title based on type
+        if (chatType.equals("group")) {
+            chatTitleText.setText("Group Chat");
+        } else if (chatType.equals("restaurant")) {
+            chatTitleText.setText("Chat with Restaurant");
+        } else if (chatType.equals("driver")) {
+            chatTitleText.setText("Chat with Driver");
+        }
 
         // Initialize chat
         messages = new ArrayList<>();
@@ -59,11 +72,15 @@ public class ChatActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(chatAdapter);
 
-        // Initialize Firebase chat reference
-        chatRef = FirebaseDatabase.getInstance()
-                .getReference("orders")
-                .child(orderId)
-                .child("messages");
+        // Initialize Firebase chat reference based on chat type
+        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference("orders").child(orderId);
+        if (chatType.equals("group")) {
+            chatRef = orderRef.child("group_chat");
+        } else if (chatType.equals("restaurant")) {
+            chatRef = orderRef.child("messages");
+        } else if (chatType.equals("driver")) {
+            chatRef = orderRef.child("driver_customer_messages");
+        }
 
         // Load existing messages
         loadMessages();
@@ -83,7 +100,6 @@ public class ChatActivity extends AppCompatActivity {
                     String senderName = snapshot.child("senderName").getValue(String.class);
                     String senderType = snapshot.child("senderType").getValue(String.class);
                     Long timestamp = snapshot.child("timestamp").getValue(Long.class);
-                    Boolean isRead = snapshot.child("isRead").getValue(Boolean.class);
 
                     if (message != null && senderId != null && timestamp != null) {
                         ChatMessage chatMessage = new ChatMessage();
@@ -92,7 +108,6 @@ public class ChatActivity extends AppCompatActivity {
                         chatMessage.setSenderName(senderName);
                         chatMessage.setSenderType(senderType);
                         chatMessage.setTimestamp(timestamp);
-                        chatMessage.setRead(isRead != null ? isRead : false);
                         messages.add(chatMessage);
                     }
                 }
@@ -118,7 +133,6 @@ public class ChatActivity extends AppCompatActivity {
             messageMap.put("senderId", senderId);
             messageMap.put("senderType", "customer");
             messageMap.put("timestamp", timestamp);
-            messageMap.put("isRead", false);
 
             // Get customer name from Firebase
             FirebaseDatabase.getInstance().getReference()
@@ -131,19 +145,24 @@ public class ChatActivity extends AppCompatActivity {
                         String senderName = task.getResult().getValue(String.class);
                         messageMap.put("senderName", senderName != null ? senderName : "Customer");
                         
-                        // Send message
-                        chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
-                            messageInput.setText("");
-                        }).addOnFailureListener(e -> {
-                            Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
-                        });
+                        // Send message to the correct reference based on chat type
+                        DatabaseReference messageRef = chatRef.push();
+                        messageRef.setValue(messageMap)
+                            .addOnSuccessListener(aVoid -> {
+                                messageInput.setText("");
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                            });
                     } else {
                         messageMap.put("senderName", "Customer");
-                        chatRef.push().setValue(messageMap).addOnSuccessListener(aVoid -> {
-                            messageInput.setText("");
-                        }).addOnFailureListener(e -> {
-                            Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
-                        });
+                        chatRef.push().setValue(messageMap)
+                            .addOnSuccessListener(aVoid -> {
+                                messageInput.setText("");
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                            });
                     }
                 });
         }
@@ -155,7 +174,6 @@ public class ChatActivity extends AppCompatActivity {
         private String senderName;
         private String senderType;
         private long timestamp;
-        private boolean isRead;
 
         public ChatMessage() {
             // Required empty constructor for Firebase
@@ -175,8 +193,69 @@ public class ChatActivity extends AppCompatActivity {
 
         public long getTimestamp() { return timestamp; }
         public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    }
 
-        public boolean isRead() { return isRead; }
-        public void setRead(boolean read) { isRead = read; }
+    private class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
+        private List<ChatMessage> messages;
+
+        public ChatAdapter(List<ChatMessage> messages) {
+            this.messages = messages;
+        }
+
+        @NonNull
+        @Override
+        public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_chat_message, parent, false);
+            return new MessageViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
+            ChatMessage message = messages.get(position);
+            holder.messageText.setText(message.getMessage());
+            
+            // Show sender info only for group chats
+            if (chatType.equals("group")) {
+                holder.senderInfo.setVisibility(View.VISIBLE);
+                holder.senderName.setText(message.getSenderName());
+                holder.senderType.setText(message.getSenderType());
+            } else {
+                holder.senderInfo.setVisibility(View.GONE);
+            }
+            
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            String time = sdf.format(new Date(message.getTimestamp()));
+            holder.timestamp.setText(time);
+
+            // Align messages based on sender type
+            if (message.getSenderType().equals("customer")) {
+                holder.messageLayout.setGravity(android.view.Gravity.END);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_sent);
+            } else {
+                holder.messageLayout.setGravity(android.view.Gravity.START);
+                holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_received);
+            }
+        }
+
+        @Override
+        public int getItemCount() {
+            return messages.size();
+        }
+
+        class MessageViewHolder extends RecyclerView.ViewHolder {
+            TextView messageText, senderName, senderType, timestamp;
+            LinearLayout messageLayout, senderInfo;
+
+            MessageViewHolder(View itemView) {
+                super(itemView);
+                messageText = itemView.findViewById(R.id.messageText);
+                senderName = itemView.findViewById(R.id.senderName);
+                senderType = itemView.findViewById(R.id.senderType);
+                timestamp = itemView.findViewById(R.id.timestamp);
+                messageLayout = itemView.findViewById(R.id.messageLayout);
+                senderInfo = itemView.findViewById(R.id.senderInfo);
+            }
+        }
     }
 } 
