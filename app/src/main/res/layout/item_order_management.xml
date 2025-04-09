@@ -117,6 +117,16 @@
 
         </LinearLayout>
 
+        <Button
+            android:id="@+id/groupChatButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_gravity="end"
+            android:text="Group Chat"
+            android:visibility="gone"
+            android:backgroundTint="@color/accent_orange" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView> 

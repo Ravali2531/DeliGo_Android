@@ -1,14 +1,17 @@
 package com.example.deligoandroid.Admin;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.deligoandroid.R;
+import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
 import com.example.deligoandroid.databinding.ActivityOrderManagementBinding;
 import com.example.deligoandroid.databinding.ItemOrderManagementBinding;
 import com.google.firebase.database.DataSnapshot;
@@ -198,12 +201,23 @@ public class OrderManagementActivity extends AppCompatActivity {
                 switch (order.getStatus().toLowerCase()) {
                     case "delivered":
                         statusColor = R.color.green;
+                        // Show group chat button for delivered orders
+                        binding.groupChatButton.setVisibility(View.VISIBLE);
+                        binding.groupChatButton.setOnClickListener(v -> {
+                            Intent chatIntent = new Intent(itemView.getContext(), AdminChatActivity.class);
+                            chatIntent.putExtra("orderId", order.getOrderId());
+                            chatIntent.putExtra("chatType", "group");
+                            chatIntent.putExtra("chatRef", "orders/" + order.getOrderId() + "/group_chat");
+                            itemView.getContext().startActivity(chatIntent);
+                        });
                         break;
                     case "ready for pickup":
                         statusColor = R.color.purple;
+                        binding.groupChatButton.setVisibility(View.GONE);
                         break;
                     default:
                         statusColor = R.color.gray_600;
+                        binding.groupChatButton.setVisibility(View.GONE);
                         break;
                 }
                 binding.orderStatus.setBackgroundResource(statusColor);

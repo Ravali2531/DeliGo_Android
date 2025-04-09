@@ -237,6 +237,10 @@
             </intent-filter>
         </service>
 
+        <!-- Admin Activities -->
+        <activity android:name=".Admin.AdminChatActivity"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 
 </manifest>
