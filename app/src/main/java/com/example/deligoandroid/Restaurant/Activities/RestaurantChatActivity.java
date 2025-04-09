@@ -46,12 +46,13 @@ public class RestaurantChatActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setTitle("Chat");
 
         // Get order details from intent
         orderId = getIntent().getStringExtra("orderId");
         customerId = getIntent().getStringExtra("customerId");
         customerName = getIntent().getStringExtra("customerName");
+        String chatType = getIntent().getStringExtra("chatType");
+        String chatRefPath = getIntent().getStringExtra("chatRef");
 
         // Initialize views
         recyclerView = findViewById(R.id.chatRecyclerView);
@@ -59,7 +60,14 @@ public class RestaurantChatActivity extends AppCompatActivity {
         sendButton = findViewById(R.id.sendButton);
         customerNameText = findViewById(R.id.customerNameText);
 
-        customerNameText.setText(customerName);
+        // Set title based on chat type
+        if (chatType != null && chatType.equals("group")) {
+            getSupportActionBar().setTitle("Group Chat");
+            customerNameText.setText("Group Chat");
+        } else {
+            getSupportActionBar().setTitle("Chat with " + customerName);
+            customerNameText.setText(customerName);
+        }
 
         // Initialize chat
         messages = new ArrayList<>();
@@ -68,10 +76,14 @@ public class RestaurantChatActivity extends AppCompatActivity {
         recyclerView.setAdapter(chatAdapter);
 
         // Initialize Firebase references
-        chatRef = FirebaseDatabase.getInstance()
-                .getReference("orders")
-                .child(orderId)
-                .child("messages");
+        if (chatRefPath != null) {
+            chatRef = FirebaseDatabase.getInstance().getReference(chatRefPath);
+        } else {
+            chatRef = FirebaseDatabase.getInstance()
+                    .getReference("orders")
+                    .child(orderId)
+                    .child("messages");
+        }
         
         String restaurantId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         restaurantRef = FirebaseDatabase.getInstance()

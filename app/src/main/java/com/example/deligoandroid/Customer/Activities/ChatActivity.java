@@ -131,41 +131,91 @@ public class ChatActivity extends AppCompatActivity {
             Map<String, Object> messageMap = new HashMap<>();
             messageMap.put("message", messageText);
             messageMap.put("senderId", senderId);
-            messageMap.put("senderType", "customer");
             messageMap.put("timestamp", timestamp);
 
-            // Get customer name from Firebase
+            // Check if user is a driver
             FirebaseDatabase.getInstance().getReference()
-                .child("customers")
+                .child("drivers")
                 .child(senderId)
-                .child("fullName")
                 .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        String senderName = task.getResult().getValue(String.class);
-                        messageMap.put("senderName", senderName != null ? senderName : "Customer");
+                .addOnCompleteListener(driverTask -> {
+                    if (driverTask.isSuccessful() && driverTask.getResult().exists()) {
+                        // User is a driver
+                        messageMap.put("senderType", "driver");
                         
-                        // Send message to the correct reference based on chat type
-                        DatabaseReference messageRef = chatRef.push();
-                        messageRef.setValue(messageMap)
-                            .addOnSuccessListener(aVoid -> {
-                                messageInput.setText("");
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                        // Get driver name
+                        FirebaseDatabase.getInstance().getReference()
+                            .child("drivers")
+                            .child(senderId)
+                            .child("fullName")
+                            .get()
+                            .addOnCompleteListener(task -> {
+                                if (task.isSuccessful() && task.getResult() != null) {
+                                    String senderName = task.getResult().getValue(String.class);
+                                    messageMap.put("senderName", senderName != null ? senderName : "Driver");
+                                    
+                                    sendMessageToFirebase(messageMap);
+                                }
                             });
                     } else {
-                        messageMap.put("senderName", "Customer");
-                        chatRef.push().setValue(messageMap)
-                            .addOnSuccessListener(aVoid -> {
-                                messageInput.setText("");
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+                        // Check if user is a restaurant
+                        FirebaseDatabase.getInstance().getReference()
+                            .child("restaurants")
+                            .child(senderId)
+                            .get()
+                            .addOnCompleteListener(restaurantTask -> {
+                                if (restaurantTask.isSuccessful() && restaurantTask.getResult().exists()) {
+                                    // User is a restaurant
+                                    messageMap.put("senderType", "restaurant");
+                                    
+                                    // Get restaurant name
+                                    FirebaseDatabase.getInstance().getReference()
+                                        .child("restaurants")
+                                        .child(senderId)
+                                        .child("store_info")
+                                        .child("name")
+                                        .get()
+                                        .addOnCompleteListener(task -> {
+                                            if (task.isSuccessful() && task.getResult() != null) {
+                                                String senderName = task.getResult().getValue(String.class);
+                                                messageMap.put("senderName", senderName != null ? senderName : "Restaurant");
+                                                
+                                                sendMessageToFirebase(messageMap);
+                                            }
+                                        });
+                                } else {
+                                    // User is a customer
+                                    messageMap.put("senderType", "customer");
+                                    
+                                    // Get customer name
+                                    FirebaseDatabase.getInstance().getReference()
+                                        .child("customers")
+                                        .child(senderId)
+                                        .child("fullName")
+                                        .get()
+                                        .addOnCompleteListener(task -> {
+                                            if (task.isSuccessful() && task.getResult() != null) {
+                                                String senderName = task.getResult().getValue(String.class);
+                                                messageMap.put("senderName", senderName != null ? senderName : "Customer");
+                                                
+                                                sendMessageToFirebase(messageMap);
+                                            }
+                                        });
+                                }
                             });
                     }
                 });
         }
+    }
+
+    private void sendMessageToFirebase(Map<String, Object> messageMap) {
+        chatRef.push().setValue(messageMap)
+            .addOnSuccessListener(aVoid -> {
+                messageInput.setText("");
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(ChatActivity.this, "Failed to send message", Toast.LENGTH_SHORT).show();
+            });
     }
 
     public static class ChatMessage {
@@ -229,10 +279,13 @@ public class ChatActivity extends AppCompatActivity {
             holder.timestamp.setText(time);
 
             // Align messages based on sender type
-            if (message.getSenderType().equals("customer")) {
+            String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            if (message.getSenderId().equals(currentUserId)) {
+                // Current user's messages on the right
                 holder.messageLayout.setGravity(android.view.Gravity.END);
                 holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_sent);
             } else {
+                // Other users' messages on the left
                 holder.messageLayout.setGravity(android.view.Gravity.START);
                 holder.messageText.setBackgroundResource(R.drawable.bg_chat_message_received);
             }

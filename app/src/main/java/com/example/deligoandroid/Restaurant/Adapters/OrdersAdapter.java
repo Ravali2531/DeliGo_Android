@@ -91,6 +91,8 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.readyForPickupButton.setVisibility(View.GONE);
         holder.assignDriverButton.setVisibility(View.GONE);
         holder.markDeliveredButton.setVisibility(View.GONE);
+        holder.chatButton.setVisibility(View.GONE);
+        holder.groupChatButton.setVisibility(View.GONE);
         
         // Show appropriate buttons based on status
         if (status.equals("pending") || status.equals("scheduled")) {
@@ -136,11 +138,25 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         } else if (status.equals("delivered")) {
             Log.d("OrdersAdapter", "Order is delivered");
             holder.orderStatus.setBackgroundResource(R.color.green);
+            
+            // Show both chat buttons for delivered orders
             holder.chatButton.setVisibility(View.VISIBLE);
+            holder.groupChatButton.setVisibility(View.VISIBLE);
+            
+            // Set up regular chat button
             holder.chatButton.setOnClickListener(v -> {
                 Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
                 chatIntent.putExtra("orderId", order.getId());
                 chatIntent.putExtra("customerName", order.getCustomerName());
+                context.startActivity(chatIntent);
+            });
+            
+            // Set up group chat button
+            holder.groupChatButton.setOnClickListener(v -> {
+                Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
+                chatIntent.putExtra("orderId", order.getId());
+                chatIntent.putExtra("chatType", "group");
+                chatIntent.putExtra("chatRef", "orders/" + order.getId() + "/group_chat");
                 context.startActivity(chatIntent);
             });
         }
@@ -288,7 +304,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton;
+        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton, groupChatButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -305,6 +321,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             actionButtons = itemView.findViewById(R.id.actionButtons);
             deliveryOption = itemView.findViewById(R.id.deliveryOption);
             chatButton = itemView.findViewById(R.id.chatButton);
+            groupChatButton = itemView.findViewById(R.id.groupChatButton);
         }
     }
 } 
