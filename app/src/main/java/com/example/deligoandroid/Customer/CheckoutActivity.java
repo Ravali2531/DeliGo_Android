@@ -66,13 +66,15 @@ import java.util.Map;
 
 public class CheckoutActivity extends AppCompatActivity implements CartAdapter.CartItemListener {
     private static final String TAG = "CheckoutActivity";
-    private static final double DELIVERY_FEE = 4.99;
+    private static final double BASE_DELIVERY_FEE = 4.99;
+    private static final double FEE_PER_KM = 1.50; // $1.50 per kilometer
     private static final String BACKEND_URL = "https://c8a9-70-26-192-244.ngrok-free.app"; // Replace with your backend URL
     private static final String STRIPE_PUBLISHABLE_KEY = "pk_test_51QLXl2L0kLdfcs5yhjcDuc0WAnDoZgIu1Ts88JhU7ZpGDDmkZ8X6mkhAnRuFuhYQLePpmWrcKXJby0qtvMiw6FVc00DTOLaHK5"; // Replace with your Stripe publishable key
+    private static final String DISTANCE_MATRIX_API_URL = "https://maps.googleapis.com/maps/api/distancematrix/json";
 
     private RecyclerView cartItemsRecyclerView;
     private CartAdapter cartAdapter;
-    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount, discountText;
+    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount, discountText, deliveryFeeSummaryAmount;
     private MaterialButton placeOrderButton;
     private RadioGroup deliveryOptionsGroup;
     private RadioGroup paymentMethodGroup;
@@ -112,7 +114,12 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         // Initialize Places API
         if (!Places.isInitialized()) {
             String apiKey = getString(R.string.google_maps_api_key);
-            Log.d(TAG, "Initializing Places API with key: " + (apiKey.isEmpty() ? "EMPTY" : "NOT EMPTY"));
+            if (apiKey.isEmpty()) {
+                Log.e(TAG, "Google Maps API key is empty");
+                Toast.makeText(this, "Error: Google Maps API key not found", Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
             Places.initialize(getApplicationContext(), apiKey);
         }
         placesClient = Places.createClient(this);
@@ -168,7 +175,8 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         discountText = findViewById(R.id.discountText);
         deliveryFeeRow = findViewById(R.id.deliveryFeeRow);
         discountRow = findViewById(R.id.discountRow);
-        
+
+        deliveryFeeSummaryAmount = findViewById(R.id.deliveryFeeSummaryAmount);
         // Place order button
         placeOrderButton = findViewById(R.id.placeOrderButton);
     }
@@ -207,9 +215,12 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     }
 
     private void setupAddressAutocomplete() {
+        if (addressInput == null) {
+            Log.e(TAG, "Address input view is null");
+            return;
+        }
+
         addressInput.setThreshold(3);
-        
-        // Set dropdown properties
         addressInput.setDropDownBackgroundResource(android.R.color.white);
         addressInput.setDropDownVerticalOffset(10);
         
@@ -228,13 +239,11 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 
                 runnable = () -> {
                     if (s.length() >= 3) {
-                        Log.d(TAG, "Getting predictions for: " + s.toString());
                         getAddressPredictions(s.toString());
                     }
                 };
                 
-                // Add a small delay to avoid too many API calls
-                handler.postDelayed(runnable, 300);
+                handler.postDelayed(runnable, 500); // Increased delay to reduce API calls
             }
 
             @Override
@@ -242,44 +251,53 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         });
 
         addressInput.setOnItemClickListener((parent, view, position, id) -> {
-            AutocompletePrediction prediction = addressAdapter.getItem(position);
-            if (prediction != null) {
-                Log.d(TAG, "Selected prediction: " + prediction.getFullText(null));
-                addressInput.setText(prediction.getFullText(null));
-                
-                // Get the place details
-                List<Place.Field> placeFields = Arrays.asList(
-                    Place.Field.ID,
-                    Place.Field.NAME,
-                    Place.Field.ADDRESS,
-                    Place.Field.LAT_LNG
-                );
-                
-                com.google.android.libraries.places.api.net.FetchPlaceRequest request = 
-                    com.google.android.libraries.places.api.net.FetchPlaceRequest.builder(prediction.getPlaceId(), placeFields)
-                    .setSessionToken(sessionToken)
-                    .build();
+            try {
+                AutocompletePrediction prediction = addressAdapter.getItem(position);
+                if (prediction != null) {
+                    addressInput.setText(prediction.getFullText(null));
+                    
+                    List<Place.Field> placeFields = Arrays.asList(
+                        Place.Field.ID,
+                        Place.Field.NAME,
+                        Place.Field.ADDRESS,
+                        Place.Field.LAT_LNG
+                    );
+                    
+                    com.google.android.libraries.places.api.net.FetchPlaceRequest request = 
+                        com.google.android.libraries.places.api.net.FetchPlaceRequest.builder(prediction.getPlaceId(), placeFields)
+                        .setSessionToken(sessionToken)
+                        .build();
 
-                placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
-                    Place place = response.getPlace();
-                    selectedPlace = place;
-                    Log.d(TAG, "Place found: " + place.getName() + ", " + place.getAddress());
-                    // Hide dropdown after selection
-                    addressInput.dismissDropDown();
-                }).addOnFailureListener((exception) -> {
-                    if (exception instanceof ApiException) {
-                        ApiException apiException = (ApiException) exception;
-                        Log.e(TAG, "Place not found: " + apiException.getStatusCode());
-                        Toast.makeText(CheckoutActivity.this, 
-                            "Error fetching place details", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
+                        Place place = response.getPlace();
+                        selectedPlace = place;
+                        
+                        // Calculate delivery fee when address is selected
+                        if (isDelivery) {
+                            // Show loading state
+                            deliveryFeeAmount.setText("Calculating...");
+                            calculateDeliveryFee();
+                        }
+                        
+                        addressInput.dismissDropDown();
+                    }).addOnFailureListener((exception) -> {
+                        if (exception instanceof ApiException) {
+                            ApiException apiException = (ApiException) exception;
+                            Log.e(TAG, "Place not found: " + apiException.getStatusCode());
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Error fetching place details", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error handling address selection", e);
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error selecting address", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void getAddressPredictions(String query) {
-        // Create a new session token if null
         if (sessionToken == null) {
             sessionToken = AutocompleteSessionToken.newInstance();
         }
@@ -292,7 +310,6 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 .build();
 
         placesClient.findAutocompletePredictions(request).addOnSuccessListener((response) -> {
-            Log.d(TAG, "Got " + response.getAutocompletePredictions().size() + " predictions");
             predictions.clear();
             predictions.addAll(response.getAutocompletePredictions());
             addressAdapter.clear();
@@ -305,59 +322,170 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         }).addOnFailureListener((exception) -> {
             if (exception instanceof ApiException) {
                 ApiException apiException = (ApiException) exception;
-                Log.e(TAG, "Place not found: " + apiException.getStatusCode());
-                Log.e(TAG, "Error message: " + apiException.getMessage());
-                Toast.makeText(CheckoutActivity.this, 
-                    "Error getting address suggestions", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error getting predictions: " + apiException.getStatusCode());
             }
         });
     }
 
-    private class AddressAdapter extends ArrayAdapter<AutocompletePrediction> {
-        public AddressAdapter(Context context, int resource, List<AutocompletePrediction> objects) {
-            super(context, resource, objects);
+    private void calculateDeliveryFee() {
+        if (restaurantId == null || restaurantId.isEmpty() || selectedPlace == null) {
+            Log.e(TAG, "Missing required information: restaurantId=" + restaurantId + ", selectedPlace=" + selectedPlace);
+            return;
         }
 
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                convertView = LayoutInflater.from(getContext())
-                        .inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+        DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("store_info")
+                .child("address");
+
+        restaurantRef.get().addOnSuccessListener(snapshot -> {
+            if (snapshot.exists()) {
+                try {
+                    String restaurantAddress = snapshot.getValue(String.class);
+                    
+                    if (restaurantAddress == null || restaurantAddress.trim().isEmpty()) {
+                        throw new Exception("Restaurant address is missing");
+                    }
+                    
+                    String customerAddress = selectedPlace.getAddress();
+                    
+                    if (customerAddress == null || customerAddress.trim().isEmpty()) {
+                        throw new Exception("Customer delivery address is missing");
+                    }
+                    
+                    Log.d(TAG, "Restaurant Address: " + restaurantAddress);
+                    Log.d(TAG, "Customer Address: " + customerAddress);
+                    
+                    // Get distance using Distance Matrix API
+                    getDistanceFromMatrixAPI(restaurantAddress, customerAddress);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error calculating delivery fee: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(CheckoutActivity.this, 
+                            "Error: " + e.getMessage(), 
+                            Toast.LENGTH_LONG).show();
+                        deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                        updateTotals();
+                    });
+                }
+            } else {
+                Log.e(TAG, "Restaurant address data not found in Firebase");
+                runOnUiThread(() -> {
+                    Toast.makeText(CheckoutActivity.this, 
+                        "Restaurant location information not found", 
+                        Toast.LENGTH_LONG).show();
+                    deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                    updateTotals();
+                });
             }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error fetching restaurant location: " + e.getMessage(), e);
+            runOnUiThread(() -> {
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error fetching restaurant location: " + e.getMessage(), 
+                    Toast.LENGTH_LONG).show();
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                updateTotals();
+            });
+        });
+    }
 
-            TextView textView = (TextView) convertView;
-            AutocompletePrediction item = getItem(position);
-            if (item != null) {
-                String primaryText = item.getPrimaryText(null).toString();
-                String secondaryText = item.getSecondaryText(null).toString();
-                textView.setText(primaryText + "\n" + secondaryText);
-                textView.setSingleLine(false);
-                textView.setLines(2);
-            }
+    private void getDistanceFromMatrixAPI(String origin, String destination) {
+        String apiKey = getString(R.string.google_maps_api_key);
+        
+        // URL encode the addresses
+        try {
+            String encodedOrigin = java.net.URLEncoder.encode(origin, "UTF-8");
+            String encodedDestination = java.net.URLEncoder.encode(destination, "UTF-8");
+            
+            String url = DISTANCE_MATRIX_API_URL + "?origins=" + encodedOrigin + 
+                        "&destinations=" + encodedDestination + 
+                        "&mode=driving&key=" + apiKey;
 
-            return convertView;
-        }
+            Log.d(TAG, "Distance Matrix API URL: " + url);
 
-        @Override
-        public Filter getFilter() {
-            return new Filter() {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
                 @Override
-                protected FilterResults performFiltering(CharSequence constraint) {
-                    FilterResults results = new FilterResults();
-                    results.values = predictions;
-                    results.count = predictions.size();
-                    return results;
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                    Log.e(TAG, "Error getting distance: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(CheckoutActivity.this, 
+                            "Error calculating distance", Toast.LENGTH_SHORT).show();
+                        deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                        updateTotals();
+                    });
                 }
 
                 @Override
-                protected void publishResults(CharSequence constraint, FilterResults results) {
-                    if (results != null && results.count > 0) {
-                        notifyDataSetChanged();
-                    } else {
-                        notifyDataSetInvalidated();
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected response code: " + response.code());
+                    }
+
+                    try {
+                        String responseBody = response.body().string();
+                        Log.d(TAG, "Distance Matrix API Response: " + responseBody);
+                        
+                        JSONObject jsonResponse = new JSONObject(responseBody);
+                        if (jsonResponse.getString("status").equals("OK")) {
+                            JSONObject element = jsonResponse.getJSONArray("rows")
+                                    .getJSONObject(0)
+                                    .getJSONArray("elements")
+                                    .getJSONObject(0);
+                            
+                            if (element.getString("status").equals("OK")) {
+                                double distanceInMeters = element.getJSONObject("distance").getDouble("value");
+                                double distanceInKm = distanceInMeters / 1000.0;
+                                double deliveryFee = BASE_DELIVERY_FEE + (distanceInKm * FEE_PER_KM);
+                                
+                                Log.d(TAG, "Distance calculated: " + distanceInKm + " km");
+                                Log.d(TAG, "Delivery fee calculated: $" + deliveryFee);
+                                
+                                runOnUiThread(() -> {
+                                    // Update both delivery fee displays
+                                    updateDeliveryFee(deliveryFee);
+                                    
+                                    // Calculate tip on the subtotal (before discount)
+                                    double tipAmount = subtotal * (tipPercentage / 100.0);
+                                    tipAmountText.setText(String.format("$%.2f", tipAmount));
+                                    
+                                    // Calculate total: subtotal - discount + delivery fee + tip
+                                    double total = subtotal - discountAmount + deliveryFee + tipAmount;
+                                    totalText.setText(String.format("$%.2f", total));
+                                });
+                            } else {
+                                throw new Exception("Could not calculate distance between locations: " + 
+                                    element.getString("status"));
+                            }
+                        } else {
+                            throw new Exception("Distance Matrix API error: " + jsonResponse.getString("status"));
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing distance response: " + e.getMessage(), e);
+                        runOnUiThread(() -> {
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Error calculating distance: " + e.getMessage(), 
+                                Toast.LENGTH_SHORT).show();
+                            deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                            updateTotals();
+                        });
                     }
                 }
-            };
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error encoding addresses: " + e.getMessage(), e);
+            runOnUiThread(() -> {
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error processing addresses", Toast.LENGTH_SHORT).show();
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                updateTotals();
+            });
         }
     }
 
@@ -367,6 +495,16 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
             isDelivery = checkedId == R.id.deliveryOption;
             deliveryAddressSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
             deliveryFeeRow.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            
+            // Reset delivery fee text when switching options
+            if (!isDelivery) {
+                deliveryFeeAmount.setText("$0.00");
+            } else if (selectedPlace != null) {
+                deliveryFeeAmount.setText("Calculating...");
+                calculateDeliveryFee();
+            } else {
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+            }
             
             // Show/hide tip sections based on delivery option
             tipSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
@@ -522,27 +660,27 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     }
 
     private void updateTotals() {
+        calculateSubtotal();
+        calculateDiscountAmount();
+        
+        double deliveryFee = BASE_DELIVERY_FEE; // Default to base fee
+        if (isDelivery && selectedPlace != null) {
+            // Calculate delivery fee based on distance
+            calculateDeliveryFee();
+            return; // The UI will be updated in the calculateDeliveryFee callback
+        }
+        
+        // Update both delivery fee displays
+        updateDeliveryFee(isDelivery ? deliveryFee : 0.0);
+        
+        // Calculate tip on the subtotal (before discount)
+        double tipAmount = subtotal * (tipPercentage / 100.0);
+        // Calculate total: subtotal - discount + delivery fee + tip
+        double total = subtotal - discountAmount + (isDelivery ? deliveryFee : 0.0) + tipAmount;
+        
         subtotalText.setText(String.format("$%.2f", subtotal));
-        
-        // Calculate tip
-        double tipAmount = (subtotal * tipPercentage) / 100.0;
         tipAmountText.setText(String.format("$%.2f", tipAmount));
-        
-        // Apply discount if available
-        if (discountPercentage > 0) {
-            calculateDiscountAmount();
-            discountRow.setVisibility(View.VISIBLE);
-            discountText.setText(String.format("-$%.2f", discountAmount));
-        } else {
-            discountRow.setVisibility(View.GONE);
-        }
-        
-        // Calculate final total
-        double total = subtotal + tipAmount - discountAmount;
-        if (isDelivery) {
-            total += DELIVERY_FEE;
-        }
-        
+        discountText.setText(String.format("-$%.2f", discountAmount));
         totalText.setText(String.format("$%.2f", total));
     }
 
@@ -706,7 +844,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         double total = subtotal;
         if (isDelivery) {
             total += (subtotal * tipPercentage) / 100.0;
-            total += DELIVERY_FEE;
+            total += BASE_DELIVERY_FEE;
         }
         return total;
     }
@@ -760,7 +898,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                         orderData.put("customerPhone", phoneNumber);
                         orderData.put("createdAt", System.currentTimeMillis());
                         orderData.put("updatedAt", System.currentTimeMillis());
-                        orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
+                        orderData.put("deliveryFee", isDelivery ? Double.parseDouble(deliveryFeeAmount.getText().toString().replace("$", "")) : 0);
                         orderData.put("deliveryOption", isDelivery ? "delivery" : "pickup");
                         orderData.put("status", isScheduledOrder ? "scheduled" : "pending");
                         orderData.put("order_status", "pending");
@@ -782,7 +920,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                         
                         double total = subtotal + tipAmount - discountAmount;
                         if (isDelivery) {
-                            total += DELIVERY_FEE;
+                            total += Double.parseDouble(deliveryFeeAmount.getText().toString().replace("$", ""));
                         }
                         
                         orderData.put("subtotal", subtotal);
@@ -956,10 +1094,9 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         subtotal = 0.0;
         if (cartItems != null) {
             for (CartItem item : cartItems) {
-                double itemTotal = item.getPrice() * item.getQuantity();
-                Log.d(TAG, "Item: " + item.getName() + ", Price: " + item.getPrice() + 
-                      ", Quantity: " + item.getQuantity() + ", Total: " + itemTotal);
-                item.setTotalPrice(itemTotal); // Update item's total price
+                // Use the item's totalPrice which is already calculated as price * quantity
+                double itemTotal = item.getTotalPrice();
+                Log.d(TAG, "Item: " + item.getName() + ", Total Price: " + itemTotal);
                 subtotal += itemTotal;
             }
         }
@@ -1004,5 +1141,59 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 Log.e(TAG, "Error checking restaurant status", error.toException());
             }
         });
+    }
+
+    private void updateDeliveryFee(double deliveryFee) {
+        String formattedFee = String.format("$%.2f", deliveryFee);
+        deliveryFeeAmount.setText(formattedFee);
+        deliveryFeeSummaryAmount.setText(formattedFee);
+    }
+
+    private class AddressAdapter extends ArrayAdapter<AutocompletePrediction> {
+        public AddressAdapter(Context context, int resource, List<AutocompletePrediction> objects) {
+            super(context, resource, objects);
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext())
+                        .inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+            }
+
+            TextView textView = (TextView) convertView;
+            AutocompletePrediction item = getItem(position);
+            if (item != null) {
+                String primaryText = item.getPrimaryText(null).toString();
+                String secondaryText = item.getSecondaryText(null).toString();
+                textView.setText(primaryText + "\n" + secondaryText);
+                textView.setSingleLine(false);
+                textView.setLines(2);
+            }
+
+            return convertView;
+        }
+
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    results.values = predictions;
+                    results.count = predictions.size();
+                    return results;
+                }
+
+                @Override
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    if (results != null && results.count > 0) {
+                        notifyDataSetChanged();
+                    } else {
+                        notifyDataSetInvalidated();
+                    }
+                }
+            };
+        }
     }
 }

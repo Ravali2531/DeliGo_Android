@@ -70,14 +70,29 @@
                 android:text="Pickup"/>
         </RadioGroup>
 
-        <TextView
-            android:id="@+id/deliveryFeeText"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Delivery Fee: $4.99"
-            android:textSize="14sp"
-            android:textColor="@android:color/darker_gray"
-            android:layout_marginTop="8dp"/>
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/deliveryFeeText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Delivery Fee"
+                android:textColor="@color/black"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/deliveryFeeAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="$4.99"
+                android:textColor="@color/black"
+                android:textSize="16sp" />
+        </LinearLayout>
 
         <!-- Delivery Address Section -->
         <LinearLayout
@@ -321,7 +336,7 @@
                     android:text="Delivery Fee"/>
 
                 <TextView
-                    android:id="@+id/deliveryFeeAmount"
+                    android:id="@+id/deliveryFeeSummaryAmount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="$4.99"/>
