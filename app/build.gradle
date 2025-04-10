@@ -1,0 +1,106 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'  // Google Services plugin
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'  // Secrets plugin for Maps API key
+}
+
+android {
+    namespace 'com.example.deligoandroid'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.example.deligoandroid"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    buildFeatures {
+        viewBinding true
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+configurations.all {
+    exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+}
+
+dependencies {
+    implementation libs.swiperefreshlayout
+    def nav_version = "2.7.7"
+    
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // Navigation Component
+    implementation "androidx.navigation:navigation-fragment:$nav_version"
+    implementation "androidx.navigation:navigation-ui:$nav_version"
+    
+    // Firebase
+    implementation platform('com.google.firebase:firebase-bom:32.7.2')
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-storage'
+    implementation 'com.google.firebase:firebase-database'
+    implementation 'com.google.firebase:firebase-messaging:23.4.1'
+
+    implementation 'com.stripe:stripe-android:20.35.0'
+    implementation 'com.stripe:stripe-core:20.35.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.9.1'
+
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+
+
+    // Glide for image loading
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+    
+    // Google Maps & Places
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    implementation 'com.google.android.libraries.places:places:3.3.0'
+    implementation 'com.google.android.gms:play-services-location:21.2.0'
+    
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    
+    implementation 'androidx.viewpager2:viewpager2:1.0.0'
+    
+    // iText PDF Dependencies
+    def itext_version = '7.1.16'
+    implementation "com.itextpdf:barcodes:${itext_version}"
+    implementation "com.itextpdf:font-asian:${itext_version}"
+    implementation "com.itextpdf:forms:${itext_version}"
+    implementation "com.itextpdf:hyph:${itext_version}"
+    implementation "com.itextpdf:io:${itext_version}"
+    implementation "com.itextpdf:kernel:${itext_version}"
+    implementation "com.itextpdf:layout:${itext_version}"
+    implementation "com.itextpdf:pdfa:${itext_version}"
+    implementation "com.itextpdf:sign:${itext_version}"
+    implementation "com.itextpdf:styled-xml-parser:${itext_version}"
+    implementation "com.itextpdf:svg:${itext_version}"
+    
+    implementation 'com.android.volley:volley:1.2.1'
+    
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+    
+    implementation 'com.stripe:stripe-java:22.21.0'
+    
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+} 

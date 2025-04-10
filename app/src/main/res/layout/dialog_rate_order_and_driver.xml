@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rate Order"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:gravity="center"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Segment Control -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="#E0E0E0"
+        app:cardCornerRadius="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/restaurantTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Restaurant"
+                android:gravity="center"
+                android:textColor="@android:color/black"
+                android:background="@android:color/white"/>
+
+            <TextView
+                android:id="@+id/driverTab"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Driver"
+                android:gravity="center"
+                android:textColor="@android:color/black"
+                android:background="@android:color/white"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Rating Section -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Restaurant Rating -->
+        <LinearLayout
+            android:id="@+id/restaurantRatingLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rate Restaurant"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp"/>
+
+            <RatingBar
+                android:id="@+id/restaurantRatingBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:numStars="5"
+                android:stepSize="0.5"
+                android:progressTint="@color/accent_orange"
+                android:secondaryProgressTint="@color/accent_orange"/>
+
+            <EditText
+                android:id="@+id/restaurantCommentInput"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/white"
+                android:gravity="top"
+                android:hint="Comments about the restaurant (optional)"
+                android:textColor="@color/black"
+                android:padding="8dp"
+                android:textSize="14sp"/>
+        </LinearLayout>
+
+        <!-- Driver Rating -->
+        <LinearLayout
+            android:id="@+id/driverRatingLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Rate Driver"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:layout_marginBottom="8dp"/>
+
+            <RatingBar
+                android:id="@+id/driverRatingBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:numStars="5"
+                android:stepSize="0.5"
+                android:progressTint="@color/accent_orange"
+                android:secondaryProgressTint="@color/accent_orange"/>
+
+            <EditText
+                android:id="@+id/driverCommentInput"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="16dp"
+                android:background="@android:color/white"
+                android:gravity="top"
+                android:hint="Comments about the driver (optional)"
+                android:padding="8dp"
+                android:textSize="14sp"/>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Submit Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/submitRatingButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Submit Rating"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@color/accent_orange"
+        app:cornerRadius="24dp"/>
+
+</LinearLayout> 
