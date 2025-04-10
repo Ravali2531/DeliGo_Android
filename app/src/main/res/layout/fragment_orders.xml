@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Order Status Tabs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/newOrdersTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="New Orders"
+            android:backgroundTint="@color/accent_orange"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
+            android:id="@+id/inProgressTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="In Progress"
+            android:backgroundTint="#CCCCCC"
+            android:layout_marginHorizontal="4dp"/>
+
+        <Button
+            android:id="@+id/deliveredTab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Delivered"
+            android:backgroundTint="#CCCCCC"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <!-- Content Area -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- New Orders Empty State -->
+        <LinearLayout
+            android:id="@+id/noNewOrdersLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_no_orders"
+                android:alpha="0.6"
+                android:layout_marginBottom="24dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Orders Yet"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_orange"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="New orders will appear here"
+                android:textColor="#757575"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <!-- In Progress Empty State -->
+        <LinearLayout
+            android:id="@+id/noInProgressOrdersLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_in_progress"
+                android:alpha="0.6"
+                android:layout_marginBottom="24dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Orders In Progress"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_orange"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Orders being prepared will appear here"
+                android:textColor="#757575"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <!-- Delivered Empty State -->
+        <LinearLayout
+            android:id="@+id/noDeliveredOrdersLayout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_delivered"
+                android:alpha="0.6"
+                android:layout_marginBottom="24dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No Delivered Orders"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent_orange"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Completed orders will appear here"
+                android:textColor="#757575"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <!-- Orders RecyclerView -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/ordersRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"/>
+    </FrameLayout>
+</LinearLayout> 
