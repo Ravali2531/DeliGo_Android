@@ -24,6 +24,16 @@
         android:padding="8dp"
         android:background="#FAFAFA" />
 
+    <TextView
+        android:id="@+id/noMessagesText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="No messages yet"
+        android:textColor="#9E9E9E"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/messageLayout"
         android:layout_width="match_parent"

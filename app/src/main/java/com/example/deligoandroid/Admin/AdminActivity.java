@@ -21,7 +21,7 @@ import com.google.firebase.database.ValueEventListener;
 
 public class AdminActivity extends AppCompatActivity {
     private TextView driverCountBadge, restaurantCountBadge;
-    private Button userManagementBtn, chatManagementBtn, logoutButton;
+    private Button userManagementBtn, chatManagementBtn, otherActivitiesBtn, logoutButton;
     private DatabaseReference databaseRef;
 
     @Override
@@ -36,6 +36,7 @@ public class AdminActivity extends AppCompatActivity {
         // Initialize views
         userManagementBtn = findViewById(R.id.userManagementBtn);
         chatManagementBtn = findViewById(R.id.chatManagementBtn);
+        otherActivitiesBtn = findViewById(R.id.otherActivitiesBtn);
         logoutButton = findViewById(R.id.logoutButton);
         driverCountBadge = findViewById(R.id.driverCountBadge);
         restaurantCountBadge = findViewById(R.id.restaurantCountBadge);
@@ -44,9 +45,11 @@ public class AdminActivity extends AppCompatActivity {
         chatManagementBtn.setOnClickListener(v ->
             startActivity(new Intent(this, ChatManagementActivity.class)));
 
-        // Setup click listeners
         userManagementBtn.setOnClickListener(v ->
                 startActivity(new Intent(this, ManageUsersActivity.class)));
+        
+        otherActivitiesBtn.setOnClickListener(v ->
+                startActivity(new Intent(this, OtherActivitiesActivity.class)));
         
         logoutButton.setOnClickListener(v -> handleLogout());
         

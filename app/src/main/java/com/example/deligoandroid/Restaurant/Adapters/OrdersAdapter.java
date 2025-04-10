@@ -21,13 +21,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import android.widget.Toast;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
-import android.app.AlertDialog;
+
 import java.util.HashMap;
 import java.util.Map;
-import com.google.firebase.database.Query;
+
 import android.util.Log;
 import android.content.Intent;
 import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
@@ -94,11 +91,13 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.readyForPickupButton.setVisibility(View.GONE);
         holder.assignDriverButton.setVisibility(View.GONE);
         holder.markDeliveredButton.setVisibility(View.GONE);
+        holder.chatButton.setVisibility(View.GONE);
+        holder.groupChatButton.setVisibility(View.GONE);
         
         // Show appropriate buttons based on status
-        if (status.equals("pending")) {
-            // New/pending order - show accept button
-            Log.d("OrdersAdapter", "Showing accept button for pending order");
+        if (status.equals("pending") || status.equals("scheduled")) {
+            // Show accept button for both pending and scheduled orders
+            Log.d("OrdersAdapter", "Showing accept button for " + status + " order");
             holder.acceptButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
         } else if (status.equals("in_progress")) {
@@ -139,11 +138,25 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         } else if (status.equals("delivered")) {
             Log.d("OrdersAdapter", "Order is delivered");
             holder.orderStatus.setBackgroundResource(R.color.green);
+            
+            // Show both chat buttons for delivered orders
             holder.chatButton.setVisibility(View.VISIBLE);
+            holder.groupChatButton.setVisibility(View.VISIBLE);
+            
+            // Set up regular chat button
             holder.chatButton.setOnClickListener(v -> {
                 Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
                 chatIntent.putExtra("orderId", order.getId());
                 chatIntent.putExtra("customerName", order.getCustomerName());
+                context.startActivity(chatIntent);
+            });
+            
+            // Set up group chat button
+            holder.groupChatButton.setOnClickListener(v -> {
+                Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
+                chatIntent.putExtra("orderId", order.getId());
+                chatIntent.putExtra("chatType", "group");
+                chatIntent.putExtra("chatRef", "orders/" + order.getId() + "/group_chat");
                 context.startActivity(chatIntent);
             });
         }
@@ -197,23 +210,43 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     private void acceptOrder(Order order, ViewHolder holder) {
-        DatabaseReference orderRef = FirebaseDatabase.getInstance().getReference()
-                .child("orders")
-                .child(order.getId());
+        // First, get references to both orders and scheduled_orders
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
+        DatabaseReference scheduledOrdersRef = FirebaseDatabase.getInstance().getReference("scheduled_orders");
+        
+        // Create the order data
+        Map<String, Object> orderData = new HashMap<>();
+        orderData.put("status", "in_progress");
+        orderData.put("order_status", "accepted");
+        orderData.put("acceptedAt", ServerValue.TIMESTAMP);
+        orderData.put("restaurantId", order.getRestaurantId());
+        orderData.put("customerId", order.getCustomerId());
+        orderData.put("customerName", order.getCustomerName());
+        orderData.put("totalAmount", order.getTotalAmount());
+        orderData.put("items", order.getItems());
+        orderData.put("deliveryOption", order.getDeliveryOption());
+        orderData.put("timestamp", order.getTimestamp());
+        orderData.put("scheduled", true); // Mark as scheduled order
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", "in_progress");
-        updates.put("order_status", "accepted");
-        updates.put("acceptedAt", ServerValue.TIMESTAMP);
-
-        orderRef.updateChildren(updates).addOnSuccessListener(aVoid -> {
-            Toast.makeText(context, "Order accepted successfully", Toast.LENGTH_SHORT).show();
-            holder.acceptButton.setVisibility(View.GONE);
-            holder.orderStatus.setText("Accepted");
-            holder.orderStatus.setBackgroundResource(R.color.green);
-        }).addOnFailureListener(e -> {
-            Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
-        });
+        // First, add to orders collection
+        String orderId = order.getId();
+        ordersRef.child(orderId).updateChildren(orderData)
+            .addOnSuccessListener(aVoid -> {
+                // Then remove from scheduled_orders
+                scheduledOrdersRef.child(orderId).removeValue()
+                    .addOnSuccessListener(aVoid1 -> {
+                        Toast.makeText(context, "Scheduled order accepted successfully", Toast.LENGTH_SHORT).show();
+                        holder.acceptButton.setVisibility(View.GONE);
+                        holder.orderStatus.setText("Accepted");
+                        holder.orderStatus.setBackgroundResource(R.color.green);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(context, "Failed to remove from scheduled orders", Toast.LENGTH_SHORT).show();
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void updateOrderStatus(String orderId, String newStatus) {
@@ -271,7 +304,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton;
+        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton, groupChatButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -288,6 +321,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             actionButtons = itemView.findViewById(R.id.actionButtons);
             deliveryOption = itemView.findViewById(R.id.deliveryOption);
             chatButton = itemView.findViewById(R.id.chatButton);
+            groupChatButton = itemView.findViewById(R.id.groupChatButton);
         }
     }
 } 

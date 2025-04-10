@@ -11,6 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.deligoandroid.Customer.Activities.ChatActivity;
 import com.example.deligoandroid.R;
 import com.example.deligoandroid.Models.Order;
 import com.example.deligoandroid.Models.OrderItem;
@@ -216,6 +218,16 @@ public class DriverOrdersAdapter extends RecyclerView.Adapter<DriverOrdersAdapte
                 holder.chatButton.setVisibility(View.VISIBLE);
                 holder.chatButton.setOnClickListener(v -> showChatDialog(order));
             }
+        } else if (status.equals("delivered") || orderStatus.equals("delivered")) {
+            // Show group chat button for delivered orders
+            holder.chatButton.setVisibility(View.VISIBLE);
+            holder.chatButton.setText("Group Chat");
+            holder.chatButton.setOnClickListener(v -> {
+                Intent intent = new Intent(context, ChatActivity.class);
+                intent.putExtra("orderId", order.getId());
+                intent.putExtra("chatType", "group");
+                context.startActivity(intent);
+            });
         }
 
         // Load restaurant and customer names from Firebase

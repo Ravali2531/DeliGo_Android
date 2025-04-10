@@ -277,25 +277,17 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
                 holder.reorderButton.setOnClickListener(v -> showReorderConfirmationDialog(order));
 
                 // Handle download receipt button click
-                holder.downloadReceiptButton.setOnClickListener(v -> {
-                    Map<String, Object> orderMap = order.toMap();
-                    PdfGenerator.generateOrderReceipt(holder.itemView.getContext(), orderMap, file -> {
-                        if (file != null) {
-                            Toast.makeText(holder.itemView.getContext(), 
-                                "Receipt saved!\n\nTo find it:\n1. Open Files app or File Manager\n2. Go to Downloads > DeliGo_Receipts", 
-                                Toast.LENGTH_LONG).show();
-                        } else {
-                            Toast.makeText(holder.itemView.getContext(), 
-                                "Failed to generate receipt", 
-                                Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                });
+                holder.downloadReceiptButton.setOnClickListener(v -> generateReceipt(order));
 
                 // Handle restaurant chat button click
                 holder.restaurantChatButton.setOnClickListener(v -> showChatDialog(order, "restaurant"));
+                
+                // Add group chat button
+                holder.groupChatButton.setVisibility(View.VISIBLE);
+                holder.groupChatButton.setOnClickListener(v -> showGroupChatDialog(order));
             } else {
                 holder.deliveredOrderActions.setVisibility(View.GONE);
+                holder.groupChatButton.setVisibility(View.GONE);
             }
 
         } catch (Exception e) {
@@ -836,11 +828,40 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
         }
     }
 
+    private void showGroupChatDialog(Order order) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Group Chat");
+        builder.setMessage("Chat with both restaurant and driver");
+        builder.setPositiveButton("Start Chat", (dialog, which) -> {
+            Intent intent = new Intent(context, ChatActivity.class);
+            intent.putExtra("orderId", order.getId());
+            intent.putExtra("chatType", "group");
+            context.startActivity(intent);
+        });
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private void generateReceipt(Order order) {
+        Map<String, Object> orderMap = order.toMap();
+        PdfGenerator.generateOrderReceipt(context, orderMap, file -> {
+            if (file != null) {
+                Toast.makeText(context, 
+                    "Receipt saved!\n\nTo find it:\n1. Open Files app or File Manager\n2. Go to Downloads > DeliGo_Receipts", 
+                    Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(context, 
+                    "Failed to generate receipt", 
+                    Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, restaurantName, deliveryType, deliveryFee, totalAmount;
         RecyclerView orderItemsRecyclerView;
         LinearLayout deliveredOrderActions;
-        MaterialButton rateOrderButton, reorderButton, downloadReceiptButton, restaurantChatButton;
+        MaterialButton rateOrderButton, reorderButton, downloadReceiptButton, restaurantChatButton, groupChatButton;
         Button driverChatButton;
 
         ViewHolder(View itemView) {
@@ -856,8 +877,9 @@ public class CustomerOrdersAdapter extends RecyclerView.Adapter<CustomerOrdersAd
             rateOrderButton = itemView.findViewById(R.id.rateOrderButton);
             reorderButton = itemView.findViewById(R.id.reorderButton);
             downloadReceiptButton = itemView.findViewById(R.id.downloadReceiptButton);
-            driverChatButton = itemView.findViewById(R.id.driverChatButton);
             restaurantChatButton = itemView.findViewById(R.id.restaurantChatButton);
+            driverChatButton = itemView.findViewById(R.id.driverChatButton);
+            groupChatButton = itemView.findViewById(R.id.groupChatButton);
         }
     }
 } 
