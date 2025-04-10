@@ -120,38 +120,92 @@
                 android:textColor="@android:color/black" />
         </LinearLayout>
 
+        <Button
+            android:id="@+id/driverChatButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chat with Driver"
+            android:layout_gravity="end"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp"
+            android:backgroundTint="@color/accent_orange" />
+
         <!-- Action Buttons for Delivered Orders -->
         <LinearLayout
             android:id="@+id/deliveredOrderActions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="16dp"
-            android:gravity="end"
+            android:orientation="vertical"
+            android:padding="8dp"
             android:visibility="gone">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/rateOrderButton"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:text="Rate Order"
-                android:textColor="@android:color/white"
-                style="@style/Widget.MaterialComponents.Button"
-                app:icon="@drawable/ic_star"
-                app:iconTint="@android:color/white"
-                android:backgroundTint="@color/accent_orange" />
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/rateOrderButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Rate Order"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/reorderButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Reorder"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/downloadReceiptButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="4dp"
+                    android:text="Invoice"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/restaurantChatButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:text="Chat with Restaurant"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@color/orange"
+                    style="@style/Widget.MaterialComponents.Button" />
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/reorderButton"
-                android:layout_width="wrap_content"
+                android:id="@+id/groupChatButton"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Reorder"
-                android:textColor="@android:color/white"
-                style="@style/Widget.MaterialComponents.Button"
-                app:icon="@drawable/ic_refresh"
-                app:iconTint="@android:color/white"
-                android:backgroundTint="@color/accent_orange" />
+                android:text="Group Chat"
+                android:textAllCaps="false"
+                android:backgroundTint="@color/orange"
+                style="@style/Widget.MaterialComponents.Button" />
+
         </LinearLayout>
 
     </LinearLayout>

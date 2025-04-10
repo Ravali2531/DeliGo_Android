@@ -29,23 +29,46 @@
                 android:textColor="@android:color/black"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- Search Bar -->
-            <androidx.cardview.widget.CardView
+            <!-- Search and Sort Section -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                android:layout_marginBottom="8dp">
+                android:orientation="vertical"
+                android:padding="8dp">
 
                 <androidx.appcompat.widget.SearchView
                     android:id="@+id/searchView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@android:color/white"
+                    android:background="@drawable/search_background"
+                    android:iconifiedByDefault="false"
                     android:queryHint="Search restaurants..."
-                    app:iconifiedByDefault="false"/>
+                    android:layout_marginBottom="8dp"/>
 
-            </androidx.cardview.widget.CardView>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sort by:"
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp"
+                        android:textColor="@android:color/black"/>
+
+                    <Spinner
+                        android:id="@+id/sortSpinner"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="150dp"
+                        android:background="@android:color/transparent"/>
+
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Restaurant List -->

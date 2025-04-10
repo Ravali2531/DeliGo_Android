@@ -93,6 +93,7 @@ public class  ManageUsersActivity extends AppCompatActivity {
                     user.email = userSnapshot.child("email").getValue(String.class);
                     user.phone = userSnapshot.child("phone").getValue(String.class);
                     user.address = userSnapshot.child("address").getValue(String.class);
+                    user.blocked = userSnapshot.child("blocked").getValue(Boolean.class);
 
                     if (userType.equals("restaurants")) {
                         user.restaurantName = userSnapshot.child("store_info/name").getValue(String.class);

@@ -41,6 +41,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.stripe.android.PaymentConfiguration;
@@ -65,13 +66,15 @@ import java.util.Map;
 
 public class CheckoutActivity extends AppCompatActivity implements CartAdapter.CartItemListener {
     private static final String TAG = "CheckoutActivity";
-    private static final double DELIVERY_FEE = 4.99;
+    private static final double BASE_DELIVERY_FEE = 4.99;
+    private static final double FEE_PER_KM = 1.50; // $1.50 per kilometer
     private static final String BACKEND_URL = "https://c8a9-70-26-192-244.ngrok-free.app"; // Replace with your backend URL
     private static final String STRIPE_PUBLISHABLE_KEY = "pk_test_51QLXl2L0kLdfcs5yhjcDuc0WAnDoZgIu1Ts88JhU7ZpGDDmkZ8X6mkhAnRuFuhYQLePpmWrcKXJby0qtvMiw6FVc00DTOLaHK5"; // Replace with your Stripe publishable key
+    private static final String DISTANCE_MATRIX_API_URL = "https://maps.googleapis.com/maps/api/distancematrix/json";
 
     private RecyclerView cartItemsRecyclerView;
     private CartAdapter cartAdapter;
-    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount;
+    private TextView subtotalText, totalText, tipAmountText, deliveryFeeAmount, discountText, deliveryFeeSummaryAmount;
     private MaterialButton placeOrderButton;
     private RadioGroup deliveryOptionsGroup;
     private RadioGroup paymentMethodGroup;
@@ -83,6 +86,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private View deliveryFeeRow;
     private View tipSection;
     private View tipRow;
+    private View discountRow;
     
     private PlacesClient placesClient;
     private AutocompleteSessionToken sessionToken;
@@ -94,6 +98,9 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     private double subtotal = 0.0;
     private double tipPercentage = 15.0;
     private boolean isDelivery = true;
+    private String restaurantId = "";
+    private int discountPercentage = 0;
+    private double discountAmount = 0.0;
 
     private PaymentSheet paymentSheet;
     private String paymentIntentClientSecret;
@@ -107,7 +114,12 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         // Initialize Places API
         if (!Places.isInitialized()) {
             String apiKey = getString(R.string.google_maps_api_key);
-            Log.d(TAG, "Initializing Places API with key: " + (apiKey.isEmpty() ? "EMPTY" : "NOT EMPTY"));
+            if (apiKey.isEmpty()) {
+                Log.e(TAG, "Google Maps API key is empty");
+                Toast.makeText(this, "Error: Google Maps API key not found", Toast.LENGTH_LONG).show();
+                finish();
+                return;
+            }
             Places.initialize(getApplicationContext(), apiKey);
         }
         placesClient = Places.createClient(this);
@@ -160,8 +172,11 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         subtotalText = findViewById(R.id.subtotalText);
         totalText = findViewById(R.id.totalText);
         deliveryFeeAmount = findViewById(R.id.deliveryFeeAmount);
+        discountText = findViewById(R.id.discountText);
         deliveryFeeRow = findViewById(R.id.deliveryFeeRow);
-        
+        discountRow = findViewById(R.id.discountRow);
+
+        deliveryFeeSummaryAmount = findViewById(R.id.deliveryFeeSummaryAmount);
         // Place order button
         placeOrderButton = findViewById(R.id.placeOrderButton);
     }
@@ -200,9 +215,12 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     }
 
     private void setupAddressAutocomplete() {
+        if (addressInput == null) {
+            Log.e(TAG, "Address input view is null");
+            return;
+        }
+
         addressInput.setThreshold(3);
-        
-        // Set dropdown properties
         addressInput.setDropDownBackgroundResource(android.R.color.white);
         addressInput.setDropDownVerticalOffset(10);
         
@@ -221,13 +239,11 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 
                 runnable = () -> {
                     if (s.length() >= 3) {
-                        Log.d(TAG, "Getting predictions for: " + s.toString());
                         getAddressPredictions(s.toString());
                     }
                 };
                 
-                // Add a small delay to avoid too many API calls
-                handler.postDelayed(runnable, 300);
+                handler.postDelayed(runnable, 500); // Increased delay to reduce API calls
             }
 
             @Override
@@ -235,44 +251,53 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         });
 
         addressInput.setOnItemClickListener((parent, view, position, id) -> {
-            AutocompletePrediction prediction = addressAdapter.getItem(position);
-            if (prediction != null) {
-                Log.d(TAG, "Selected prediction: " + prediction.getFullText(null));
-                addressInput.setText(prediction.getFullText(null));
-                
-                // Get the place details
-                List<Place.Field> placeFields = Arrays.asList(
-                    Place.Field.ID,
-                    Place.Field.NAME,
-                    Place.Field.ADDRESS,
-                    Place.Field.LAT_LNG
-                );
-                
-                com.google.android.libraries.places.api.net.FetchPlaceRequest request = 
-                    com.google.android.libraries.places.api.net.FetchPlaceRequest.builder(prediction.getPlaceId(), placeFields)
-                    .setSessionToken(sessionToken)
-                    .build();
+            try {
+                AutocompletePrediction prediction = addressAdapter.getItem(position);
+                if (prediction != null) {
+                    addressInput.setText(prediction.getFullText(null));
+                    
+                    List<Place.Field> placeFields = Arrays.asList(
+                        Place.Field.ID,
+                        Place.Field.NAME,
+                        Place.Field.ADDRESS,
+                        Place.Field.LAT_LNG
+                    );
+                    
+                    com.google.android.libraries.places.api.net.FetchPlaceRequest request = 
+                        com.google.android.libraries.places.api.net.FetchPlaceRequest.builder(prediction.getPlaceId(), placeFields)
+                        .setSessionToken(sessionToken)
+                        .build();
 
-                placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
-                    Place place = response.getPlace();
-                    selectedPlace = place;
-                    Log.d(TAG, "Place found: " + place.getName() + ", " + place.getAddress());
-                    // Hide dropdown after selection
-                    addressInput.dismissDropDown();
-                }).addOnFailureListener((exception) -> {
-                    if (exception instanceof ApiException) {
-                        ApiException apiException = (ApiException) exception;
-                        Log.e(TAG, "Place not found: " + apiException.getStatusCode());
-                        Toast.makeText(CheckoutActivity.this, 
-                            "Error fetching place details", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                    placesClient.fetchPlace(request).addOnSuccessListener((response) -> {
+                        Place place = response.getPlace();
+                        selectedPlace = place;
+                        
+                        // Calculate delivery fee when address is selected
+                        if (isDelivery) {
+                            // Show loading state
+                            deliveryFeeAmount.setText("Calculating...");
+                            calculateDeliveryFee();
+                        }
+                        
+                        addressInput.dismissDropDown();
+                    }).addOnFailureListener((exception) -> {
+                        if (exception instanceof ApiException) {
+                            ApiException apiException = (ApiException) exception;
+                            Log.e(TAG, "Place not found: " + apiException.getStatusCode());
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Error fetching place details", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error handling address selection", e);
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error selecting address", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void getAddressPredictions(String query) {
-        // Create a new session token if null
         if (sessionToken == null) {
             sessionToken = AutocompleteSessionToken.newInstance();
         }
@@ -285,7 +310,6 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
                 .build();
 
         placesClient.findAutocompletePredictions(request).addOnSuccessListener((response) -> {
-            Log.d(TAG, "Got " + response.getAutocompletePredictions().size() + " predictions");
             predictions.clear();
             predictions.addAll(response.getAutocompletePredictions());
             addressAdapter.clear();
@@ -298,59 +322,170 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         }).addOnFailureListener((exception) -> {
             if (exception instanceof ApiException) {
                 ApiException apiException = (ApiException) exception;
-                Log.e(TAG, "Place not found: " + apiException.getStatusCode());
-                Log.e(TAG, "Error message: " + apiException.getMessage());
-                Toast.makeText(CheckoutActivity.this, 
-                    "Error getting address suggestions", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "Error getting predictions: " + apiException.getStatusCode());
             }
         });
     }
 
-    private class AddressAdapter extends ArrayAdapter<AutocompletePrediction> {
-        public AddressAdapter(Context context, int resource, List<AutocompletePrediction> objects) {
-            super(context, resource, objects);
+    private void calculateDeliveryFee() {
+        if (restaurantId == null || restaurantId.isEmpty() || selectedPlace == null) {
+            Log.e(TAG, "Missing required information: restaurantId=" + restaurantId + ", selectedPlace=" + selectedPlace);
+            return;
         }
 
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (convertView == null) {
-                convertView = LayoutInflater.from(getContext())
-                        .inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+        DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("store_info")
+                .child("address");
+
+        restaurantRef.get().addOnSuccessListener(snapshot -> {
+            if (snapshot.exists()) {
+                try {
+                    String restaurantAddress = snapshot.getValue(String.class);
+                    
+                    if (restaurantAddress == null || restaurantAddress.trim().isEmpty()) {
+                        throw new Exception("Restaurant address is missing");
+                    }
+                    
+                    String customerAddress = selectedPlace.getAddress();
+                    
+                    if (customerAddress == null || customerAddress.trim().isEmpty()) {
+                        throw new Exception("Customer delivery address is missing");
+                    }
+                    
+                    Log.d(TAG, "Restaurant Address: " + restaurantAddress);
+                    Log.d(TAG, "Customer Address: " + customerAddress);
+                    
+                    // Get distance using Distance Matrix API
+                    getDistanceFromMatrixAPI(restaurantAddress, customerAddress);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error calculating delivery fee: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(CheckoutActivity.this, 
+                            "Error: " + e.getMessage(), 
+                            Toast.LENGTH_LONG).show();
+                        deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                        updateTotals();
+                    });
+                }
+            } else {
+                Log.e(TAG, "Restaurant address data not found in Firebase");
+                runOnUiThread(() -> {
+                    Toast.makeText(CheckoutActivity.this, 
+                        "Restaurant location information not found", 
+                        Toast.LENGTH_LONG).show();
+                    deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                    updateTotals();
+                });
             }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error fetching restaurant location: " + e.getMessage(), e);
+            runOnUiThread(() -> {
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error fetching restaurant location: " + e.getMessage(), 
+                    Toast.LENGTH_LONG).show();
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                updateTotals();
+            });
+        });
+    }
 
-            TextView textView = (TextView) convertView;
-            AutocompletePrediction item = getItem(position);
-            if (item != null) {
-                String primaryText = item.getPrimaryText(null).toString();
-                String secondaryText = item.getSecondaryText(null).toString();
-                textView.setText(primaryText + "\n" + secondaryText);
-                textView.setSingleLine(false);
-                textView.setLines(2);
-            }
+    private void getDistanceFromMatrixAPI(String origin, String destination) {
+        String apiKey = getString(R.string.google_maps_api_key);
+        
+        // URL encode the addresses
+        try {
+            String encodedOrigin = java.net.URLEncoder.encode(origin, "UTF-8");
+            String encodedDestination = java.net.URLEncoder.encode(destination, "UTF-8");
+            
+            String url = DISTANCE_MATRIX_API_URL + "?origins=" + encodedOrigin + 
+                        "&destinations=" + encodedDestination + 
+                        "&mode=driving&key=" + apiKey;
 
-            return convertView;
-        }
+            Log.d(TAG, "Distance Matrix API URL: " + url);
 
-        @Override
-        public Filter getFilter() {
-            return new Filter() {
+            OkHttpClient client = new OkHttpClient();
+            Request request = new Request.Builder()
+                    .url(url)
+                    .build();
+
+            client.newCall(request).enqueue(new Callback() {
                 @Override
-                protected FilterResults performFiltering(CharSequence constraint) {
-                    FilterResults results = new FilterResults();
-                    results.values = predictions;
-                    results.count = predictions.size();
-                    return results;
+                public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                    Log.e(TAG, "Error getting distance: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        Toast.makeText(CheckoutActivity.this, 
+                            "Error calculating distance", Toast.LENGTH_SHORT).show();
+                        deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                        updateTotals();
+                    });
                 }
 
                 @Override
-                protected void publishResults(CharSequence constraint, FilterResults results) {
-                    if (results != null && results.count > 0) {
-                        notifyDataSetChanged();
-                    } else {
-                        notifyDataSetInvalidated();
+                public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Unexpected response code: " + response.code());
+                    }
+
+                    try {
+                        String responseBody = response.body().string();
+                        Log.d(TAG, "Distance Matrix API Response: " + responseBody);
+                        
+                        JSONObject jsonResponse = new JSONObject(responseBody);
+                        if (jsonResponse.getString("status").equals("OK")) {
+                            JSONObject element = jsonResponse.getJSONArray("rows")
+                                    .getJSONObject(0)
+                                    .getJSONArray("elements")
+                                    .getJSONObject(0);
+                            
+                            if (element.getString("status").equals("OK")) {
+                                double distanceInMeters = element.getJSONObject("distance").getDouble("value");
+                                double distanceInKm = distanceInMeters / 1000.0;
+                                double deliveryFee = BASE_DELIVERY_FEE + (distanceInKm * FEE_PER_KM);
+                                
+                                Log.d(TAG, "Distance calculated: " + distanceInKm + " km");
+                                Log.d(TAG, "Delivery fee calculated: $" + deliveryFee);
+                                
+                                runOnUiThread(() -> {
+                                    // Update both delivery fee displays
+                                    updateDeliveryFee(deliveryFee);
+                                    
+                                    // Calculate tip on the subtotal (before discount)
+                                    double tipAmount = subtotal * (tipPercentage / 100.0);
+                                    tipAmountText.setText(String.format("$%.2f", tipAmount));
+                                    
+                                    // Calculate total: subtotal - discount + delivery fee + tip
+                                    double total = subtotal - discountAmount + deliveryFee + tipAmount;
+                                    totalText.setText(String.format("$%.2f", total));
+                                });
+                            } else {
+                                throw new Exception("Could not calculate distance between locations: " + 
+                                    element.getString("status"));
+                            }
+                        } else {
+                            throw new Exception("Distance Matrix API error: " + jsonResponse.getString("status"));
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing distance response: " + e.getMessage(), e);
+                        runOnUiThread(() -> {
+                            Toast.makeText(CheckoutActivity.this, 
+                                "Error calculating distance: " + e.getMessage(), 
+                                Toast.LENGTH_SHORT).show();
+                            deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                            updateTotals();
+                        });
                     }
                 }
-            };
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Error encoding addresses: " + e.getMessage(), e);
+            runOnUiThread(() -> {
+                Toast.makeText(CheckoutActivity.this, 
+                    "Error processing addresses", Toast.LENGTH_SHORT).show();
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+                updateTotals();
+            });
         }
     }
 
@@ -360,6 +495,16 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
             isDelivery = checkedId == R.id.deliveryOption;
             deliveryAddressSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
             deliveryFeeRow.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
+            
+            // Reset delivery fee text when switching options
+            if (!isDelivery) {
+                deliveryFeeAmount.setText("$0.00");
+            } else if (selectedPlace != null) {
+                deliveryFeeAmount.setText("Calculating...");
+                calculateDeliveryFee();
+            } else {
+                deliveryFeeAmount.setText(String.format("$%.2f", BASE_DELIVERY_FEE));
+            }
             
             // Show/hide tip sections based on delivery option
             tipSection.setVisibility(isDelivery ? View.VISIBLE : View.GONE);
@@ -419,57 +564,124 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
     }
 
     private void loadCartItems() {
-        // Get cart items from intent
-        Serializable items = getIntent().getSerializableExtra("cartItems");
-        if (items instanceof ArrayList<?>) {
-            cartItems = (ArrayList<CartItem>) items;
-        } else {
-            cartItems = new ArrayList<>();
-            Log.e(TAG, "Failed to get cart items from intent");
-        }
-        subtotal = getIntent().getDoubleExtra("subtotal", 0.0);
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference cartRef = FirebaseDatabase.getInstance()
+                .getReference("customers")
+                .child(userId)
+                .child("cart");
 
-        Log.d(TAG, "Received " + (cartItems != null ? cartItems.size() : 0) + " items");
-        Log.d(TAG, "Subtotal: " + subtotal);
+        cartRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    cartItems = new ArrayList<>();
+                    for (com.google.firebase.database.DataSnapshot itemSnapshot : dataSnapshot.getChildren()) {
+                        CartItem item = itemSnapshot.getValue(CartItem.class);
+                        if (item != null) {
+                            cartItems.add(item);
+                            // Get the restaurant ID for fetching discount and checking status
+                            if (restaurantId.isEmpty() && !item.getRestaurantId().isEmpty()) {
+                                restaurantId = item.getRestaurantId();
+                                fetchRestaurantDiscount(restaurantId);
+                                checkRestaurantStatus(restaurantId);
+                            }
+                        }
+                    }
+                    if (!cartItems.isEmpty()) {
+                        cartAdapter.setItems(cartItems);
+                        calculateSubtotal();
+                        updateTotals();
+                    } else {
+                        showEmptyCart();
+                    }
+                } else {
+                    showEmptyCart();
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError databaseError) {
+                Toast.makeText(CheckoutActivity.this, "Failed to load cart: " + 
+                        databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void setupRecyclerView() {
-        cartAdapter = new CartAdapter(this, this);
-        cartItemsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        cartItemsRecyclerView.setAdapter(cartAdapter);
-        cartAdapter.setItems(cartItems);
+    private void fetchRestaurantDiscount(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty()) {
+            return;
+        }
+        
+        DatabaseReference discountRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("discount");
+                
+        discountRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Long discountValue = snapshot.getValue(Long.class);
+                    if (discountValue != null && discountValue > 0) {
+                        discountPercentage = discountValue.intValue();
+                        calculateDiscountAmount();
+                        discountRow.setVisibility(View.VISIBLE);
+                        updateTotals();
+                    } else {
+                        discountRow.setVisibility(View.GONE);
+                        discountPercentage = 0;
+                        discountAmount = 0;
+                    }
+                } else {
+                    discountRow.setVisibility(View.GONE);
+                    discountPercentage = 0;
+                    discountAmount = 0;
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError error) {
+                Log.e(TAG, "Error loading discount", error.toException());
+                discountRow.setVisibility(View.GONE);
+                discountPercentage = 0;
+                discountAmount = 0;
+            }
+        });
+    }
+
+    private void calculateDiscountAmount() {
+        if (discountPercentage > 0) {
+            discountAmount = (subtotal * discountPercentage) / 100.0;
+            discountText.setText(String.format("-$%.2f", discountAmount));
+        } else {
+            discountAmount = 0;
+            discountText.setText("-$0.00");
+        }
     }
 
     private void updateTotals() {
-        // Calculate tip amount
-        double tipAmount = (subtotal * tipPercentage) / 100.0;
-        Log.d(TAG, "Calculating totals - Subtotal: " + subtotal + ", Tip: " + tipAmount);
+        calculateSubtotal();
+        calculateDiscountAmount();
         
-        // Update UI
+        double deliveryFee = BASE_DELIVERY_FEE; // Default to base fee
+        if (isDelivery && selectedPlace != null) {
+            // Calculate delivery fee based on distance
+            calculateDeliveryFee();
+            return; // The UI will be updated in the calculateDeliveryFee callback
+        }
+        
+        // Update both delivery fee displays
+        updateDeliveryFee(isDelivery ? deliveryFee : 0.0);
+        
+        // Calculate tip on the subtotal (before discount)
+        double tipAmount = subtotal * (tipPercentage / 100.0);
+        // Calculate total: subtotal - discount + delivery fee + tip
+        double total = subtotal - discountAmount + (isDelivery ? deliveryFee : 0.0) + tipAmount;
+        
         subtotalText.setText(String.format("$%.2f", subtotal));
-        
-        // Show/hide and update tip amount
-        if (isDelivery) {
-            tipRow.setVisibility(View.VISIBLE);
-            tipAmountText.setText(String.format("$%.2f", tipAmount));
-        } else {
-            tipRow.setVisibility(View.GONE);
-            tipAmountText.setText("$0.00");
-        }
-        
-        // Calculate total
-        double total = subtotal + (isDelivery ? tipAmount : 0);
-        if (isDelivery) {
-            total += DELIVERY_FEE;
-            deliveryFeeAmount.setText(String.format("$%.2f", DELIVERY_FEE));
-            deliveryFeeRow.setVisibility(View.VISIBLE);
-            Log.d(TAG, "Added delivery fee. New total: " + total);
-        } else {
-            deliveryFeeRow.setVisibility(View.GONE);
-        }
-        
+        tipAmountText.setText(String.format("$%.2f", tipAmount));
+        discountText.setText(String.format("-$%.2f", discountAmount));
         totalText.setText(String.format("$%.2f", total));
-        Log.d(TAG, "Final total: " + total);
     }
 
     private boolean validateOrder() {
@@ -632,7 +844,7 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         double total = subtotal;
         if (isDelivery) {
             total += (subtotal * tipPercentage) / 100.0;
-            total += DELIVERY_FEE;
+            total += BASE_DELIVERY_FEE;
         }
         return total;
     }
@@ -644,156 +856,174 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
 
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         
-        // First get the customer's phone number
+        // First get the customer's details
         DatabaseReference customerRef = FirebaseDatabase.getInstance()
                 .getReference("customers")
-                .child(userId)
-                .child("phone");
+                .child(userId);
                 
         customerRef.get().addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                String phoneNumber = task.getResult().getValue(String.class);
+                DataSnapshot customerSnapshot = task.getResult();
+                String phoneNumber = customerSnapshot.child("phone").getValue(String.class);
+                String customerName = customerSnapshot.child("fullName").getValue(String.class);
                 
-                // Now proceed with order creation
-                DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
-                String orderId = java.util.UUID.randomUUID().toString().toUpperCase();
-
-                Map<String, Object> orderData = new HashMap<>();
-                orderData.put("customerId", userId);
-                orderData.put("userId", userId);
-                orderData.put("customerName", FirebaseAuth.getInstance().getCurrentUser().getDisplayName());
-                orderData.put("customerPhone", phoneNumber);
-                orderData.put("createdAt", System.currentTimeMillis());
-                orderData.put("updatedAt", System.currentTimeMillis());
-                orderData.put("deliveryFee", isDelivery ? DELIVERY_FEE : 0);
-                orderData.put("deliveryOption", isDelivery ? "Delivery" : "Pickup");
-                orderData.put("status", "pending");
-                orderData.put("order_status", "pending");
-                
-                // Get restaurantId from the first cart item (all items are from the same restaurant)
-                if (!cartItems.isEmpty()) {
-                    CartItem firstItem = cartItems.get(0);
-                    String restaurantId = firstItem.getRestaurantId();
-                    if (restaurantId == null || restaurantId.isEmpty()) {
-                        Toast.makeText(this, "Error: Restaurant ID not found", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    orderData.put("restaurantId", restaurantId);
-                } else {
+                // Get restaurantId from the first cart item
+                if (cartItems.isEmpty()) {
                     Toast.makeText(this, "Error: No items in cart", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 
-                // Add payment method
-                String paymentMethod = paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? 
-                    "Credit Card" : "Cash on Delivery";
-                orderData.put("paymentMethod", paymentMethod);
+                String restaurantId = cartItems.get(0).getRestaurantId();
                 
-                // Calculate final amounts
-                double tipAmount = (subtotal * tipPercentage) / 100.0;
-                double total = subtotal + tipAmount;
-                if (isDelivery) {
-                    total += DELIVERY_FEE;
-                }
-                
-                orderData.put("subtotal", subtotal);
-                orderData.put("tipAmount", tipAmount);
-                orderData.put("tipPercentage", tipPercentage);
-                orderData.put("total", total);
-
-                // Add delivery location if delivery is selected
-                if (isDelivery && selectedPlace != null && selectedPlace.getLatLng() != null) {
-                    orderData.put("latitude", selectedPlace.getLatLng().latitude);
-                    orderData.put("longitude", selectedPlace.getLatLng().longitude);
-                }
-
-                // Format items with proper customizations structure
-                Map<String, Object> items = new HashMap<>();
-                for (int i = 0; i < cartItems.size(); i++) {
-                    CartItem item = cartItems.get(i);
-                    Map<String, Object> itemData = new HashMap<>();
-                    itemData.put("id", item.getId());
-                    itemData.put("menuItemId", item.getMenuItemId());
-                    itemData.put("name", item.getName());
-                    itemData.put("description", item.getDescription());
-                    itemData.put("price", item.getPrice());
-                    itemData.put("imageURL", item.getImageURL());
-                    itemData.put("quantity", item.getQuantity());
-                    itemData.put("specialInstructions", item.getSpecialInstructions() != null ? item.getSpecialInstructions() : "");
-                    itemData.put("totalPrice", item.getTotalPrice());
-                    
-                    // Handle customizations with proper structure
-                    if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                        Map<String, Object> customizations = new HashMap<>();
+                // Check if restaurant is open
+                DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                        .getReference("restaurants")
+                        .child(restaurantId)
+                        .child("isOpen");
                         
-                        for (Map.Entry<String, List<CustomizationSelection>> entry : item.getCustomizations().entrySet()) {
-                            String optionId = entry.getKey();
-                            List<CustomizationSelection> selections = entry.getValue();
-                            
-                            Map<String, Object> customizationData = new HashMap<>();
-                            for (int j = 0; j < selections.size(); j++) {
-                                CustomizationSelection selection = selections.get(j);
-                                Map<String, Object> selectionData = new HashMap<>();
-                                selectionData.put("optionId", optionId);
-                                selectionData.put("optionName", selection.getOptionName());
-                                
-                                // Handle selected items
-                                if (selection.getSelectedItems() != null) {
-                                    Map<String, Object> selectedItemsMap = new HashMap<>();
-                                    for (int k = 0; k < selection.getSelectedItems().size(); k++) {
-                                        SelectedItem selectedItem = selection.getSelectedItems().get(k);
-                                        Map<String, Object> selectedItemData = new HashMap<>();
-                                        selectedItemData.put("id", selectedItem.getId());
-                                        selectedItemData.put("name", selectedItem.getName());
-                                        selectedItemData.put("price", selectedItem.getPrice());
-                                        selectedItemsMap.put(String.valueOf(k), selectedItemData);
-                                    }
-                                    selectionData.put("selectedItems", selectedItemsMap);
-                                }
-                                
-                                customizationData.put(String.valueOf(j), selectionData);
-                            }
-                            customizations.put(optionId, customizationData);
+                restaurantRef.get().addOnCompleteListener(restaurantTask -> {
+                    if (restaurantTask.isSuccessful()) {
+                        Boolean isOpen = restaurantTask.getResult().getValue(Boolean.class);
+                        boolean isScheduledOrder = isOpen != null && !isOpen;
+                        
+                        // Determine the order reference based on restaurant status
+                        String orderRefPath = isScheduledOrder ? "scheduled_orders" : "orders";
+                        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference(orderRefPath);
+                        String orderId = java.util.UUID.randomUUID().toString().toUpperCase();
+
+                        Map<String, Object> orderData = new HashMap<>();
+                        orderData.put("customerId", userId);
+                        orderData.put("userId", userId);
+                        orderData.put("customerName", customerName);
+                        orderData.put("customerPhone", phoneNumber);
+                        orderData.put("createdAt", System.currentTimeMillis());
+                        orderData.put("updatedAt", System.currentTimeMillis());
+                        orderData.put("deliveryFee", isDelivery ? Double.parseDouble(deliveryFeeAmount.getText().toString().replace("$", "")) : 0);
+                        orderData.put("deliveryOption", isDelivery ? "delivery" : "pickup");
+                        orderData.put("status", isScheduledOrder ? "scheduled" : "pending");
+                        orderData.put("order_status", "pending");
+                        orderData.put("restaurantId", restaurantId);
+                        
+                        // Add payment method
+                        String paymentMethod = paymentMethodGroup.getCheckedRadioButtonId() == R.id.cardPayment ? 
+                            "Credit Card" : "Cash on Delivery";
+                        orderData.put("paymentMethod", paymentMethod);
+                        
+                        // Calculate final amounts
+                        double tipAmount = (subtotal * tipPercentage) / 100.0;
+                        
+                        // Add discount information if applicable
+                        if (discountPercentage > 0) {
+                            orderData.put("discountPercentage", discountPercentage);
+                            orderData.put("discountAmount", discountAmount);
                         }
-                        itemData.put("customizations", customizations);
-                    }
-                    
-                    items.put(String.valueOf(i), itemData);
-                }
-                orderData.put("items", items);
+                        
+                        double total = subtotal + tipAmount - discountAmount;
+                        if (isDelivery) {
+                            total += Double.parseDouble(deliveryFeeAmount.getText().toString().replace("$", ""));
+                        }
+                        
+                        orderData.put("subtotal", subtotal);
+                        orderData.put("tipAmount", tipAmount);
+                        orderData.put("tipPercentage", tipPercentage);
+                        orderData.put("total", total);
 
-                if (isDelivery && selectedPlace != null) {
-                    Map<String, Object> addressData = new HashMap<>();
-                    addressData.put("street", selectedPlace.getAddress());
-                    if (!TextUtils.isEmpty(unitInput.getText())) {
-                        addressData.put("unit", unitInput.getText().toString().trim());
-                    }
-                    // Add delivery instructions if provided
-                    if (!TextUtils.isEmpty(instructionsInput.getText())) {
-                        addressData.put("instructions", instructionsInput.getText().toString().trim());
-                    }
-                    orderData.put("address", addressData);
-                }
+                        // Add delivery location if delivery is selected
+                        if (isDelivery && selectedPlace != null && selectedPlace.getLatLng() != null) {
+                            orderData.put("latitude", selectedPlace.getLatLng().latitude);
+                            orderData.put("longitude", selectedPlace.getLatLng().longitude);
+                        }
 
-                // Add order to Firebase
-                ordersRef.child(orderId).setValue(orderData)
-                        .addOnSuccessListener(aVoid -> {
-                            // Clear cart after successful order
-                            DatabaseReference cartRef = FirebaseDatabase.getInstance()
+                        // Format items with proper customizations structure
+                        Map<String, Object> items = new HashMap<>();
+                        for (int i = 0; i < cartItems.size(); i++) {
+                            CartItem item = cartItems.get(i);
+                            Map<String, Object> itemData = new HashMap<>();
+                            itemData.put("id", item.getId());
+                            itemData.put("menuItemId", item.getMenuItemId());
+                            itemData.put("name", item.getName());
+                            itemData.put("description", item.getDescription());
+                            itemData.put("price", item.getPrice());
+                            itemData.put("imageURL", item.getImageURL());
+                            itemData.put("quantity", item.getQuantity());
+                            itemData.put("specialInstructions", item.getSpecialInstructions() != null ? item.getSpecialInstructions() : "");
+                            itemData.put("totalPrice", item.getTotalPrice());
+                            
+                            // Handle customizations with proper structure
+                            if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
+                                Map<String, Object> customizations = new HashMap<>();
+                                
+                                for (Map.Entry<String, List<CustomizationSelection>> entry : item.getCustomizations().entrySet()) {
+                                    String optionId = entry.getKey();
+                                    List<CustomizationSelection> selections = entry.getValue();
+                                    
+                                    Map<String, Object> customizationData = new HashMap<>();
+                                    for (int j = 0; j < selections.size(); j++) {
+                                        CustomizationSelection selection = selections.get(j);
+                                        Map<String, Object> selectionData = new HashMap<>();
+                                        selectionData.put("optionId", optionId);
+                                        selectionData.put("optionName", selection.getOptionName());
+                                        
+                                        // Handle selected items
+                                        if (selection.getSelectedItems() != null) {
+                                            Map<String, Object> selectedItemsMap = new HashMap<>();
+                                            for (int k = 0; k < selection.getSelectedItems().size(); k++) {
+                                                SelectedItem selectedItem = selection.getSelectedItems().get(k);
+                                                Map<String, Object> selectedItemData = new HashMap<>();
+                                                selectedItemData.put("id", selectedItem.getId());
+                                                selectedItemData.put("name", selectedItem.getName());
+                                                selectedItemData.put("price", selectedItem.getPrice());
+                                                selectedItemsMap.put(String.valueOf(k), selectedItemData);
+                                            }
+                                            selectionData.put("selectedItems", selectedItemsMap);
+                                        }
+                                        customizationData.put(String.valueOf(j), selectionData);
+                                    }
+                                    customizations.put(optionId, customizationData);
+                                }
+                                itemData.put("customizations", customizations);
+                            }
+                            items.put(String.valueOf(i), itemData);
+                        }
+                        orderData.put("items", items);
+
+                        // Save the order
+                        ordersRef.child(orderId).setValue(orderData)
+                            .addOnSuccessListener(aVoid -> {
+                                // Clear the cart
+                                DatabaseReference cartRef = FirebaseDatabase.getInstance()
                                     .getReference("customers")
                                     .child(userId)
                                     .child("cart");
-                            cartRef.removeValue();
-
-                            Toast.makeText(this, "Order placed successfully!", Toast.LENGTH_SHORT).show();
-                            finish();
-                        })
-                        .addOnFailureListener(e -> {
-                            Toast.makeText(this, "Failed to place order: " + e.getMessage(),
+                                
+                                cartRef.removeValue()
+                                    .addOnSuccessListener(cartVoid -> {
+                                        Toast.makeText(CheckoutActivity.this, 
+                                            isScheduledOrder ? "Order scheduled successfully!" : "Order placed successfully!", 
+                                            Toast.LENGTH_SHORT).show();
+                                        finish();
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Toast.makeText(CheckoutActivity.this, 
+                                            "Error clearing cart: " + e.getMessage(), 
+                                            Toast.LENGTH_SHORT).show();
+                                    });
+                            })
+                            .addOnFailureListener(e -> {
+                                Toast.makeText(CheckoutActivity.this, 
+                                    "Error placing order: " + e.getMessage(), 
                                     Toast.LENGTH_SHORT).show();
-                        });
+                            });
+                    } else {
+                        Toast.makeText(this, 
+                            "Error checking restaurant status: " + restaurantTask.getException().getMessage(), 
+                            Toast.LENGTH_SHORT).show();
+                    }
+                });
             } else {
-                Toast.makeText(this, "Failed to get customer phone number", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, 
+                    "Error getting customer details: " + task.getException().getMessage(), 
+                    Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -864,13 +1094,106 @@ public class CheckoutActivity extends AppCompatActivity implements CartAdapter.C
         subtotal = 0.0;
         if (cartItems != null) {
             for (CartItem item : cartItems) {
-                double itemTotal = item.getPrice() * item.getQuantity();
-                Log.d(TAG, "Item: " + item.getName() + ", Price: " + item.getPrice() + 
-                      ", Quantity: " + item.getQuantity() + ", Total: " + itemTotal);
-                item.setTotalPrice(itemTotal); // Update item's total price
+                // Use the item's totalPrice which is already calculated as price * quantity
+                double itemTotal = item.getTotalPrice();
+                Log.d(TAG, "Item: " + item.getName() + ", Total Price: " + itemTotal);
                 subtotal += itemTotal;
             }
         }
         Log.d(TAG, "New subtotal: " + subtotal);
+    }
+
+    private void setupRecyclerView() {
+        cartAdapter = new CartAdapter(this, this);
+        cartItemsRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        cartItemsRecyclerView.setAdapter(cartAdapter);
+    }
+
+    private void showEmptyCart() {
+        Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show();
+        finish();
+    }
+
+    private void checkRestaurantStatus(String restaurantId) {
+        DatabaseReference restaurantRef = FirebaseDatabase.getInstance()
+                .getReference("restaurants")
+                .child(restaurantId)
+                .child("store_info")
+                .child("isOpen");
+                
+        restaurantRef.addListenerForSingleValueEvent(new com.google.firebase.database.ValueEventListener() {
+            @Override
+            public void onDataChange(com.google.firebase.database.DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    Boolean isOpen = snapshot.getValue(Boolean.class);
+                    if (isOpen != null && !isOpen) {
+                        // Restaurant is closed, update button text
+                        placeOrderButton.setText("Schedule Order");
+                    } else {
+                        // Restaurant is open, use default text
+                        placeOrderButton.setText("Place Order");
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(com.google.firebase.database.DatabaseError error) {
+                Log.e(TAG, "Error checking restaurant status", error.toException());
+            }
+        });
+    }
+
+    private void updateDeliveryFee(double deliveryFee) {
+        String formattedFee = String.format("$%.2f", deliveryFee);
+        deliveryFeeAmount.setText(formattedFee);
+        deliveryFeeSummaryAmount.setText(formattedFee);
+    }
+
+    private class AddressAdapter extends ArrayAdapter<AutocompletePrediction> {
+        public AddressAdapter(Context context, int resource, List<AutocompletePrediction> objects) {
+            super(context, resource, objects);
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext())
+                        .inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+            }
+
+            TextView textView = (TextView) convertView;
+            AutocompletePrediction item = getItem(position);
+            if (item != null) {
+                String primaryText = item.getPrimaryText(null).toString();
+                String secondaryText = item.getSecondaryText(null).toString();
+                textView.setText(primaryText + "\n" + secondaryText);
+                textView.setSingleLine(false);
+                textView.setLines(2);
+            }
+
+            return convertView;
+        }
+
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    results.values = predictions;
+                    results.count = predictions.size();
+                    return results;
+                }
+
+                @Override
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    if (results != null && results.count > 0) {
+                        notifyDataSetChanged();
+                    } else {
+                        notifyDataSetInvalidated();
+                    }
+                }
+            };
+        }
     }
 }

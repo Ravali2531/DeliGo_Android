@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 public class StoreInformationActivity extends AppCompatActivity {
-    private TextInputEditText storeNameInput, phoneInput, emailInput, aboutInput;
+    private TextInputEditText storeNameInput, phoneInput, emailInput, aboutInput, minPriceInput, maxPriceInput;
     private AutoCompleteTextView locationInput;
     private Button saveButton;
     private DatabaseReference storeInfoRef;
@@ -78,6 +78,9 @@ public class StoreInformationActivity extends AppCompatActivity {
 
         // Setup save button
         saveButton.setOnClickListener(v -> saveStoreInformation());
+
+        // Add text change listeners for price validation
+        setupPriceValidation();
     }
 
     private void initializeViews() {
@@ -86,7 +89,72 @@ public class StoreInformationActivity extends AppCompatActivity {
         phoneInput = findViewById(R.id.phoneInput);
         emailInput = findViewById(R.id.emailInput);
         aboutInput = findViewById(R.id.aboutInput);
+        minPriceInput = findViewById(R.id.minPriceInput);
+        maxPriceInput = findViewById(R.id.maxPriceInput);
         saveButton = findViewById(R.id.saveButton);
+    }
+
+    private void setupPriceValidation() {
+        TextWatcher priceWatcher = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                validatePriceRange();
+            }
+        };
+
+        minPriceInput.addTextChangedListener(priceWatcher);
+        maxPriceInput.addTextChangedListener(priceWatcher);
+    }
+
+    private void validatePriceRange() {
+        String minPriceStr = minPriceInput.getText().toString().trim();
+        String maxPriceStr = maxPriceInput.getText().toString().trim();
+
+        try {
+            if (!minPriceStr.isEmpty()) {
+                double minPrice = Double.parseDouble(minPriceStr);
+                if (minPrice < 0) {
+                    minPriceInput.setError("Minimum price cannot be negative");
+                    return;
+                }
+            }
+
+            if (!maxPriceStr.isEmpty()) {
+                double maxPrice = Double.parseDouble(maxPriceStr);
+                if (maxPrice < 0) {
+                    maxPriceInput.setError("Maximum price cannot be negative");
+                    return;
+                }
+            }
+
+            if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty()) {
+                double minPrice = Double.parseDouble(minPriceStr);
+                double maxPrice = Double.parseDouble(maxPriceStr);
+                
+                if (maxPrice <= minPrice) {
+                    maxPriceInput.setError("Maximum price must be greater than minimum price");
+                    return;
+                }
+            }
+
+            // Clear any previous errors if validation passes
+            minPriceInput.setError(null);
+            maxPriceInput.setError(null);
+        } catch (NumberFormatException e) {
+            // Invalid number format
+            if (!minPriceStr.isEmpty()) {
+                minPriceInput.setError("Please enter a valid number");
+            }
+            if (!maxPriceStr.isEmpty()) {
+                maxPriceInput.setError("Please enter a valid number");
+            }
+        }
     }
 
     private void setupLocationAutocomplete() {
@@ -164,6 +232,17 @@ public class StoreInformationActivity extends AppCompatActivity {
                     if (dataSnapshot.hasChild("description")) {
                         aboutInput.setText(dataSnapshot.child("description").getValue(String.class));
                     }
+
+                    // Load price range
+                    if (dataSnapshot.hasChild("price_range")) {
+                        DataSnapshot priceRangeSnapshot = dataSnapshot.child("price_range");
+                        if (priceRangeSnapshot.hasChild("min")) {
+                            minPriceInput.setText(String.valueOf(priceRangeSnapshot.child("min").getValue(Double.class)));
+                        }
+                        if (priceRangeSnapshot.hasChild("max")) {
+                            maxPriceInput.setText(String.valueOf(priceRangeSnapshot.child("max").getValue(Double.class)));
+                        }
+                    }
                 }
             }
 
@@ -223,10 +302,43 @@ public class StoreInformationActivity extends AppCompatActivity {
         String phone = phoneInput.getText().toString().trim();
         String email = emailInput.getText().toString().trim();
         String about = aboutInput.getText().toString().trim();
+        String minPriceStr = minPriceInput.getText().toString().trim();
+        String maxPriceStr = maxPriceInput.getText().toString().trim();
 
         if (storeName.isEmpty() || location.isEmpty() || phone.isEmpty() || email.isEmpty()) {
             Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        // Validate price range if either field is filled
+        if (!minPriceStr.isEmpty() || !maxPriceStr.isEmpty()) {
+            try {
+                if (minPriceStr.isEmpty() || maxPriceStr.isEmpty()) {
+                    Toast.makeText(this, "Please fill both minimum and maximum prices", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                double minPrice = Double.parseDouble(minPriceStr);
+                double maxPrice = Double.parseDouble(maxPriceStr);
+
+                if (minPrice < 0) {
+                    minPriceInput.setError("Minimum price cannot be negative");
+                    return;
+                }
+
+                if (maxPrice < 0) {
+                    maxPriceInput.setError("Maximum price cannot be negative");
+                    return;
+                }
+
+                if (maxPrice <= minPrice) {
+                    maxPriceInput.setError("Maximum price must be greater than minimum price");
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, "Please enter valid price values", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         // Save store info
@@ -236,6 +348,15 @@ public class StoreInformationActivity extends AppCompatActivity {
         storeUpdates.put("phone", phone);
         storeUpdates.put("email", email);
         storeUpdates.put("description", about);
+        storeUpdates.put("updatedAt", System.currentTimeMillis());
+
+        // Add price range if both fields are filled
+        if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty()) {
+            Map<String, Object> priceRange = new HashMap<>();
+            priceRange.put("min", Double.parseDouble(minPriceStr));
+            priceRange.put("max", Double.parseDouble(maxPriceStr));
+            storeUpdates.put("price_range", priceRange);
+        }
 
         // Save location data
         Map<String, Object> locationUpdates = new HashMap<>();

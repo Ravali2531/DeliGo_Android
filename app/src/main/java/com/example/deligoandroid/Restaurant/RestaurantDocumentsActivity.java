@@ -41,6 +41,7 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
     private Button uploadRestaurantProofButton, uploadOwnerIdButton, submitButton;
     private TimePicker openingTimePicker, closingTimePicker;
     private TextView coordinatesText;
+    private EditText minPriceEditText, maxPriceEditText;
     private Uri restaurantProofUri, ownerIdUri;
     private FirebaseStorage storage;
     private DatabaseReference databaseRef;
@@ -108,6 +109,8 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         openingTimePicker = findViewById(R.id.openingTimePicker);
         closingTimePicker = findViewById(R.id.closingTimePicker);
         coordinatesText = findViewById(R.id.coordinatesText);
+        minPriceEditText = findViewById(R.id.minPriceEditText);
+        maxPriceEditText = findViewById(R.id.maxPriceEditText);
 
         // Set 24-hour format for time pickers
         openingTimePicker.setIs24HourView(true);
@@ -116,6 +119,102 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         // Set initial placeholder images
         restaurantProofPreview.setImageResource(R.drawable.id_placeholder);
         ownerIdPreview.setImageResource(R.drawable.id_placeholder);
+
+        // Add text change listeners for price range validation
+        minPriceEditText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                validatePriceRange();
+            }
+        });
+
+        maxPriceEditText.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                validatePriceRange();
+            }
+        });
+    }
+
+    private void validatePriceRange() {
+        String minPriceStr = minPriceEditText.getText().toString().trim();
+        String maxPriceStr = maxPriceEditText.getText().toString().trim();
+
+        try {
+            if (!minPriceStr.isEmpty()) {
+                double minPrice = Double.parseDouble(minPriceStr);
+                if (minPrice < 0) {
+                    minPriceEditText.setError("Minimum price cannot be negative");
+                    return;
+                }
+            }
+
+            if (!maxPriceStr.isEmpty()) {
+                double maxPrice = Double.parseDouble(maxPriceStr);
+                if (maxPrice < 0) {
+                    maxPriceEditText.setError("Maximum price cannot be negative");
+                    return;
+                }
+            }
+
+            if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty()) {
+                double minPrice = Double.parseDouble(minPriceStr);
+                double maxPrice = Double.parseDouble(maxPriceStr);
+                
+                if (maxPrice <= minPrice) {
+                    maxPriceEditText.setError("Maximum price must be greater than minimum price");
+                    return;
+                }
+            }
+
+            // Clear any previous errors if validation passes
+            minPriceEditText.setError(null);
+            maxPriceEditText.setError(null);
+        } catch (NumberFormatException e) {
+            // Invalid number format
+            if (!minPriceStr.isEmpty()) {
+                minPriceEditText.setError("Please enter a valid number");
+            }
+            if (!maxPriceStr.isEmpty()) {
+                maxPriceEditText.setError("Please enter a valid number");
+            }
+        }
+
+        updateSubmitButtonState();
+    }
+
+    private void updateSubmitButtonState() {
+        boolean hasValidPriceRange = false;
+        try {
+            String minPriceStr = minPriceEditText.getText().toString().trim();
+            String maxPriceStr = maxPriceEditText.getText().toString().trim();
+            
+            if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty()) {
+                double minPrice = Double.parseDouble(minPriceStr);
+                double maxPrice = Double.parseDouble(maxPriceStr);
+                hasValidPriceRange = minPrice >= 0 && maxPrice > minPrice;
+            }
+        } catch (NumberFormatException e) {
+            hasValidPriceRange = false;
+        }
+
+        submitButton.setEnabled(restaurantProofUri != null && 
+                              ownerIdUri != null && 
+                              selectedLatitude != 0 && 
+                              selectedLongitude != 0 &&
+                              hasValidPriceRange);
     }
 
     private void setupPlacesAutocomplete() {
@@ -212,13 +311,6 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         }
     }
 
-    private void updateSubmitButtonState() {
-        submitButton.setEnabled(restaurantProofUri != null && 
-                              ownerIdUri != null && 
-                              selectedLatitude != 0 && 
-                              selectedLongitude != 0);
-    }
-
     private void uploadDocuments() {
         if (restaurantProofUri == null || ownerIdUri == null) {
             Toast.makeText(this, "Please select both documents", Toast.LENGTH_SHORT).show();
@@ -227,6 +319,40 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
 
         if (selectedLatitude == 0 || selectedLongitude == 0) {
             Toast.makeText(this, "Please select a location", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String minPriceStr = minPriceEditText.getText().toString().trim();
+        String maxPriceStr = maxPriceEditText.getText().toString().trim();
+
+        if (minPriceStr.isEmpty() || maxPriceStr.isEmpty()) {
+            Toast.makeText(this, "Please enter both minimum and maximum prices", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            double minPrice = Double.parseDouble(minPriceStr);
+            double maxPrice = Double.parseDouble(maxPriceStr);
+            
+            if (minPrice < 0) {
+                minPriceEditText.setError("Minimum price cannot be negative");
+                Toast.makeText(this, "Minimum price cannot be negative", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (maxPrice < 0) {
+                maxPriceEditText.setError("Maximum price cannot be negative");
+                Toast.makeText(this, "Maximum price cannot be negative", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (maxPrice <= minPrice) {
+                maxPriceEditText.setError("Maximum price must be greater than minimum price");
+                Toast.makeText(this, "Maximum price must be greater than minimum price", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Please enter valid price values", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -243,6 +369,17 @@ public class RestaurantDocumentsActivity extends AppCompatActivity {
         restaurantData.put("location/longitude", selectedLongitude);
         restaurantData.put("location/address", selectedAddress);
         restaurantData.put("store_info/address", selectedAddress);
+
+        // Save price range only if both fields are filled
+        if (!minPriceStr.isEmpty() && !maxPriceStr.isEmpty()) {
+            Map<String, Object> priceRange = new HashMap<>();
+            priceRange.put("min", Double.parseDouble(minPriceStr));
+            priceRange.put("max", Double.parseDouble(maxPriceStr));
+            restaurantData.put("store_info/price_range", priceRange);
+        }
+
+        // Add updatedAt timestamp
+        restaurantData.put("store_info/updatedAt", System.currentTimeMillis());
 
         databaseRef.child("restaurants").child(userId).updateChildren(restaurantData)
             .addOnSuccessListener(aVoid -> {

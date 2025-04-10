@@ -21,14 +21,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import android.widget.Toast;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.ValueEventListener;
-import android.app.AlertDialog;
+
 import java.util.HashMap;
 import java.util.Map;
-import com.google.firebase.database.Query;
+
 import android.util.Log;
+import android.content.Intent;
+import com.example.deligoandroid.Restaurant.Activities.RestaurantChatActivity;
+import androidx.annotation.NonNull;
+import com.google.firebase.database.ServerValue;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
     private List<Order> orders = new ArrayList<>();
@@ -61,7 +62,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Order order = orders.get(position);
         if (order == null) return;
         
@@ -74,10 +75,12 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         // Set status with appropriate color
         String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
         String orderStatus = order.getOrderStatus() != null ? order.getOrderStatus().toLowerCase() : "";
+        String deliveryOption = order.getDeliveryOption() != null ? order.getDeliveryOption().toLowerCase() : "";
         
         Log.d("OrdersAdapter", "Order ID: " + orderId);
         Log.d("OrdersAdapter", "Status: " + status);
         Log.d("OrdersAdapter", "Order Status: " + orderStatus);
+        Log.d("OrdersAdapter", "Delivery Option: " + deliveryOption);
         
         // Set the displayed status text
         String displayStatus = !orderStatus.isEmpty() ? orderStatus : status;
@@ -88,11 +91,13 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.readyForPickupButton.setVisibility(View.GONE);
         holder.assignDriverButton.setVisibility(View.GONE);
         holder.markDeliveredButton.setVisibility(View.GONE);
+        holder.chatButton.setVisibility(View.GONE);
+        holder.groupChatButton.setVisibility(View.GONE);
         
         // Show appropriate buttons based on status
-        if (status.equals("pending")) {
-            // New/pending order - show accept button
-            Log.d("OrdersAdapter", "Showing accept button for pending order");
+        if (status.equals("pending") || status.equals("scheduled")) {
+            // Show accept button for both pending and scheduled orders
+            Log.d("OrdersAdapter", "Showing accept button for " + status + " order");
             holder.acceptButton.setVisibility(View.VISIBLE);
             holder.orderStatus.setBackgroundResource(R.color.orange);
         } else if (status.equals("in_progress")) {
@@ -104,7 +109,6 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
                 holder.orderStatus.setBackgroundResource(R.color.green);
             } else if (orderStatus.equals("ready_for_pickup")) {
                 // Ready for pickup - show appropriate button based on delivery option
-                String deliveryOption = order.getDeliveryOption();
                 Log.d("OrdersAdapter", "Order is ready for pickup, delivery option: " + deliveryOption);
                 if ("delivery".equalsIgnoreCase(deliveryOption)) {
                     // For delivery orders, show assign driver button
@@ -120,21 +124,48 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             } else if (orderStatus.equals("assigned_driver") || 
                       orderStatus.equals("driver_accepted") || 
                       orderStatus.equals("out_for_delivery")) {
-                // Driver assigned/accepted or out for delivery - show mark as delivered button
-                Log.d("OrdersAdapter", "Showing mark delivered button for order with driver");
-                holder.markDeliveredButton.setVisibility(View.VISIBLE);
-                holder.orderStatus.setBackgroundResource(R.color.purple);
+                // Driver assigned/accepted or out for delivery - only show mark as delivered for pickup orders
+                if (!"delivery".equalsIgnoreCase(deliveryOption)) {
+                    Log.d("OrdersAdapter", "Showing mark delivered button for pickup order with driver");
+                    holder.markDeliveredButton.setVisibility(View.VISIBLE);
+                    holder.orderStatus.setBackgroundResource(R.color.purple);
+                } else {
+                    Log.d("OrdersAdapter", "Hiding mark delivered button for delivery order with driver");
+                    holder.markDeliveredButton.setVisibility(View.GONE);
+                    holder.orderStatus.setBackgroundResource(R.color.blue);
+                }
             }
         } else if (status.equals("delivered")) {
             Log.d("OrdersAdapter", "Order is delivered");
             holder.orderStatus.setBackgroundResource(R.color.green);
+            
+            // Show both chat buttons for delivered orders
+            holder.chatButton.setVisibility(View.VISIBLE);
+            holder.groupChatButton.setVisibility(View.VISIBLE);
+            
+            // Set up regular chat button
+            holder.chatButton.setOnClickListener(v -> {
+                Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
+                chatIntent.putExtra("orderId", order.getId());
+                chatIntent.putExtra("customerName", order.getCustomerName());
+                context.startActivity(chatIntent);
+            });
+            
+            // Set up group chat button
+            holder.groupChatButton.setOnClickListener(v -> {
+                Intent chatIntent = new Intent(context, RestaurantChatActivity.class);
+                chatIntent.putExtra("orderId", order.getId());
+                chatIntent.putExtra("chatType", "group");
+                chatIntent.putExtra("chatRef", "orders/" + order.getId() + "/group_chat");
+                context.startActivity(chatIntent);
+            });
         }
 
         // Set customer name and delivery option
         String customerName = order.getCustomerName() != null ? order.getCustomerName() : "Unknown Customer";
-        String deliveryOption = order.getDeliveryOption() != null ? order.getDeliveryOption() : "Unknown";
+        String displayDeliveryOption = deliveryOption != null && !deliveryOption.isEmpty() ? deliveryOption : "Unknown";
         holder.customerName.setText(customerName);
-        holder.deliveryOption.setText(deliveryOption);
+        holder.deliveryOption.setText(displayDeliveryOption);
 
         // Set total amount with proper formatting
         NumberFormat format = NumberFormat.getCurrencyInstance(Locale.US);
@@ -160,7 +191,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
         // Setup button click listeners
         holder.acceptButton.setOnClickListener(v -> {
-            updateOrderStatus(order.getId(), "accepted");
+            acceptOrder(order, holder);
         });
 
         holder.readyForPickupButton.setOnClickListener(v -> {
@@ -176,6 +207,46 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.markDeliveredButton.setOnClickListener(v -> {
             updateOrderStatus(order.getId(), "delivered");
         });
+    }
+
+    private void acceptOrder(Order order, ViewHolder holder) {
+        // First, get references to both orders and scheduled_orders
+        DatabaseReference ordersRef = FirebaseDatabase.getInstance().getReference("orders");
+        DatabaseReference scheduledOrdersRef = FirebaseDatabase.getInstance().getReference("scheduled_orders");
+        
+        // Create the order data
+        Map<String, Object> orderData = new HashMap<>();
+        orderData.put("status", "in_progress");
+        orderData.put("order_status", "accepted");
+        orderData.put("acceptedAt", ServerValue.TIMESTAMP);
+        orderData.put("restaurantId", order.getRestaurantId());
+        orderData.put("customerId", order.getCustomerId());
+        orderData.put("customerName", order.getCustomerName());
+        orderData.put("totalAmount", order.getTotalAmount());
+        orderData.put("items", order.getItems());
+        orderData.put("deliveryOption", order.getDeliveryOption());
+        orderData.put("timestamp", order.getTimestamp());
+        orderData.put("scheduled", true); // Mark as scheduled order
+
+        // First, add to orders collection
+        String orderId = order.getId();
+        ordersRef.child(orderId).updateChildren(orderData)
+            .addOnSuccessListener(aVoid -> {
+                // Then remove from scheduled_orders
+                scheduledOrdersRef.child(orderId).removeValue()
+                    .addOnSuccessListener(aVoid1 -> {
+                        Toast.makeText(context, "Scheduled order accepted successfully", Toast.LENGTH_SHORT).show();
+                        holder.acceptButton.setVisibility(View.GONE);
+                        holder.orderStatus.setText("Accepted");
+                        holder.orderStatus.setBackgroundResource(R.color.green);
+                    })
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(context, "Failed to remove from scheduled orders", Toast.LENGTH_SHORT).show();
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(context, "Failed to accept order", Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void updateOrderStatus(String orderId, String newStatus) {
@@ -233,7 +304,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderNumber, orderStatus, customerName, totalAmount, deliveryOption;
         RecyclerView orderItemsRecyclerView;
-        Button acceptButton, rejectButton, assignDriverButton, markDeliveredButton, readyForPickupButton;
+        Button acceptButton, assignDriverButton, markDeliveredButton, readyForPickupButton, chatButton, groupChatButton;
         LinearLayout actionButtons;
 
         ViewHolder(View itemView) {
@@ -244,12 +315,13 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             totalAmount = itemView.findViewById(R.id.totalAmount);
             orderItemsRecyclerView = itemView.findViewById(R.id.orderItemsRecyclerView);
             acceptButton = itemView.findViewById(R.id.acceptButton);
-            rejectButton = itemView.findViewById(R.id.rejectButton);
             assignDriverButton = itemView.findViewById(R.id.assignDriverButton);
             markDeliveredButton = itemView.findViewById(R.id.markDeliveredButton);
             readyForPickupButton = itemView.findViewById(R.id.readyForPickupButton);
             actionButtons = itemView.findViewById(R.id.actionButtons);
             deliveryOption = itemView.findViewById(R.id.deliveryOption);
+            chatButton = itemView.findViewById(R.id.chatButton);
+            groupChatButton = itemView.findViewById(R.id.groupChatButton);
         }
     }
 } 

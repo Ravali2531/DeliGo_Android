@@ -14,6 +14,11 @@ import com.example.deligoandroid.Customer.Models.Restaurant;
 import com.example.deligoandroid.R;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.RestaurantViewHolder> {
     private Context context;
@@ -63,7 +68,9 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
         private TextView ratingText;
         private TextView numberOfRatingsText;
         private TextView statusBadge;
+        private TextView discountBadge;
         private TextView distanceText;
+        private TextView priceRangeText;
 
         RestaurantViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -74,7 +81,9 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
             ratingText = itemView.findViewById(R.id.ratingText);
             numberOfRatingsText = itemView.findViewById(R.id.numberOfRatings);
             statusBadge = itemView.findViewById(R.id.statusBadge);
+            discountBadge = itemView.findViewById(R.id.discountBadge);
             distanceText = itemView.findViewById(R.id.distanceText);
+            priceRangeText = itemView.findViewById(R.id.priceRangeText);
 
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
@@ -112,6 +121,69 @@ public class RestaurantAdapter extends RecyclerView.Adapter<RestaurantAdapter.Re
                     }
                 } else {
                     distanceText.setVisibility(View.GONE);
+                }
+
+                // Load price range
+                if (restaurant.getId() != null) {
+                    DatabaseReference priceRangeRef = FirebaseDatabase.getInstance()
+                        .getReference("restaurants")
+                        .child(restaurant.getId())
+                        .child("store_info")
+                        .child("price_range");
+
+                    priceRangeRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                Double minPrice = snapshot.child("min").getValue(Double.class);
+                                Double maxPrice = snapshot.child("max").getValue(Double.class);
+                                
+                                if (minPrice != null && maxPrice != null) {
+                                    priceRangeText.setVisibility(View.VISIBLE);
+                                    priceRangeText.setText(String.format("$%.2f - $%.2f", minPrice, maxPrice));
+                                } else {
+                                    priceRangeText.setVisibility(View.GONE);
+                                }
+                            } else {
+                                priceRangeText.setVisibility(View.GONE);
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Log.e("RestaurantAdapter", "Error loading price range", error.toException());
+                            priceRangeText.setVisibility(View.GONE);
+                        }
+                    });
+                    
+                    // Load discount information
+                    DatabaseReference discountRef = FirebaseDatabase.getInstance()
+                        .getReference("restaurants")
+                        .child(restaurant.getId())
+                        .child("discount");
+                        
+                    discountRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                Long discountValue = snapshot.getValue(Long.class);
+                                if (discountValue != null && discountValue > 0) {
+                                    discountBadge.setVisibility(View.VISIBLE);
+                                    discountBadge.setText(discountValue + "% off");
+                                } else {
+                                    discountBadge.setVisibility(View.GONE);
+                                }
+                            } else {
+                                discountBadge.setVisibility(View.GONE);
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Log.e("RestaurantAdapter", "Error loading discount", error.toException());
+                            discountBadge.setVisibility(View.GONE);
+                        }
+                    });
                 }
 
                 // Handle image loading

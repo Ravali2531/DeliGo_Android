@@ -30,6 +30,8 @@ public class DriverHomeFragment extends Fragment {
     private SwipeRefreshLayout swipeRefreshLayout;
     private TextView earningsText;
     private TextView deliveriesText;
+    private TextView rejectedOrdersText;
+    private TextView ratingText;
     private Switch availabilitySwitch;
     private String currentDriverId;
     private DatabaseReference ordersRef;
@@ -37,6 +39,7 @@ public class DriverHomeFragment extends Fragment {
     private ValueEventListener ordersListener;
     private ValueEventListener earningsListener;
     private ValueEventListener availabilityListener;
+    private ValueEventListener ratingListener;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -48,6 +51,8 @@ public class DriverHomeFragment extends Fragment {
         swipeRefreshLayout = view.findViewById(R.id.swipeRefresh);
         earningsText = view.findViewById(R.id.earningsText);
         deliveriesText = view.findViewById(R.id.deliveriesText);
+        rejectedOrdersText = view.findViewById(R.id.rejectedOrdersText);
+        ratingText = view.findViewById(R.id.ratingText);
         availabilitySwitch = view.findViewById(R.id.availabilitySwitch);
 
         // Get current driver ID
@@ -71,6 +76,8 @@ public class DriverHomeFragment extends Fragment {
         // Load data
         loadOrders();
         loadEarnings();
+        loadRejectedOrders();
+        loadRating();
 
         return view;
     }
@@ -150,16 +157,34 @@ public class DriverHomeFragment extends Fragment {
                 double totalEarnings = 0;
                 int deliveryCount = 0;
                 
+                // Get today's start timestamp (midnight)
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                long todayStart = calendar.getTimeInMillis();
+                
                 for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                     String driverId = orderSnapshot.child("driverId").getValue(String.class);
                     String status = orderSnapshot.child("status").getValue(String.class);
+                    Long updatedAt = orderSnapshot.child("updatedAt").getValue(Long.class);
                     
-                    if (currentDriverId.equals(driverId) && "delivered".equals(status)) {
-                        Double amount = orderSnapshot.child("total").getValue(Double.class);
-                        if (amount != null) {
-                            totalEarnings += amount;
-                            deliveryCount++;
-                        }
+                    // Only count orders delivered today
+                    if (currentDriverId.equals(driverId) && 
+                        "delivered".equals(status) && 
+                        updatedAt != null && 
+                        updatedAt >= todayStart) {
+                        
+                        // Get delivery fee and tip amount
+                        Double deliveryFee = orderSnapshot.child("deliveryFee").getValue(Double.class);
+                        Double tipAmount = orderSnapshot.child("tipAmount").getValue(Double.class);
+                        
+                        // Add to total earnings
+                        if (deliveryFee != null) totalEarnings += deliveryFee;
+                        if (tipAmount != null) totalEarnings += tipAmount;
+                        
+                        deliveryCount++;
                     }
                 }
 
@@ -190,7 +215,11 @@ public class DriverHomeFragment extends Fragment {
                 
                 for (DataSnapshot orderSnapshot : dataSnapshot.getChildren()) {
                     String driverId = orderSnapshot.child("driverId").getValue(String.class);
-                    if (driverId != null && driverId.equals(currentDriverId)) {
+                    String status = orderSnapshot.child("status").getValue(String.class);
+                    
+                    // Only show orders that are assigned to this driver and are not delivered/cancelled
+                    if (driverId != null && driverId.equals(currentDriverId) && 
+                        status != null && !status.equals("delivered") && !status.equals("cancelled")) {
                         Order order = new Order();
                         
                         // Map the data from Firebase to our Order model
@@ -239,7 +268,7 @@ public class DriverHomeFragment extends Fragment {
                             }
                         }
                         
-                        order.setStatus(orderSnapshot.child("status").getValue(String.class));
+                        order.setStatus(status);
                         order.setOrderStatus(orderSnapshot.child("order_status").getValue(String.class));
                         order.setDriverId(driverId);
                         order.setDriverName(orderSnapshot.child("driverName").getValue(String.class));
@@ -308,7 +337,6 @@ public class DriverHomeFragment extends Fragment {
                     }
                 }
 
-                // Update UI
                 if (driverOrders.isEmpty()) {
                     noOrdersText.setVisibility(View.VISIBLE);
                     recyclerView.setVisibility(View.GONE);
@@ -334,6 +362,78 @@ public class DriverHomeFragment extends Fragment {
         ordersRef.addValueEventListener(ordersListener);
     }
 
+    private void loadRejectedOrders() {
+        driversRef.child("rejectedOrdersCount")
+            .addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                    Integer rejectedCount = dataSnapshot.getValue(Integer.class);
+                    if (rejectedOrdersText != null) {
+                        rejectedOrdersText.setText((rejectedCount != null ? rejectedCount : 0) + " Rejected Orders");
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {
+                    Log.e("DriverHomeFragment", "Error loading rejected orders count", databaseError.toException());
+                }
+            });
+    }
+
+    private void loadRating() {
+        if (ratingListener != null) {
+            driversRef.child("ratingsandcomments").child("rating").removeEventListener(ratingListener);
+        }
+
+        ratingListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (getContext() == null || !isAdded()) return;
+
+                try {
+                    double sum = 0;
+                    int count = 0;
+
+                    // Iterate through each rating entry
+                    for (DataSnapshot ratingSnapshot : dataSnapshot.getChildren()) {
+                        Object value = ratingSnapshot.getValue();
+                        if (value instanceof Long) {
+                            sum += ((Long) value).doubleValue();
+                            count++;
+                        } else if (value instanceof Double) {
+                            sum += (Double) value;
+                            count++;
+                        } else if (value instanceof Integer) {
+                            sum += ((Integer) value).doubleValue();
+                            count++;
+                        }
+                    }
+
+                    if (count > 0) {
+                        double averageRating = sum / count;
+                        String formattedRating = String.format(Locale.US, "%.1f★ (%d)", averageRating, count);
+                        ratingText.setText(formattedRating);
+                    } else {
+                        ratingText.setText("No Rating");
+                    }
+                } catch (Exception e) {
+                    Log.e("DriverHomeFragment", "Error processing rating", e);
+                    ratingText.setText("No Rating");
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                if (getContext() == null || !isAdded()) return;
+                
+                Log.e("DriverHomeFragment", "Error loading rating", databaseError.toException());
+                ratingText.setText("No Rating");
+            }
+        };
+
+        driversRef.child("ratingsandcomments").child("rating").addValueEventListener(ratingListener);
+    }
+
     @Override
     public void onDestroyView() {
         super.onDestroyView();
@@ -347,6 +447,9 @@ public class DriverHomeFragment extends Fragment {
         }
         if (availabilityListener != null) {
             driversRef.child("isAvailable").removeEventListener(availabilityListener);
+        }
+        if (ratingListener != null) {
+            driversRef.child("ratingsandcomments").child("rating").removeEventListener(ratingListener);
         }
     }
 } 

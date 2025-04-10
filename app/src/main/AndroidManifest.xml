@@ -20,7 +20,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DeliGoAndroid"
         tools:targetApi="31">
-        
+
         <!-- Splash Activity -->
         <activity
             android:name=".SplashActivity"
@@ -35,21 +35,21 @@
         <activity
             android:name=".Authentication.SignupActivity"
             android:exported="true" />
-        
+
         <activity
             android:name=".Authentication.LoginActivity"
             android:exported="true" />
-        
+
         <activity
             android:name=".MainActivity"
             android:exported="true" />
-        
+
         <activity
             android:name=".Authentication.ForgotPasswordActivity"
             android:exported="false" />
 
         <activity android:name=".Admin.AdminActivity" />
-        
+
         <activity android:name=".Admin.ManageUsersActivity" />
 
         <activity
@@ -168,13 +168,78 @@
             android:exported="false" />
 
         <activity
+            android:name=".Restaurant.SalesReportsActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.SpecialDiscountsActivity"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.BestSellingDishesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Restaurant.ScheduledOrdersActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGoAndroid" />
+
+        <activity
             android:name=".Customer.Activities.RestaurantReviewsActivity"
             android:exported="false" />
+
+        <activity android:name=".Customer.Activities.CustomerMainActivity" />
+        <activity android:name=".Customer.Activities.ChatActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity android:name=".Driver.Activities.TipHistoryActivity"
+            android:label="Tip History" />
+
+        <activity android:name=".Driver.Activities.DriverEarningsActivity"
+            android:label="Earnings"
+            android:theme="@style/Theme.DeliGoAndroid"
+            android:exported="false" />
+
+        <activity android:name=".Restaurant.Activities.RestaurantChatActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Other Activities -->
+        <activity
+            android:name=".Admin.OtherActivitiesActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGo.NoActionBar" />
+
+        <!-- Order Management -->
+        <activity
+            android:name=".Admin.OrderManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGo.NoActionBar" />
+
+        <!-- Payment Transactions -->
+        <activity
+            android:name=".Admin.PaymentTransactionsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DeliGo.NoActionBar" />
 
         <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key"/>
+            android:value="AIzaSyDHujk0Z7p3_mjmPsicmn7T9iyQBC0ZqtU" />
+
+        <service
+            android:name=".Services.FCMService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Admin Activities -->
+        <activity android:name=".Admin.AdminChatActivity"
+            android:windowSoftInputMode="adjustResize" />
 
     </application>
 

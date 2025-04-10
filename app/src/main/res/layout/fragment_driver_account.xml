@@ -47,9 +47,9 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Order History -->
+            <!-- Tip History -->
             <LinearLayout
-                android:id="@+id/orderHistorySection"
+                android:id="@+id/tipHistorySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -62,13 +62,13 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_orders"
+                    android:src="@drawable/ic_earnings"
                     android:layout_marginEnd="16dp"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Order History"
+                    android:text="Tip History"
                     android:textSize="16sp"/>
             </LinearLayout>
 
